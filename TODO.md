@@ -38,8 +38,8 @@ on Windows, Linux, and macOS.
 - [x] Implement typed sort/filter/search specifications with bound values; never
   accept unchecked identifier or SQL fragments from UI code.
 - [ ] Prefer keyset pagination for stable unique orderings.
-- [ ] Add insert/edit modes, dirty tracking, validation, save, cancel, and delete.
-- [ ] Cover no-primary-key tables and views with explicit capability flags.
+- [x] Add insert/edit modes, dirty tracking, validation, save, cancel, and delete.
+- [x] Cover no-primary-key tables and views with explicit capability flags.
 
 ## M3 — Terminal and semantic UI foundation
 

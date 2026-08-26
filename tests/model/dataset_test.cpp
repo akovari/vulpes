@@ -108,4 +108,97 @@ TEST_CASE("views remain readable but advertise no edit capability", "[model][dat
     CHECK(dataset.rows().size() == 3);
     CHECK_FALSE(dataset.is_editable());
     CHECK_FALSE(dataset.current_identity());
+    CHECK_THROWS_AS(dataset.begin_insert(), Error);
+    CHECK_THROWS_AS(dataset.begin_edit(), Error);
+    CHECK_THROWS_AS(dataset.erase(), Error);
+}
+
+TEST_CASE("dataset inserts records and preserves database defaults", "[model][dataset][edit]") {
+    auto database = make_dataset_database();
+    database.execute("ALTER TABLE customer ADD COLUMN status TEXT NOT NULL DEFAULT 'new'");
+    model::Dataset dataset{database, customer_schema(database)};
+
+    dataset.begin_insert();
+    CHECK(dataset.mode() == model::DatasetMode::insert);
+    CHECK_FALSE(dataset.is_dirty());
+    CHECK_FALSE(dataset.draft_value("name"));
+
+    dataset.set("name", "New customer").set("city", "Plzen").set("balance", 7.5).set("active", true);
+    CHECK(dataset.is_dirty());
+    REQUIRE(dataset.draft_value("name"));
+    CHECK(dataset.draft_value("name")->as_string() == "New customer");
+    dataset.save();
+
+    CHECK(dataset.mode() == model::DatasetMode::browse);
+    CHECK_FALSE(dataset.is_dirty());
+    auto query = database.prepare("SELECT name, city, balance, active, status FROM customer WHERE name = ?");
+    query.bind(1, "New customer");
+    REQUIRE(query.step());
+    CHECK(query.column(1).as_string() == "Plzen");
+    CHECK(query.column(2).as_double() == 7.5);
+    CHECK(query.column(3).as_int() == 1);
+    CHECK(query.column(4).as_string() == "new");
+}
+
+TEST_CASE("dataset updates, cancels, and deletes through stable row identity", "[model][dataset][edit]") {
+    auto database = make_dataset_database();
+    model::Dataset dataset{database, customer_schema(database)};
+
+    dataset.begin_edit();
+    REQUIRE(dataset.draft_value("name"));
+    REQUIRE(dataset.current());
+    CHECK(*dataset.draft_value("name") == dataset.current()->at("name"));
+    dataset.set("city", "Olomouc");
+    CHECK(dataset.is_dirty());
+    dataset.cancel();
+    CHECK(dataset.mode() == model::DatasetMode::browse);
+    CHECK_FALSE(dataset.is_dirty());
+
+    dataset.begin_edit();
+    dataset.set("city", "Olomouc");
+    CHECK_THROWS_AS(dataset.set("id", 88), Error);
+    CHECK_THROWS_AS(dataset.set("name", nullptr), Error);
+    dataset.save();
+
+    auto query = database.prepare("SELECT city FROM customer WHERE id = 1");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_string() == "Olomouc");
+
+    static_cast<void>(dataset.first());
+    dataset.erase();
+    CHECK(dataset.total_count() == 4);
+    auto count = database.prepare("SELECT count(*) FROM customer WHERE id = 1");
+    REQUIRE(count.step());
+    CHECK(count.column(0).as_int() == 0);
+}
+
+TEST_CASE("dataset retains edit state after a failed constraint save", "[model][dataset][edit]") {
+    auto database = make_dataset_database();
+    database.execute("CREATE UNIQUE INDEX customer_name ON customer(name)");
+    model::Dataset dataset{database, customer_schema(database)};
+
+    dataset.begin_edit();
+    dataset.set("name", "Beta");
+    CHECK_THROWS_AS(dataset.save(), Error);
+    CHECK(dataset.mode() == model::DatasetMode::edit);
+    CHECK(dataset.is_dirty());
+    REQUIRE(dataset.draft_value("name"));
+    CHECK(dataset.draft_value("name")->as_string() == "Beta");
+
+    dataset.cancel();
+    auto query = database.prepare("SELECT count(*) FROM customer WHERE id = 1 AND name = 'Beta'");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_int() == 0);
+}
+
+TEST_CASE("tables without primary keys remain browse-only", "[model][dataset][edit]") {
+    db::Database database{":memory:"};
+    database.execute("CREATE TABLE note(body TEXT); INSERT INTO note VALUES ('read me')");
+    const auto schema = db::inspect_schema(database);
+    model::Dataset dataset{database, schema.front()};
+
+    CHECK_FALSE(dataset.is_editable());
+    CHECK_THROWS_AS(dataset.begin_insert(), Error);
+    CHECK_THROWS_AS(dataset.begin_edit(), Error);
+    CHECK_THROWS_AS(dataset.erase(), Error);
 }

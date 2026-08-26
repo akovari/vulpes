@@ -4,10 +4,11 @@ Vulpes is a local-first, keyboard-driven RAD environment that turns an ordinary
 SQLite schema into an application. The first frontend is a TUI; its database,
 application, semantic UI, and rendering layers are deliberately independent.
 
-The repository is an early scaffold. It currently provides a C++23 build,
-cross-platform CI, RAII SQLite primitives, basic schema introspection, normalized
-input types, a virtual screen buffer, tests, and the inventory dogfood schema.
-It does **not** yet provide an interactive browser or editor.
+The repository is pre-alpha. It currently provides a C++23 build,
+cross-platform CI, RAII SQLite primitives, schema introspection, normalized
+input, a virtual screen buffer, a keyboard-driven `--table` browse view, and a
+transactional dataset editing model. Record-editing controls and the in-app
+command window are the next frontend milestones.
 
 ## Prerequisites
 

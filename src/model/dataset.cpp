@@ -3,6 +3,7 @@
 #include "vulpes/core/error.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/identifier.hpp"
+#include "vulpes/db/transaction.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -143,6 +144,172 @@ auto Dataset::clear_search() -> Dataset& {
     return *this;
 }
 
+void Dataset::begin_insert() {
+    ensure_editable();
+    if (mode_ != DatasetMode::browse)
+        throw Error{ErrorCategory::validation, "finish or cancel the current edit before inserting"};
+
+    mode_ = DatasetMode::insert;
+    draft_.assign(schema_.fields.size(), std::nullopt);
+    modified_fields_.clear();
+    original_identity_.reset();
+}
+
+void Dataset::begin_edit() {
+    ensure_editable();
+    if (mode_ != DatasetMode::browse)
+        throw Error{ErrorCategory::validation, "finish or cancel the current edit before editing another record"};
+
+    const auto row = current();
+    const auto identity = current_identity();
+    if (!row || !identity)
+        throw Error{ErrorCategory::database, "the current record has no stable identity"};
+
+    mode_ = DatasetMode::edit;
+    draft_.clear();
+    draft_.reserve(schema_.fields.size());
+    for (const auto& field : schema_.fields)
+        draft_.emplace_back(row->at(field.name));
+    modified_fields_.clear();
+    original_identity_ = identity;
+}
+
+auto Dataset::set(std::string_view field, db::Value value) -> Dataset& {
+    ensure_editing();
+    const auto index = field_index(field);
+    const auto& field_schema = schema_.fields[index];
+    if (field_schema.hidden || field_schema.generated)
+        throw Error{ErrorCategory::validation, "field is not writable: " + field_schema.name};
+    if (mode_ == DatasetMode::edit && field_schema.primary_key)
+        throw Error{ErrorCategory::validation, "primary key fields cannot be edited"};
+    if (!field_schema.nullable && value.is_null())
+        throw Error{ErrorCategory::validation, "field cannot be NULL: " + field_schema.name};
+
+    draft_[index] = std::move(value);
+    if (std::ranges::find(modified_fields_, index) == modified_fields_.end())
+        modified_fields_.push_back(index);
+    return *this;
+}
+
+auto Dataset::draft_value(std::string_view field) const -> std::optional<db::Value> {
+    const auto index = field_index(field);
+    if (mode_ != DatasetMode::browse)
+        return draft_.at(index);
+    const auto row = current();
+    if (!row)
+        return std::nullopt;
+    return row->at(index);
+}
+
+void Dataset::save() {
+    ensure_editing();
+    validate_draft();
+
+    db::Transaction transaction{*database_};
+    if (mode_ == DatasetMode::insert) {
+        std::vector<std::size_t> fields;
+        for (std::size_t index = 0; index < draft_.size(); ++index) {
+            if (draft_[index])
+                fields.push_back(index);
+        }
+
+        std::string sql{"INSERT INTO " + db::detail::quote_identifier(schema_.name)};
+        if (fields.empty()) {
+            sql += " DEFAULT VALUES";
+            database_->execute(sql);
+        } else {
+            sql += " (";
+            std::string placeholders;
+            for (std::size_t position = 0; position < fields.size(); ++position) {
+                if (position != 0) {
+                    sql += ", ";
+                    placeholders += ", ";
+                }
+                sql += db::detail::quote_identifier(schema_.fields[fields[position]].name);
+                placeholders += '?';
+            }
+            sql += ") VALUES (" + placeholders + ')';
+            auto statement = database_->prepare(sql);
+            for (std::size_t position = 0; position < fields.size(); ++position)
+                statement.bind(static_cast<int>(position + 1), *draft_[fields[position]]);
+            statement.execute();
+        }
+    } else if (!modified_fields_.empty()) {
+        std::string sql{"UPDATE " + db::detail::quote_identifier(schema_.name) + " SET "};
+        for (std::size_t position = 0; position < modified_fields_.size(); ++position) {
+            if (position != 0)
+                sql += ", ";
+            sql += db::detail::quote_identifier(schema_.fields[modified_fields_[position]].name) + " = ?";
+        }
+
+        std::vector<db::Value> identity_values;
+        sql += " WHERE ";
+        for (std::size_t position = 0; position < original_identity_->fields.size(); ++position) {
+            if (position != 0)
+                sql += " AND ";
+            sql += db::detail::quote_identifier(original_identity_->fields[position]);
+            const auto& value = original_identity_->values[position];
+            if (value.is_null())
+                sql += " IS NULL";
+            else {
+                sql += " = ?";
+                identity_values.push_back(value);
+            }
+        }
+
+        auto statement = database_->prepare(sql);
+        int parameter = 1;
+        for (const auto index : modified_fields_)
+            statement.bind(parameter++, *draft_[index]);
+        for (const auto& value : identity_values)
+            statement.bind(parameter++, value);
+        statement.execute();
+        if (database_->changes() != 1)
+            throw Error{ErrorCategory::database, "record was changed or deleted by another operation"};
+    }
+    transaction.commit();
+    reset_edit_state();
+    refresh_after_write();
+}
+
+void Dataset::cancel() noexcept {
+    reset_edit_state();
+}
+
+void Dataset::erase() {
+    ensure_editable();
+    if (mode_ != DatasetMode::browse)
+        throw Error{ErrorCategory::validation, "finish or cancel the current edit before deleting"};
+    const auto identity = current_identity();
+    if (!identity)
+        throw Error{ErrorCategory::database, "the current record has no stable identity"};
+
+    std::string sql{"DELETE FROM " + db::detail::quote_identifier(schema_.name) + " WHERE "};
+    std::vector<db::Value> values;
+    for (std::size_t position = 0; position < identity->fields.size(); ++position) {
+        if (position != 0)
+            sql += " AND ";
+        sql += db::detail::quote_identifier(identity->fields[position]);
+        const auto& value = identity->values[position];
+        if (value.is_null())
+            sql += " IS NULL";
+        else {
+            sql += " = ?";
+            values.push_back(value);
+        }
+    }
+
+    db::Transaction transaction{*database_};
+    auto statement = database_->prepare(sql);
+    for (std::size_t index = 0; index < values.size(); ++index)
+        statement.bind(static_cast<int>(index + 1), values[index]);
+    statement.execute();
+    if (database_->changes() != 1)
+        throw Error{ErrorCategory::database, "record was changed or deleted by another operation"};
+    transaction.commit();
+    refresh_after_write();
+}
+
 void Dataset::refresh() {
     std::vector<db::Value> values;
     const auto sql = "SELECT * FROM " + db::detail::quote_identifier(schema_.name) + query_where_clause(values) +
@@ -209,10 +376,50 @@ auto Dataset::last() -> bool {
     return true;
 }
 
-void Dataset::validate_field(std::string_view field) const {
+auto Dataset::field_index(std::string_view field) const -> std::size_t {
     const auto found = std::ranges::find(schema_.fields, field, &db::FieldSchema::name);
     if (found == schema_.fields.end())
         throw Error{ErrorCategory::validation, "unknown dataset field: " + std::string{field}};
+    return static_cast<std::size_t>(std::distance(schema_.fields.begin(), found));
+}
+
+void Dataset::validate_field(std::string_view field) const {
+    static_cast<void>(field_index(field));
+}
+
+void Dataset::ensure_editable() const {
+    if (!is_editable())
+        throw Error{ErrorCategory::validation, "this dataset is read-only"};
+}
+
+void Dataset::ensure_editing() const {
+    ensure_editable();
+    if (mode_ == DatasetMode::browse)
+        throw Error{ErrorCategory::validation, "begin an insert or edit before changing fields"};
+}
+
+void Dataset::validate_draft() const {
+    for (const auto index : modified_fields_) {
+        const auto& field = schema_.fields[index];
+        if (!field.nullable && (!draft_[index] || draft_[index]->is_null()))
+            throw Error{ErrorCategory::validation, "field cannot be NULL: " + field.name};
+    }
+}
+
+void Dataset::reset_edit_state() noexcept {
+    mode_ = DatasetMode::browse;
+    draft_.clear();
+    modified_fields_.clear();
+    original_identity_.reset();
+}
+
+void Dataset::refresh_after_write() {
+    const auto count = total_count();
+    if (count == 0)
+        page_offset_ = 0;
+    else if (page_offset_ >= count && page_offset_ != 0)
+        page_offset_ = ((count - 1) / page_size_) * page_size_;
+    refresh();
 }
 
 auto Dataset::query_where_clause(std::vector<db::Value>& values) const -> std::string {
