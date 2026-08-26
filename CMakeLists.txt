@@ -12,6 +12,7 @@ find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22)
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 add_library(vulpes_options INTERFACE)
 target_compile_features(vulpes_options INTERFACE cxx_std_23)
@@ -56,7 +57,9 @@ target_include_directories(vulpes_core
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_link_libraries(vulpes_core PUBLIC vulpes_options PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc)
+target_link_libraries(vulpes_core
+    PUBLIC vulpes_options
+    PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json)
 target_compile_definitions(vulpes_core PRIVATE VULPES_BUILDING_LIBRARY)
 
 configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)
@@ -70,6 +73,7 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY translations DESTINATION ${CMAKE_INSTALL_DATADIR}/vulpes)
 
 if(BUILD_TESTING)
     add_subdirectory(tests)

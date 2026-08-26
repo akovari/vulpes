@@ -1,5 +1,10 @@
 #include "vulpes/core/localization.hpp"
 
+#include "vulpes/core/error.hpp"
+
+#include <fstream>
+#include <nlohmann/json.hpp>
+
 namespace vulpes::core {
 
 Localizer::Localizer(std::string locale) : locale_{std::move(locale)} {
@@ -8,6 +13,42 @@ Localizer::Localizer(std::string locale) : locale_{std::move(locale)} {
 
 void Localizer::add_catalog(std::string locale, MessageCatalog catalog) {
     catalogs_.insert_or_assign(std::move(locale), std::move(catalog));
+}
+
+void Localizer::load_catalog_file(const std::filesystem::path& path) {
+    std::error_code error;
+    const auto size = std::filesystem::file_size(path, error);
+    if (error)
+        throw Error{ErrorCategory::io, "unable to inspect message catalog: " + path.string()};
+    if (size > 1U * 1024U * 1024U)
+        throw Error{ErrorCategory::metadata, "message catalog exceeds the 1 MiB size limit: " + path.string()};
+
+    std::ifstream input{path, std::ios::binary};
+    if (!input)
+        throw Error{ErrorCategory::io, "unable to open message catalog: " + path.string()};
+
+    try {
+        const auto document = nlohmann::json::parse(input);
+        if (!document.is_object() || !document.contains("locale") || !document.at("locale").is_string() ||
+            !document.contains("messages") || !document.at("messages").is_object()) {
+            throw Error{ErrorCategory::metadata, "message catalog must contain string locale and object messages"};
+        }
+
+        const auto locale = document.at("locale").get<std::string>();
+        if (locale.empty())
+            throw Error{ErrorCategory::metadata, "message catalog locale cannot be empty"};
+
+        MessageCatalog catalog;
+        for (const auto& [key, value] : document.at("messages").items()) {
+            if (key.empty() || !value.is_string())
+                throw Error{ErrorCategory::metadata, "message catalog keys and values must be non-empty strings"};
+            catalog.insert_or_assign(key, value.get<std::string>());
+        }
+        add_catalog(locale, std::move(catalog));
+    } catch (const nlohmann::json::exception& exception) {
+        throw Error{ErrorCategory::metadata,
+                    "unable to parse message catalog '" + path.string() + "': " + exception.what()};
+    }
 }
 
 auto Localizer::find_template(std::string_view key) const -> const std::string* {

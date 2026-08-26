@@ -49,8 +49,10 @@ implemented vocabulary types so platform support remains practical.
 ### vcpkg manifest dependencies
 
 The checked-in registry baseline makes dependency resolution reproducible.
-SQLite and Catch2 are the only dependencies. Terminal and Unicode libraries are
-deferred until an implementation spike compares behavior on all three platforms.
+SQLite, Catch2, utf8proc, CLI11, and nlohmann/json each have a narrow boundary:
+database access, tests, Unicode cell handling, process argument parsing, and
+external message-catalog parsing respectively. Terminal rendering remains behind
+Vulpes abstractions rather than a framework-specific widget model.
 
 ### SQLite threading and ownership
 

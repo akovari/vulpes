@@ -1,0 +1,16 @@
+{
+  "locale": "cs",
+  "messages": {
+    "application.title": "Vulpes",
+    "application.unknown_command": "Neznámý příkaz. Pro nápovědu zadejte help.",
+    "command.help": "Příkazy: help, tables, schema <tabulka>, browse <tabulka>, quit",
+    "database.tables": "Tabulky a pohledy",
+    "error.invalid_command_arguments": "Neplatné argumenty příkazu '{command}'.",
+    "error.unknown_table": "Tabulka nebo pohled '{name}' neexistuje.",
+    "schema.generated": "generované",
+    "schema.not_null": "není null",
+    "schema.primary_key": "primární klíč",
+    "schema.title": "Schéma: {name}",
+    "schema.unique": "jedinečné"
+  }
+}

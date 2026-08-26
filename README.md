@@ -52,6 +52,10 @@ sqlite3 inventory.db ".read examples/inventory/schema.sql"
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.
 
+Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
+example, use the shipped Czech translation with `--locale cs-CZ --catalog
+translations\cs.json`. See [docs/localization.md](docs/localization.md).
+
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
 and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.
 

@@ -17,6 +17,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -80,9 +81,12 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
 }
 
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
-         const std::optional<std::string>& command_source) -> int {
+         const std::optional<std::string>& command_source, const std::string& locale,
+         const std::vector<std::string>& catalog_paths) -> int {
     vulpes::db::Database database{database_path};
-    vulpes::core::Localizer messages;
+    vulpes::core::Localizer messages{locale};
+    for (const auto& catalog_path : catalog_paths)
+        messages.load_catalog_file(std::filesystem::path{catalog_path});
     vulpes::core::ApplicationRuntime application{database};
     std::cout << messages.translate("application.title") << " " << VULPES_VERSION << "\n\n";
 
@@ -139,11 +143,15 @@ auto main(int argc, char** argv) -> int {
         std::string database_argument;
         std::string table_name;
         std::string command_source;
+        std::string locale{"en"};
+        std::vector<std::string> catalog_paths;
         app.add_flag("--version", version, "Show Vulpes version and exit");
         app.add_option("database", database_argument, "SQLite database path");
         const auto table_option = app.add_option("--table", table_name, "Browse one table or view");
         const auto command_option = app.add_option("--command", command_source, "Run one Vulpes command and exit");
         table_option->excludes(command_option);
+        app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
+        app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
         app.set_help_flag("-h,--help", "Show this help and exit");
         try {
             app.parse(argc, argv);
@@ -162,7 +170,7 @@ auto main(int argc, char** argv) -> int {
 
         return run(std::filesystem::path{database_argument},
                    table_name.empty() ? std::nullopt : std::optional{table_name},
-                   command_source.empty() ? std::nullopt : std::optional{command_source});
+                   command_source.empty() ? std::nullopt : std::optional{command_source}, locale, catalog_paths);
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;

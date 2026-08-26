@@ -67,7 +67,7 @@ on Windows, Linux, and macOS.
 
 - [x] Define stable message keys, locale fallback, and named message arguments.
 - [x] Use CLI11 for process-level command-line parsing.
-- [ ] Add external UTF-8 catalog loading and locale selection configuration.
+- [x] Add external UTF-8 catalog loading and locale selection configuration.
 - [ ] Add ICU-backed plural/select message formatting with the first translated
   application catalog.
 

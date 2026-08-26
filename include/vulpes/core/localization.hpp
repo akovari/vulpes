@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <map>
 #include <string>
 #include <string_view>
@@ -15,6 +16,7 @@ class Localizer {
   public:
     explicit Localizer(std::string locale = "en");
     void add_catalog(std::string locale, MessageCatalog catalog);
+    void load_catalog_file(const std::filesystem::path& path);
     [[nodiscard]] auto locale() const noexcept -> std::string_view { return locale_; }
     [[nodiscard]] auto translate(std::string_view key, const MessageArguments& arguments = {}) const -> std::string;
 
