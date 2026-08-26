@@ -37,7 +37,7 @@ on Windows, Linux, and macOS.
   last, refresh, and bounded paging.
 - [x] Implement typed sort/filter/search specifications with bound values; never
   accept unchecked identifier or SQL fragments from UI code.
-- [ ] Prefer keyset pagination for stable unique orderings.
+- [x] Prefer keyset pagination for stable unique orderings.
 - [x] Add insert/edit modes, dirty tracking, validation, save, cancel, and delete.
 - [x] Cover no-primary-key tables and views with explicit capability flags.
 

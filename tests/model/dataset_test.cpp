@@ -57,6 +57,24 @@ TEST_CASE("dataset pages and navigates deterministic primary-key rows", "[model]
     CHECK(dataset.is_editable());
 }
 
+TEST_CASE("dataset uses keyset boundaries for a stable single-column primary key", "[model][dataset][paging]") {
+    auto database = make_dataset_database();
+    model::Dataset dataset{database, customer_schema(database), 2};
+
+    REQUIRE(dataset.next());
+    CHECK(dataset.current()->at("id").as_int() == 2);
+    database.execute("INSERT INTO customer(id, name) VALUES (0, 'Inserted before current page')");
+
+    // An OFFSET page would repeat id 2 after the insertion. The keyset cursor
+    // continues strictly after its last visible primary-key value.
+    REQUIRE(dataset.next());
+    CHECK(dataset.page_offset() == 2);
+    CHECK(dataset.current()->at("id").as_int() == 3);
+    REQUIRE(dataset.previous());
+    CHECK(dataset.page_offset() == 0);
+    CHECK(dataset.current()->at("id").as_int() == 2);
+}
+
 TEST_CASE("dataset binds filters, orders, and escapes search text", "[model][dataset]") {
     auto database = make_dataset_database();
     model::Dataset dataset{database, customer_schema(database), 10};

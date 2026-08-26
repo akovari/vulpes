@@ -88,6 +88,9 @@ class Dataset {
     [[nodiscard]] auto order_clause() const -> std::string;
     [[nodiscard]] auto has_text_fields() const -> bool;
     [[nodiscard]] auto foreign_key_for(std::string_view field) const -> const db::ForeignKeySchema*;
+    [[nodiscard]] auto keyset_field() const -> std::optional<std::string>;
+    [[nodiscard]] auto keyset_order_clause(bool reverse) const -> std::string;
+    [[nodiscard]] auto fetch_keyset_page(const db::Value& anchor, bool forward) -> bool;
 
     db::Database* database_;
     db::TableSchema schema_;

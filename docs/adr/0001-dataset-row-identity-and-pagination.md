@@ -21,17 +21,21 @@ The dataset returns a `RowIdentity` containing every primary-key field, includin
 composite keys. Tables without primary keys and views remain browseable but must
 advertise no edit capability.
 
-The initial implementation uses bounded `LIMIT/OFFSET` pages. It provides a
-deterministic default `ORDER BY` over the primary key when present. A requested
-order is deterministic only if it is unique; keyset pagination therefore remains
-the next implementation task and will append primary-key tie breakers where
-needed. No UI API depends on offset mechanics.
+The dataset uses keyset paging when a single stable key is available: its default
+single-column primary-key order, or an explicitly selected non-null unique key.
+The next and previous page predicates compare against the last or first visible
+key, so inserts before the current page cannot create duplicate rows. Composite,
+nullable, and non-unique sorts use the existing bounded `LIMIT/OFFSET` fallback
+until their null and tie-break semantics are deliberately designed. No UI API
+depends on the query strategy.
 
 ## Consequences
 
 - Widgets do not execute SQL or own statement lifetimes.
 - Filtering is deliberately typed; free-form SQL belongs only in the SQL console.
 - The model avoids injection through application/UI paths.
-- Large datasets will improve without a widget API change when keyset paging lands.
+- Large stable-key datasets avoid expensive OFFSET scans without a widget API
+  change.
+- A keyset refresh deliberately returns to the first matching page because an
+  in-memory page anchor is not a durable bookmark across writes.
 - Updating data requires a separate editing model with explicit transactions.
-

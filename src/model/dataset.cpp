@@ -364,15 +364,23 @@ void Dataset::erase() {
 }
 
 void Dataset::refresh() {
+    // A keyset page is defined by the previous page's anchor, which is not a
+    // durable bookmark across a refresh or a write. Refresh therefore starts
+    // from the first matching row rather than claiming to preserve an offset.
+    if (keyset_field())
+        page_offset_ = 0;
     std::vector<db::Value> values;
-    const auto sql = "SELECT * FROM " + db::detail::quote_identifier(schema_.name) + query_where_clause(values) +
-                     order_clause() + " LIMIT ? OFFSET ?";
+    auto sql = "SELECT * FROM " + db::detail::quote_identifier(schema_.name) + query_where_clause(values) +
+               order_clause() + " LIMIT ?";
+    if (!keyset_field())
+        sql += " OFFSET ?";
     auto query = database_->prepare(sql);
     int index = 1;
     for (const auto& value : values)
         query.bind(index++, value);
     query.bind(index++, db::Value{static_cast<std::int64_t>(page_size_)});
-    query.bind(index, db::Value{static_cast<std::int64_t>(page_offset_)});
+    if (!keyset_field())
+        query.bind(index, db::Value{static_cast<std::int64_t>(page_offset_)});
 
     rows_.clear();
     while (query.step())
@@ -393,6 +401,16 @@ auto Dataset::next() -> bool {
         ++current_index_;
         return true;
     }
+    if (const auto field = keyset_field()) {
+        if (rows_.back().at(*field).is_null())
+            return false;
+        const auto previous_size = rows_.size();
+        if (!fetch_keyset_page(rows_.back().at(*field), true))
+            return false;
+        page_offset_ += previous_size;
+        current_index_ = 0;
+        return true;
+    }
     if (page_offset_ + rows_.size() >= total_count())
         return false;
     page_offset_ += rows_.size();
@@ -409,6 +427,15 @@ auto Dataset::previous() -> bool {
     }
     if (page_offset_ == 0)
         return false;
+    if (const auto field = keyset_field()) {
+        if (rows_.front().at(*field).is_null())
+            return false;
+        if (!fetch_keyset_page(rows_.front().at(*field), false))
+            return false;
+        page_offset_ = page_offset_ > page_size_ ? page_offset_ - page_size_ : 0;
+        current_index_ = rows_.size() - 1;
+        return true;
+    }
     page_offset_ = page_offset_ > page_size_ ? page_offset_ - page_size_ : 0;
     refresh();
     current_index_ = rows_.empty() ? 0 : rows_.size() - 1;
@@ -424,7 +451,21 @@ auto Dataset::last() -> bool {
         return false;
     }
     page_offset_ = ((count - 1) / page_size_) * page_size_;
-    refresh();
+    if (keyset_field()) {
+        std::vector<db::Value> values;
+        auto query = database_->prepare("SELECT * FROM " + db::detail::quote_identifier(schema_.name) +
+                                        query_where_clause(values) + keyset_order_clause(true) + " LIMIT ?");
+        int index = 1;
+        for (const auto& value : values)
+            query.bind(index++, value);
+        query.bind(index, db::Value{static_cast<std::int64_t>(page_size_)});
+        rows_.clear();
+        while (query.step())
+            rows_.push_back(query.row());
+        std::ranges::reverse(rows_);
+    } else {
+        refresh();
+    }
     current_index_ = rows_.size() - 1;
     return true;
 }
@@ -529,6 +570,53 @@ auto Dataset::order_clause() const -> std::string {
         clause += db::detail::quote_identifier(primary_key[index]) + " ASC";
     }
     return clause;
+}
+
+auto Dataset::keyset_field() const -> std::optional<std::string> {
+    if (order_) {
+        const auto field = std::ranges::find(schema_.fields, order_->first, &db::FieldSchema::name);
+        if (field != schema_.fields.end() && (field->primary_key || (field->unique && !field->nullable)))
+            return field->name;
+        return std::nullopt;
+    }
+    const auto primary_key = schema_.primary_key_fields();
+    return primary_key.size() == 1 ? std::optional{primary_key.front()} : std::nullopt;
+}
+
+auto Dataset::keyset_order_clause(bool reverse) const -> std::string {
+    const auto field = *keyset_field();
+    const auto direction = order_ ? order_->second : SortDirection::ascending;
+    const auto ascending = reverse ? direction == SortDirection::descending : direction == SortDirection::ascending;
+    return " ORDER BY " + db::detail::quote_identifier(field) + (ascending ? " ASC" : " DESC");
+}
+
+auto Dataset::fetch_keyset_page(const db::Value& anchor, bool forward) -> bool {
+    const auto field = *keyset_field();
+    const auto direction = order_ ? order_->second : SortDirection::ascending;
+    const auto ascending = direction == SortDirection::ascending;
+    const auto use_greater_than = forward == ascending;
+    std::vector<db::Value> values;
+    auto where_clause = query_where_clause(values);
+    where_clause += where_clause.empty() ? " WHERE " : " AND ";
+    where_clause += db::detail::quote_identifier(field) + (use_greater_than ? " > ?" : " < ?");
+    values.push_back(anchor);
+
+    auto query = database_->prepare("SELECT * FROM " + db::detail::quote_identifier(schema_.name) + where_clause +
+                                    keyset_order_clause(!forward) + " LIMIT ?");
+    int index = 1;
+    for (const auto& value : values)
+        query.bind(index++, value);
+    query.bind(index, db::Value{static_cast<std::int64_t>(page_size_)});
+
+    std::vector<db::Row> next_rows;
+    while (query.step())
+        next_rows.push_back(query.row());
+    if (next_rows.empty())
+        return false;
+    if (!forward)
+        std::ranges::reverse(next_rows);
+    rows_ = std::move(next_rows);
+    return true;
 }
 
 auto Dataset::has_text_fields() const -> bool {

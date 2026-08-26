@@ -69,8 +69,9 @@ of externally supplied text.
 
 The dataset layer owns paging, row identity, filters, ordering, editing state,
 and owning row snapshots. Widgets request logical rows and never assemble SQL.
-Current bounded OFFSET paging is deliberately behind this boundary; keyset
-paging is the next optimization when a stable unique ordering is available.
+Stable single-column primary-key and non-null unique-order datasets use keyset
+paging; composite, nullable, and non-unique orderings retain bounded OFFSET
+pages. The strategy remains behind the dataset boundary.
 Dataset writes are transactional and schema-validated; see ADR 0001 and ADR
 0005.
 
