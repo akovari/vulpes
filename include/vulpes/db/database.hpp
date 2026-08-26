@@ -24,6 +24,7 @@ public:
 
     [[nodiscard]] auto prepare(std::string_view sql) -> Statement;
     void execute(std::string_view sql);
+    [[nodiscard]] auto in_transaction() const noexcept -> bool;
     [[nodiscard]] auto changes() const noexcept -> int;
     [[nodiscard]] auto last_insert_rowid() const noexcept -> std::int64_t;
 

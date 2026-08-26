@@ -20,20 +20,20 @@ on Windows, Linux, and macOS.
 - [x] SQLite `NULL`, integer, real, text, and blob `Value` storage.
 - [x] Positional and named parameter binding.
 - [x] Basic table/view, column, and foreign-key introspection.
-- [ ] Add row/name lookup without exposing statement lifetimes.
-- [ ] Discover unique constraints, indexes, generated/hidden columns, composite
+- [x] Add row/name lookup without exposing statement lifetimes.
+- [x] Discover unique constraints, indexes, generated/hidden columns, composite
   keys, and foreign-key actions.
-- [ ] Classify constraint errors and preserve extended SQLite result codes.
+- [x] Classify constraint errors and preserve extended SQLite result codes.
 - [ ] Test blobs, empty values, invalid UTF-8 policy, nested transaction policy,
   busy handling, read-only mode, and move semantics.
-- [ ] Add safe identifier quoting as an internal shared utility.
+- [x] Add safe identifier quoting as an internal shared utility.
 
 ## M2 — Dataset/cursor model
 
-- [ ] Write an ADR for row identity, stable ordering, and pagination fallback.
-- [ ] Implement read-only datasets with fields, current row, first/next/previous,
+- [x] Write an ADR for row identity, stable ordering, and pagination fallback.
+- [x] Implement read-only datasets with fields, current row, first/next/previous,
   last, refresh, and bounded paging.
-- [ ] Implement typed sort/filter/search specifications with bound values; never
+- [x] Implement typed sort/filter/search specifications with bound values; never
   accept unchecked identifier or SQL fragments from UI code.
 - [ ] Prefer keyset pagination for stable unique orderings.
 - [ ] Add insert/edit modes, dirty tracking, validation, save, cancel, and delete.

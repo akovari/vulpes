@@ -17,6 +17,8 @@ produce a clean and stable warning set.
 - No raw SQLite handles outside `src/db`.
 - No terminal escape sequences outside terminal backends.
 - No database access from widgets.
+- Dataset identifiers must originate in `TableSchema`; values must be bound rather
+  than interpolated. Free-form SQL is reserved for the SQL console boundary.
 - UTF-8 at external text boundaries and `char32_t` for logical screen glyphs.
 - Exceptions may cross implementation layers, but frontend boundaries convert
   `vulpes::Error` into user-facing structured errors.
@@ -31,4 +33,3 @@ normalized events. End-to-end tests must use temporary database copies.
 CI builds Windows, Ubuntu, and macOS on every push and pull request. Sanitizer,
 coverage, fuzz, and static-analysis jobs are tracked in `TODO.md` rather than
 being implied by the initial scaffold.
-

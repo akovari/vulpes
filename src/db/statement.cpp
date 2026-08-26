@@ -1,12 +1,14 @@
 #include "vulpes/db/statement.hpp"
 
 #include "vulpes/core/error.hpp"
+#include "sqlite_error.hpp"
 
 #include <sqlite3.h>
 
 #include <limits>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace vulpes::db {
 namespace {
@@ -14,7 +16,7 @@ namespace {
 void check(sqlite3_stmt* statement, int result) {
     if (result != SQLITE_OK) {
         auto* database = sqlite3_db_handle(statement);
-        throw Error{ErrorCategory::database, sqlite3_errmsg(database), result};
+        throw detail::sqlite_error(database, result);
     }
 }
 
@@ -57,7 +59,7 @@ auto Statement::step() -> bool {
     if (result == SQLITE_ROW) return true;
     if (result == SQLITE_DONE) return false;
     auto* database = sqlite3_db_handle(statement_);
-    throw Error{ErrorCategory::database, sqlite3_errmsg(database), result};
+    throw detail::sqlite_error(database, result);
 }
 
 void Statement::execute() {
@@ -95,5 +97,16 @@ auto Statement::column(int index) const -> Value {
     }
 }
 
-} // namespace vulpes::db
+auto Statement::row() const -> Row {
+    std::vector<std::string> names;
+    std::vector<Value> values;
+    names.reserve(static_cast<std::size_t>(column_count()));
+    values.reserve(static_cast<std::size_t>(column_count()));
+    for (int index = 0; index < column_count(); ++index) {
+        names.emplace_back(column_name(index));
+        values.push_back(column(index));
+    }
+    return Row{std::move(names), std::move(values)};
+}
 
+} // namespace vulpes::db

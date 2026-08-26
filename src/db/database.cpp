@@ -1,6 +1,7 @@
 #include "vulpes/db/database.hpp"
 
 #include "vulpes/core/error.hpp"
+#include "sqlite_error.hpp"
 
 #include <sqlite3.h>
 
@@ -28,7 +29,7 @@ Database::Database(const std::filesystem::path& path, OpenMode mode) {
         const std::string message = handle_ ? sqlite3_errmsg(handle_) : "unable to allocate SQLite connection";
         sqlite3_close(handle_);
         handle_ = nullptr;
-        throw Error{ErrorCategory::database, message, result};
+        throw detail::sqlite_error(nullptr, result, message);
     }
     sqlite3_extended_result_codes(handle_, 1);
     sqlite3_busy_timeout(handle_, 5'000);
@@ -51,7 +52,7 @@ auto Database::prepare(std::string_view sql) -> Statement {
     sqlite3_stmt* statement{};
     const int result = sqlite3_prepare_v2(handle_, sql.data(), static_cast<int>(sql.size()), &statement, nullptr);
     if (result != SQLITE_OK) {
-        throw Error{ErrorCategory::database, sqlite3_errmsg(handle_), result};
+        throw detail::sqlite_error(handle_, result);
     }
     return Statement{statement};
 }
@@ -63,11 +64,12 @@ void Database::execute(std::string_view sql) {
     if (result != SQLITE_OK) {
         const std::string message = error_message ? error_message : sqlite3_errmsg(handle_);
         sqlite3_free(error_message);
-        throw Error{ErrorCategory::database, message, result};
+        throw detail::sqlite_error(handle_, result, message);
     }
 }
 
 auto Database::changes() const noexcept -> int { return sqlite3_changes(handle_); }
 auto Database::last_insert_rowid() const noexcept -> std::int64_t { return sqlite3_last_insert_rowid(handle_); }
+auto Database::in_transaction() const noexcept -> bool { return sqlite3_get_autocommit(handle_) == 0; }
 
 } // namespace vulpes::db

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/db/value.hpp"
+#include "vulpes/db/row.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -30,10 +31,10 @@ public:
     [[nodiscard]] auto column_count() const -> int;
     [[nodiscard]] auto column_name(int index) const -> std::string_view;
     [[nodiscard]] auto column(int index) const -> Value;
+    [[nodiscard]] auto row() const -> Row;
 
 private:
     sqlite3_stmt* statement_{};
 };
 
 } // namespace vulpes::db
-

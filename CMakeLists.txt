@@ -26,10 +26,13 @@ endif()
 
 add_library(vulpes_core
     src/db/database.cpp
+    src/db/identifier.cpp
+    src/db/row.cpp
     src/db/schema.cpp
     src/db/statement.cpp
     src/db/transaction.cpp
     src/db/value.cpp
+    src/model/dataset.cpp
     src/terminal/screen_buffer.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)
@@ -53,4 +56,3 @@ install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
-

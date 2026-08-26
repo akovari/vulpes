@@ -31,10 +31,10 @@ public:
     [[nodiscard]] auto as_string() const -> const std::string&;
     [[nodiscard]] auto as_blob() const -> std::span<const std::byte>;
     [[nodiscard]] auto storage() const noexcept -> const Storage& { return storage_; }
+    auto operator==(const Value&) const -> bool = default;
 
 private:
     Storage storage_{};
 };
 
 } // namespace vulpes::db
-

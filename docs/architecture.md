@@ -60,9 +60,10 @@ is initially five seconds and will become configuration.
 
 ### Data paging
 
-The dataset layer will own paging and row identity. Widgets will request logical
-rows and never assemble SQL. Keyset paging is preferred when a stable unique
-ordering exists; a bounded OFFSET fallback is acceptable otherwise.
+The dataset layer owns paging, row identity, filters, ordering, and owning row
+snapshots. Widgets request logical rows and never assemble SQL. Current bounded
+OFFSET paging is deliberately behind this boundary; keyset paging is the next
+optimization when a stable unique ordering is available. See ADR 0001.
 
 ### Terminal rendering
 
@@ -79,4 +80,3 @@ Unicode-width dependency must be selected before text layout is implemented.
 - Lua runtime and sandbox policy.
 
 Each requires a focused cross-platform spike and an ADR before adoption.
-
