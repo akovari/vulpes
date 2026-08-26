@@ -22,10 +22,16 @@ localized strings. It is a replaceable implementation of `Terminal`.
 
 ## Current limitations
 
-- Unix arrow/home/end/page navigation is normalized; non-ASCII text input is not
-  decoded yet because browse does not accept text entry.
+- Unix arrow/home/end/page navigation and UTF-8 character input are normalized;
+  more complete function-key, modified-key, and terminal capability support is
+  pending.
 - Resize is checked before every frame. Signal-driven redraw and more complete
   terminal capability negotiation are pending.
 - Real host testing is manual; deterministic behavior is covered through
   `TestTerminal`, frame-diff, and browse-controller tests.
 
+## Consequences
+
+- Unix input decodes UTF-8 into one normalized character event. Ctrl+A through
+  Ctrl+Z normalize to their printable base character with the `ctrl` modifier,
+  matching Windows Console behavior for semantic actions such as Ctrl+C.

@@ -3,9 +3,12 @@
 #include "vulpes/core/error.hpp"
 #include "vulpes/terminal/ansi_encoder.hpp"
 #include "vulpes/terminal/frame_diff.hpp"
+#include "vulpes/terminal/unicode.hpp"
 
+#include <array>
 #include <iostream>
 #include <stdexcept>
+#include <utf8proc.h>
 #include <utility>
 
 #ifdef _WIN32
@@ -92,6 +95,34 @@ namespace {
         return Key::unknown;
     }
 }
+#else
+[[nodiscard]] auto read_utf8_character(unsigned char first) -> char32_t {
+    if (first < 0x80U)
+        return static_cast<char32_t>(first);
+
+    int length = 0;
+    if ((first & 0xE0U) == 0xC0U)
+        length = 2;
+    else if ((first & 0xF0U) == 0xE0U)
+        length = 3;
+    else if ((first & 0xF8U) == 0xF0U)
+        length = 4;
+    else
+        return U'\uFFFD';
+
+    std::array<utf8proc_uint8_t, 4> bytes{};
+    bytes.front() = first;
+    for (int index = 1; index < length; ++index) {
+        char byte{};
+        if (read(STDIN_FILENO, &byte, 1) != 1)
+            throw Error{ErrorCategory::terminal, "unable to read UTF-8 terminal input"};
+        bytes[static_cast<std::size_t>(index)] = static_cast<unsigned char>(byte);
+    }
+
+    utf8proc_int32_t code_point{};
+    const auto consumed = utf8proc_iterate(bytes.data(), length, &code_point);
+    return consumed == length ? static_cast<char32_t>(code_point) : U'\uFFFD';
+}
 #endif
 
 } // namespace
@@ -167,11 +198,15 @@ auto ConsoleTerminal::read_event() -> InputEvent {
         const auto& event = record.Event.KeyEvent;
         const DWORD modifiers = event.dwControlKeyState;
         KeyEvent key;
-        key.character = event.uChar.UnicodeChar;
-        key.key = key.character != U'\0' ? Key::character : map_key(event.wVirtualKeyCode);
         key.ctrl = (modifiers & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) != 0;
         key.alt = (modifiers & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) != 0;
         key.shift = (modifiers & SHIFT_PRESSED) != 0;
+        key.character = event.uChar.UnicodeChar;
+        key.key = map_key(event.wVirtualKeyCode);
+        if (key.key == Key::unknown && key.ctrl)
+            key.character = normalize_control_character(key.character);
+        if (key.key == Key::unknown)
+            key.key = key.character != U'\0' ? Key::character : Key::unknown;
         return key;
     }
     throw Error{ErrorCategory::terminal, "unable to read Windows console input"};
@@ -222,9 +257,11 @@ auto ConsoleTerminal::read_event() -> InputEvent {
         return KeyEvent{.key = Key::tab};
     if (byte == 127)
         return KeyEvent{.key = Key::backspace};
+    const auto character = read_utf8_character(static_cast<unsigned char>(byte));
+    const bool control = character < U' ';
     return KeyEvent{.key = Key::character,
-                    .character = static_cast<unsigned char>(byte),
-                    .ctrl = static_cast<unsigned char>(byte) < 32};
+                    .character = control ? normalize_control_character(character) : character,
+                    .ctrl = control};
 #endif
 }
 

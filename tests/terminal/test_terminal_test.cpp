@@ -35,3 +35,10 @@ TEST_CASE("test terminal queues normalized input and captures frames", "[termina
     REQUIRE(terminal.frames().size() == 1);
     CHECK(terminal.frames().front().cell(0, 0).glyph == U'V');
 }
+
+TEST_CASE("control characters normalize to semantic keyboard chords", "[terminal][input]") {
+    CHECK(normalize_control_character(U'\x01') == U'a');
+    CHECK(normalize_control_character(U'\x03') == U'c');
+    CHECK(normalize_control_character(U'\x1A') == U'z');
+    CHECK(normalize_control_character(U'Ž') == U'Ž');
+}

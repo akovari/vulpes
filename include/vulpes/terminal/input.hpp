@@ -41,6 +41,13 @@ struct KeyEvent {
     bool shift{false};
 };
 
+// Terminal hosts commonly report Ctrl+A through Ctrl+Z as ASCII control bytes.
+// Normalize those bytes to their printable base character while retaining the
+// modifier, so application actions do not depend on host-specific encodings.
+[[nodiscard]] constexpr auto normalize_control_character(char32_t character) noexcept -> char32_t {
+    return character >= U'\x01' && character <= U'\x1A' ? U'a' + (character - U'\x01') : character;
+}
+
 struct ResizeEvent {
     int width{};
     int height{};
