@@ -19,9 +19,25 @@ Run `clang-format -i --style=file <files>` to format selected files. When
 `format-check` targets instead. Visual Studio 2026 includes `clang-format`;
 its x64 executable is under `VC\Tools\Llvm\x64\bin` in a standard install.
 
-The `Format` GitHub workflow checks every push and pull request. `clang-tidy` is
-intentionally not enabled yet; it will be introduced as a separate, reviewed
-static-analysis policy rather than quietly changing formatting behavior.
+The `Format` GitHub workflow checks every push and pull request.
+
+### Static analysis
+
+`.clang-tidy` defines a deliberately narrow reviewed baseline: correctness and
+performance checks that do not impose stylistic churn or a project-wide
+ownership model prematurely. CMake exposes it as the `tidy` target when
+`clang-tidy` is available:
+
+```powershell
+cmake --preset windows-tidy
+cmake --build --preset windows-tidy
+cmake --build build/windows-tidy --target tidy
+```
+
+The dedicated single-config preset avoids multi-config compilation-database
+entries that refer to configuration-specific compiler module files. It is kept
+separate from normal builds so contributors can upgrade or review its policy
+explicitly.
 
 ### Pre-commit hook
 

@@ -13,7 +13,7 @@ on Windows, Linux, and macOS.
 - [ ] Confirm the first CI run on all platforms.
 - [x] Add enforced `clang-format` configuration, CMake targets, and CI check.
 - [x] Add an opt-in pre-commit hook for staged C/C++ formatting.
-- [ ] Add reviewed `clang-tidy` checks and static-analysis presets.
+- [x] Add reviewed `clang-tidy` checks and a static-analysis target.
 - [ ] Add release metadata generated from Git tags.
 
 ## M1 — Safe SQLite foundation

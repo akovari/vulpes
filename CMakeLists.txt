@@ -8,6 +8,8 @@ include(CTest)
 option(VULPES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22)
+find_program(VULPES_CLANG_TIDY NAMES clang-tidy clang-tidy-22
+    HINTS "$ENV{VSINSTALLDIR}/VC/Tools/Llvm/x64/bin" "$ENV{VCToolsInstallDir}/../../Llvm/x64/bin")
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
@@ -98,4 +100,16 @@ if(VULPES_CLANG_FORMAT)
         COMMENT "Checking Vulpes C++ formatting")
 else()
     message(STATUS "clang-format not found; format targets are unavailable")
+endif()
+
+if(VULPES_CLANG_TIDY)
+    file(GLOB_RECURSE VULPES_TIDY_FILES CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/src/*.cpp"
+        "${PROJECT_SOURCE_DIR}/tests/*.cpp")
+    add_custom_target(tidy
+        COMMAND ${VULPES_CLANG_TIDY} -p ${CMAKE_BINARY_DIR} --config-file=${PROJECT_SOURCE_DIR}/.clang-tidy ${VULPES_TIDY_FILES}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running Vulpes clang-tidy checks")
+else()
+    message(STATUS "clang-tidy not found; tidy target is unavailable")
 endif()
