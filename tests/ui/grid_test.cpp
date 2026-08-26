@@ -22,3 +22,26 @@ TEST_CASE("grid renders dataset fields and selected row to logical cells", "[ui]
     CHECK(buffer.cell(1, 3).glyph == U'1');
     CHECK(buffer.cell(1, 3).style.reverse);
 }
+
+TEST_CASE("grid selects and scrolls columns independently of dataset navigation", "[ui][grid]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE sample(id INTEGER PRIMARY KEY, first TEXT, second TEXT, third TEXT, fourth TEXT);"
+                     "INSERT INTO sample VALUES (1, 'a', 'b', 'c', 'd')");
+    const auto schema = vulpes::db::inspect_schema(database).front();
+    vulpes::model::Dataset dataset{database, schema};
+    vulpes::ui::Grid grid{dataset, "Sample"};
+
+    CHECK_FALSE(grid.move_left());
+    REQUIRE(grid.move_right());
+    REQUIRE(grid.move_right());
+    CHECK(grid.selected_column_index() == 2);
+    CHECK(grid.first_visible_column_index() == 0);
+
+    vulpes::terminal::ScreenBuffer buffer{14, 8};
+    grid.render(buffer, {0, 0, 14, 8});
+    CHECK(grid.first_visible_column_index() == 1);
+    CHECK(buffer.cell(8, 1).style.underline);
+
+    CHECK(grid.move_left());
+    CHECK(grid.selected_column_index() == 1);
+}

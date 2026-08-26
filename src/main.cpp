@@ -57,7 +57,14 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
         terminal.present(previous, current);
         previous = current;
-        if (controller.handle(terminal.read_event()) == vulpes::core::BrowseResult::close)
+        const auto event = terminal.read_event();
+        if (const auto* key = std::get_if<vulpes::terminal::KeyEvent>(&event); key != nullptr) {
+            if (key->key == vulpes::terminal::Key::left && grid.move_left())
+                continue;
+            if (key->key == vulpes::terminal::Key::right && grid.move_right())
+                continue;
+        }
+        if (controller.handle(event) == vulpes::core::BrowseResult::close)
             return;
     }
 }

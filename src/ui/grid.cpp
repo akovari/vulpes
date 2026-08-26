@@ -41,19 +41,62 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 Grid::Grid(const model::Dataset& dataset, std::string title) : dataset_{&dataset}, title_{std::move(title)} {
 }
 
-void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
+auto Grid::move_left() -> bool {
+    if (selected_column_ == 0)
+        return false;
+    --selected_column_;
+    first_visible_column_ = std::min(first_visible_column_, selected_column_);
+    return true;
+}
+
+auto Grid::move_right() -> bool {
+    std::size_t field_count{};
+    for (const auto& field : dataset_->schema().fields) {
+        if (!field.hidden)
+            ++field_count;
+    }
+    if (selected_column_ + 1 >= field_count)
+        return false;
+    ++selected_column_;
+    return true;
+}
+
+void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     if (bounds.width < 4 || bounds.height < 5 || bounds.x < 0 || bounds.y < 0 ||
         bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
         return;
 
-    std::vector<const db::FieldSchema*> fields;
+    std::vector<const db::FieldSchema*> all_fields;
     for (const auto& field : dataset_->schema().fields)
         if (!field.hidden)
-            fields.push_back(&field);
-    if (fields.empty())
+            all_fields.push_back(&field);
+    if (all_fields.empty())
         return;
 
     const int interior_width = bounds.width - 2;
+    auto visible_fields = [&](std::size_t first_visible) {
+        std::vector<const db::FieldSchema*> fields;
+        constexpr int minimum_column_width = 4;
+        for (std::size_t index = first_visible; index < all_fields.size(); ++index) {
+            const auto candidate_count = static_cast<int>(fields.size()) + 1;
+            const int candidate_content_width = interior_width - candidate_count + 1;
+            if (candidate_content_width / candidate_count < minimum_column_width)
+                break;
+            fields.push_back(all_fields[index]);
+        }
+        return fields;
+    };
+
+    auto first_visible = std::min(first_visible_column_, all_fields.size() - 1);
+    auto fields = visible_fields(first_visible);
+    while (selected_column_ >= first_visible + fields.size() && first_visible < selected_column_) {
+        ++first_visible;
+        fields = visible_fields(first_visible);
+    }
+    first_visible_column_ = first_visible;
+    if (fields.empty())
+        return;
+
     const int content_width = interior_width - static_cast<int>(fields.size()) + 1;
     if (content_width < static_cast<int>(fields.size()))
         return;
@@ -73,7 +116,8 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     int x = bounds.x + 1;
     for (std::size_t index = 0; index < fields.size(); ++index) {
         const int width = base_width + (static_cast<int>(index) < remainder ? 1 : 0);
-        write_padded(buffer, x, header_y, width, fields[index]->name, terminal::Style{.bold = true});
+        const terminal::Style header_style{.bold = true, .underline = first_visible + index == selected_column_};
+        write_padded(buffer, x, header_y, width, fields[index]->name, header_style);
         x += width;
         buffer.put(x++, header_y, U'|');
     }
@@ -86,9 +130,12 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         buffer.put(bounds.x, y, U'|');
         x = bounds.x + 1;
         const auto row_exists = static_cast<std::size_t>(row_index) < dataset_->rows().size();
-        const terminal::Style style{.reverse = selected && *selected == static_cast<std::size_t>(row_index)};
         for (std::size_t field_index = 0; field_index < fields.size(); ++field_index) {
             const int width = base_width + (static_cast<int>(field_index) < remainder ? 1 : 0);
+            const terminal::Style style{
+                .underline = first_visible + field_index == selected_column_,
+                .reverse = selected && *selected == static_cast<std::size_t>(row_index),
+            };
             const auto text =
                 row_exists
                     ? display_value(dataset_->rows()[static_cast<std::size_t>(row_index)].at(fields[field_index]->name))

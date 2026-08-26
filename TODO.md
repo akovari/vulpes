@@ -58,7 +58,7 @@ on Windows, Linux, and macOS.
 - [x] Implement static grid layout and logical-cell tests.
 - [x] Bind grid rows to a read-only dataset.
 - [x] Add selected-row state, vertical navigation, and dataset paging.
-- [ ] Add horizontal grid navigation and scrolling.
+- [x] Add horizontal grid navigation and scrolling.
 - [x] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
 - [ ] Add safe sorting, filtering, searching, and refresh.
 - [ ] Reuse Grid for a multiline SQL console.
