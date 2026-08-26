@@ -84,6 +84,14 @@ The initial inference is intentionally conservative: binary and generated data
 are read-only, numeric declarations get numeric parsing, and boolean hints are
 limited to explicit types and well-known field names. See ADR 0006.
 
+### Destructive confirmation
+
+`ui::ConfirmationDialog` is a reusable semantic dialog whose default selection
+is cancel. It has no database dependency and receives all visible strings from
+the presentation caller. Browse uses it before delegating deletion to
+`Dataset::erase`; the dataset remains responsible for transactional execution
+and stable primary-key identity. See ADR 0008.
+
 ### Commands
 
 The command parser produces stable `CommandId` values. `ApplicationRuntime`

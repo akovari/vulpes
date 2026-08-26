@@ -65,6 +65,10 @@ the selected field's declared numeric type, accept `=`, `!=`, `<>`, `<`, `<=`,
 or filter input clears its respective constraint. Values are still bound as
 SQLite parameters; the TUI never interpolates user input into SQL.
 
+`Delete` opens a confirmation dialog that defaults to **Cancel**; choose Delete
+with Left/Right or `Y`, then press Enter. Deletion uses the same transactional,
+primary-key-guarded dataset operation as other writes.
+
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.

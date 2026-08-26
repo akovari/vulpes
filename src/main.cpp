@@ -8,6 +8,7 @@
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/confirmation_dialog.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/ui/text_prompt.hpp"
@@ -172,6 +173,29 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         }
     };
 
+    const auto confirm_delete = [&] {
+        vulpes::ui::ConfirmationDialog dialog{messages.translate("browse.delete_title"),
+                                              messages.translate("browse.delete_message", {{"table", table.name}}),
+                                              messages.translate("dialog.delete"), messages.translate("dialog.cancel"),
+                                              messages.translate("dialog.select")};
+        for (;;) {
+            update_terminal_size();
+            current.clear();
+            grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
+            constexpr int dialog_height = 6;
+            const int dialog_width = (std::min)(terminal_size.width, 60);
+            dialog.render(current, {(terminal_size.width - dialog_width) / 2,
+                                    (terminal_size.height - dialog_height) / 2, dialog_width, dialog_height});
+            terminal.present(previous, current);
+            previous = current;
+            const auto result = dialog.handle(terminal.read_event());
+            if (result == vulpes::ui::ConfirmationResult::confirmed)
+                return true;
+            if (result == vulpes::ui::ConfirmationResult::cancelled)
+                return false;
+        }
+    };
+
     std::optional<std::pair<std::string, vulpes::model::SortDirection>> sort;
 
     for (;;) {
@@ -190,6 +214,11 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
             }
             if (key->key == vulpes::terminal::Key::insert_key && dataset.is_editable()) {
                 edit_record(vulpes::ui::FormMode::insert);
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::delete_key && dataset.is_editable() && dataset.current() &&
+                confirm_delete()) {
+                dataset.erase();
                 continue;
             }
             if (key->key == vulpes::terminal::Key::f3) {

@@ -10,6 +10,7 @@ add_executable(vulpes_tests
     examples/inventory_test.cpp
     model/dataset_test.cpp
     ui/form_test.cpp
+    ui/confirmation_dialog_test.cpp
     ui/grid_test.cpp
     ui/text_prompt_test.cpp
     terminal/frame_diff_test.cpp

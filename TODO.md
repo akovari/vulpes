@@ -77,7 +77,8 @@ on Windows, Linux, and macOS.
 - [x] Implement a schema-generated text, number, checkbox, and read-only record
   form with keyboard save/cancel.
 - [ ] Add button and dialog widgets, including destructive-action confirmation.
-- [ ] Add insert/edit/delete confirmation and transaction boundaries.
+- [x] Add transactional insert/edit/delete handling and destructive delete
+  confirmation.
 - [ ] Map constraint/validation failures to fields without losing edits.
 - [ ] Infer boolean-like fields conservatively.
 - [ ] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
