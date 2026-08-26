@@ -4,6 +4,7 @@
 
 #include "sqlite_error.hpp"
 
+#include <limits>
 #include <sqlite3.h>
 #include <utility>
 
@@ -61,6 +62,51 @@ auto Database::prepare(std::string_view sql) -> Statement {
         throw detail::sqlite_error(handle_, result);
     }
     return Statement{statement};
+}
+
+auto Database::run_sql(std::string_view script, std::size_t row_limit) -> SqlResult {
+    if (row_limit == 0)
+        throw Error{ErrorCategory::validation, "SQL result row limit must be greater than zero"};
+    if (script.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+        throw Error{ErrorCategory::database, "SQL script exceeds SQLite's maximum statement size"};
+
+    SqlResult result;
+    const auto* current = script.data();
+    const auto* const end = script.data() + script.size();
+    while (current < end) {
+        sqlite3_stmt* raw_statement{};
+        const char* tail{};
+        const int prepare_result =
+            sqlite3_prepare_v2(handle_, current, static_cast<int>(end - current), &raw_statement, &tail);
+        if (prepare_result != SQLITE_OK)
+            throw detail::sqlite_error(handle_, prepare_result);
+        if (tail == nullptr || tail <= current)
+            break;
+        current = tail;
+        if (raw_statement == nullptr)
+            continue;
+
+        Statement statement{raw_statement};
+        if (statement.column_count() == 0) {
+            statement.execute();
+            result.changes += changes();
+            continue;
+        }
+
+        result.columns.clear();
+        result.rows.clear();
+        result.truncated = false;
+        for (int index = 0; index < statement.column_count(); ++index)
+            result.columns.emplace_back(statement.column_name(index));
+        while (statement.step()) {
+            if (result.rows.size() == row_limit) {
+                result.truncated = true;
+                break;
+            }
+            result.rows.push_back(statement.row());
+        }
+    }
+    return result;
 }
 
 void Database::execute(std::string_view sql) {

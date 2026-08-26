@@ -75,6 +75,11 @@ keys. Vulpes infers a related display field in this order: `name`, `title`,
 first 100 related rows; Vulpes stores the underlying key. Searchable and
 metadata-configured lookups are intentionally deferred.
 
+The database layer also provides a bounded SQL execution model for the upcoming
+SQL console: it executes a script, reports affected rows, and retains owned
+rows from its final row-producing statement (up to 1,000 by default). The
+interactive console and grid adapter are the next step.
+
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.

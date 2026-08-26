@@ -125,6 +125,14 @@ comparison prefix grammar and calls `Dataset::search`, `where`, `order_by`, or
 dataset model. User-facing prompt and footer text comes from the `Localizer`,
 so adding a translation does not alter commands, actions, or database names.
 
+### SQL console boundary
+
+`Database::run_sql` is the sole arbitrary-SQL boundary. It keeps the SQLite C
+API internal, executes a complete script, and returns an owned `SqlResult` for
+the final statement with columns. Result rows are bounded to protect terminal
+renderers from accidental unbounded queries. The SQL console widget will adapt
+this result to the semantic grid rather than implement a second result table.
+
 ## Deferred decisions
 
 - Terminal library versus small native ANSI/Windows backends.

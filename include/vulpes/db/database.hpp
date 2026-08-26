@@ -2,15 +2,27 @@
 
 #include "vulpes/db/statement.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #include <string_view>
+#include <vector>
 
 struct sqlite3;
 
 namespace vulpes::db {
 
 enum class OpenMode { read_only, read_write, read_write_create };
+
+// The final tabular result produced by an arbitrary SQL script. Rows own all
+// values, so callers never depend on a prepared statement lifetime.
+struct SqlResult {
+    std::vector<std::string> columns;
+    std::vector<Row> rows;
+    int changes{};
+    bool truncated{false};
+};
 
 class Database {
   public:
@@ -23,6 +35,7 @@ class Database {
     auto operator=(Database&& other) noexcept -> Database&;
 
     [[nodiscard]] auto prepare(std::string_view sql) -> Statement;
+    [[nodiscard]] auto run_sql(std::string_view script, std::size_t row_limit = 1'000) -> SqlResult;
     void execute(std::string_view sql);
     [[nodiscard]] auto in_transaction() const noexcept -> bool;
     [[nodiscard]] auto changes() const noexcept -> int;

@@ -69,6 +69,22 @@ TEST_CASE("execute accepts a complete SQL script", "[db]") {
     CHECK(query.column(0).as_string() == "ready");
 }
 
+TEST_CASE("run_sql owns the final tabular result and bounds rows", "[db]") {
+    Database database{":memory:"};
+    const auto result = database.run_sql("CREATE TABLE sample(id INTEGER);"
+                                         "INSERT INTO sample VALUES (1), (2), (3);"
+                                         "SELECT id FROM sample ORDER BY id;",
+                                         2);
+
+    CHECK(result.changes == 3);
+    CHECK(result.columns == std::vector<std::string>{"id"});
+    REQUIRE(result.rows.size() == 2);
+    CHECK(result.rows.front().at("id").as_int() == 1);
+    CHECK(result.rows.back().at("id").as_int() == 2);
+    CHECK(result.truncated);
+    CHECK_THROWS_AS(database.run_sql("SELECT 1", 0), vulpes::Error);
+}
+
 TEST_CASE("rows own values independently from their statement", "[db]") {
     Database database{":memory:"};
     database.execute("CREATE TABLE sample(value TEXT); INSERT INTO sample VALUES ('persist');");
