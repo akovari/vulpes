@@ -65,6 +65,14 @@ on Windows, Linux, and macOS.
 - [x] Add bounded, owned SQL-script result execution for the console boundary.
 - [x] Reuse Grid for a multiline SQL console.
 
+## M4.5 — Workspace shell
+
+- [ ] Start without arguments in a keyboard-first workspace shell.
+- [ ] Add File, Database, View, Window, and Help menus with stable actions.
+- [ ] Open or create SQLite databases through a portable path-entry dialog.
+- [ ] Manage active document tabs, modal input, focus, and a status bar.
+- [ ] Host browse and SQL-console surfaces as workspace documents.
+
 ## Cross-cutting — localization
 
 - [x] Define stable message keys, locale fallback, and named message arguments.
