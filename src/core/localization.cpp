@@ -62,8 +62,15 @@ auto english_catalog() -> MessageCatalog {
     return {
         {"application.title", "Vulpes"},
         {"application.unknown_command", "Unknown command. Type help for available commands."},
+        {"command.help", "Commands: help, tables, schema <table>, browse <table>, quit"},
         {"database.tables", "Tables and views"},
+        {"error.invalid_command_arguments", "Invalid arguments for '{command}'."},
         {"error.unknown_table", "No table or view named '{name}'."},
+        {"schema.generated", "generated"},
+        {"schema.not_null", "not null"},
+        {"schema.primary_key", "primary key"},
+        {"schema.title", "Schema: {name}"},
+        {"schema.unique", "unique"},
     };
 }
 

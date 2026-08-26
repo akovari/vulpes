@@ -1,4 +1,6 @@
+#include "vulpes/core/application.hpp"
 #include "vulpes/core/browse_controller.hpp"
+#include "vulpes/core/command.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/database.hpp"
@@ -13,6 +15,7 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #ifdef _WIN32
@@ -58,22 +61,66 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     }
 }
 
-auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name) -> int {
+void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Localizer& messages) {
+    std::cout << messages.translate("schema.title", {{"name", table.name}}) << '\n';
+    for (const auto& field : table.fields) {
+        std::cout << "  " << field.name;
+        if (!field.declared_type.empty())
+            std::cout << " : " << field.declared_type;
+        if (!field.nullable)
+            std::cout << " [" << messages.translate("schema.not_null") << ']';
+        if (field.primary_key)
+            std::cout << " [" << messages.translate("schema.primary_key") << ']';
+        if (field.unique)
+            std::cout << " [" << messages.translate("schema.unique") << ']';
+        if (field.generated)
+            std::cout << " [" << messages.translate("schema.generated") << ']';
+        std::cout << '\n';
+    }
+}
+
+auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
+         const std::optional<std::string>& command_source) -> int {
     vulpes::db::Database database{database_path};
-    const auto schema = vulpes::db::inspect_schema(database);
     vulpes::core::Localizer messages;
+    vulpes::core::ApplicationRuntime application{database};
     std::cout << messages.translate("application.title") << " " << VULPES_VERSION << "\n\n";
-    if (table_name) {
-        const auto found = std::ranges::find(schema, *table_name, &vulpes::db::TableSchema::name);
-        if (found == schema.end()) {
-            throw vulpes::Error{vulpes::ErrorCategory::validation,
-                                messages.translate("error.unknown_table", {{"name", *table_name}})};
-        }
-        browse(database, *found);
-    } else {
+
+    vulpes::core::Command command{.id = vulpes::core::CommandId::tables};
+    if (table_name)
+        command = {.id = vulpes::core::CommandId::browse, .arguments = {*table_name}};
+    else if (command_source)
+        command = vulpes::core::parse_command(*command_source);
+
+    const auto response = application.execute(command);
+    switch (response.outcome) {
+    case vulpes::core::CommandOutcome::help:
+        std::cout << messages.translate("command.help") << '\n';
+        break;
+    case vulpes::core::CommandOutcome::tables:
         std::cout << messages.translate("database.tables") << ":\n";
-        for (const auto& table : schema)
+        for (const auto& table : response.tables)
             std::cout << "  " << table.name << (table.is_view ? " [view]" : "") << '\n';
+        break;
+    case vulpes::core::CommandOutcome::schema:
+        print_schema(*response.table, messages);
+        break;
+    case vulpes::core::CommandOutcome::browse:
+        browse(database, *response.table);
+        break;
+    case vulpes::core::CommandOutcome::quit:
+        break;
+    case vulpes::core::CommandOutcome::unknown_command:
+        std::cerr << messages.translate("application.unknown_command") << '\n';
+        return 1;
+    case vulpes::core::CommandOutcome::invalid_arguments:
+        std::cerr << messages.translate("error.invalid_command_arguments",
+                                        {{"command", std::string{vulpes::core::action_id(response.command)}}})
+                  << '\n';
+        return 1;
+    case vulpes::core::CommandOutcome::table_not_found:
+        std::cerr << messages.translate("error.unknown_table", {{"name", command.arguments.front()}}) << '\n';
+        return 1;
     }
     return 0;
 }
@@ -91,9 +138,12 @@ auto main(int argc, char** argv) -> int {
         bool version = false;
         std::string database_argument;
         std::string table_name;
+        std::string command_source;
         app.add_flag("--version", version, "Show Vulpes version and exit");
         app.add_option("database", database_argument, "SQLite database path");
-        app.add_option("--table", table_name, "Inspect one table or view");
+        const auto table_option = app.add_option("--table", table_name, "Browse one table or view");
+        const auto command_option = app.add_option("--command", command_source, "Run one Vulpes command and exit");
+        table_option->excludes(command_option);
         app.set_help_flag("-h,--help", "Show this help and exit");
         try {
             app.parse(argc, argv);
@@ -111,7 +161,8 @@ auto main(int argc, char** argv) -> int {
         }
 
         return run(std::filesystem::path{database_argument},
-                   table_name.empty() ? std::nullopt : std::optional{table_name});
+                   table_name.empty() ? std::nullopt : std::optional{table_name},
+                   command_source.empty() ? std::nullopt : std::optional{command_source});
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;

@@ -22,6 +22,8 @@ forward-declare opaque SQLite types where ownership requires it.
 ## Source layout
 
 - `include/vulpes/core`: shared errors and application-level primitives.
+- `ApplicationRuntime` in `core` translates parsed semantic commands into data
+  results; it has no terminal or widget dependency.
 - `include/vulpes/db`, `src/db`: SQLite ownership, values, statements,
   transactions, and UI-independent schema discovery.
 - `include/vulpes/model`, `src/model`: datasets, fields, relationships, and
@@ -69,6 +71,14 @@ Current bounded OFFSET paging is deliberately behind this boundary; keyset
 paging is the next optimization when a stable unique ordering is available.
 Dataset writes are transactional and schema-validated; see ADR 0001 and ADR
 0005.
+
+### Commands
+
+The command parser produces stable `CommandId` values. `ApplicationRuntime`
+validates command arity and resolves schema objects, then returns a semantic
+`CommandResponse` for the caller to localize and render. The executable's
+`--command` option is a non-interactive adapter; a later command-line widget
+will use the same runtime rather than execute SQLite directly.
 
 ### Terminal rendering
 

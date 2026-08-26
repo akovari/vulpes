@@ -44,7 +44,13 @@ To exercise the first schema-listing vertical slice after creating a database:
 ```powershell
 sqlite3 inventory.db ".read examples/inventory/schema.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db
+.\build\windows-msvc\Debug\vulpes.exe inventory.db --command "schema products"
+.\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
 ```
+
+`--command` currently accepts `help`, `tables`, `schema <table>`, `browse
+<table>`, and `quit`. It is a non-interactive bridge to the same application
+command dispatcher that will power the in-app command window.
 
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
 and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.

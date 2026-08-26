@@ -59,7 +59,7 @@ on Windows, Linux, and macOS.
 - [x] Bind grid rows to a read-only dataset.
 - [x] Add selected-row state, vertical navigation, and dataset paging.
 - [ ] Add horizontal grid navigation and scrolling.
-- [ ] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
+- [x] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
 - [ ] Add safe sorting, filtering, searching, and refresh.
 - [ ] Reuse Grid for a multiline SQL console.
 
