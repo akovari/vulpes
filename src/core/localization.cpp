@@ -111,6 +111,8 @@ auto english_catalog() -> MessageCatalog {
         {"dialog.cancel", "Cancel"},
         {"dialog.delete", "Delete"},
         {"dialog.select", "Left/Right Select   Enter Apply   Esc Cancel"},
+        {"form.instructions", "F8 Save   Esc Cancel   Left/Right Lookup"},
+        {"prompt.instructions", "Enter Apply   Esc Cancel"},
         {"command.help", "Commands: help, tables, schema <table>, browse <table>, quit"},
         {"database.tables", "Tables and views"},
         {"error.invalid_command_arguments", "Invalid arguments for '{command}'."},

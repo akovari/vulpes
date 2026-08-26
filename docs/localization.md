@@ -4,6 +4,11 @@ Vulpes keeps stable message keys in code and translates only at presentation
 boundaries. Commands, actions, field names, and database identifiers are never
 localized identifiers.
 
+Semantic UI widgets receive their visible instructions from their caller rather
+than hard-coding English: the browse footer, prompts, record-form instructions,
+and destructive dialogs therefore use catalog messages. Schema field names are
+still the default labels; metadata-provided localized labels are a later layer.
+
 ## Catalog format
 
 Catalogs are UTF-8 JSON files with a BCP-47 locale and a flat message map:

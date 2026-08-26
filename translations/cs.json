@@ -11,6 +11,8 @@
     "dialog.cancel": "Zrušit",
     "dialog.delete": "Odstranit",
     "dialog.select": "Vlevo/Vpravo Vybrat   Enter Potvrdit   Esc Zrušit",
+    "form.instructions": "F8 Uložit   Esc Zrušit   Vlevo/Vpravo Výběr",
+    "prompt.instructions": "Enter Potvrdit   Esc Zrušit",
     "command.help": "Příkazy: help, tables, schema <tabulka>, browse <tabulka>, quit",
     "database.tables": "Tabulky a pohledy",
     "error.invalid_command_arguments": "Neplatné argumenty příkazu '{command}'.",

@@ -20,7 +20,7 @@ auto form_dataset(vulpes::db::Database& database) -> vulpes::model::Dataset {
 TEST_CASE("generated form infers controls and persists keyboard edits", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     auto dataset = form_dataset(database);
-    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit};
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save"};
 
     REQUIRE(form.fields().size() == 4);
     CHECK(form.fields()[0].kind == vulpes::ui::FormFieldKind::read_only);
@@ -42,7 +42,7 @@ TEST_CASE("generated form infers controls and persists keyboard edits", "[ui][fo
 TEST_CASE("generated form cancels drafts and renders logical cells", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     auto dataset = form_dataset(database);
-    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit};
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save"};
     vulpes::terminal::ScreenBuffer buffer{40, 10};
 
     form.render(buffer, {0, 0, 40, 10});
@@ -57,7 +57,7 @@ TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     database.execute("CREATE TABLE document(id INTEGER PRIMARY KEY, contents BLOB)");
     vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front()};
-    vulpes::ui::RecordForm form{dataset, "New document", vulpes::ui::FormMode::insert};
+    vulpes::ui::RecordForm form{dataset, "New document", vulpes::ui::FormMode::insert, "F8 Save"};
 
     REQUIRE(form.fields().size() == 2);
     CHECK(form.fields()[1].name == "contents");
@@ -74,7 +74,7 @@ TEST_CASE("generated form selects a foreign key by its inferred display field", 
     const auto job = std::ranges::find(schemas, "job", &vulpes::db::TableSchema::name);
     REQUIRE(job != schemas.end());
     vulpes::model::Dataset dataset{database, *job};
-    vulpes::ui::RecordForm form{dataset, "New job", vulpes::ui::FormMode::insert};
+    vulpes::ui::RecordForm form{dataset, "New job", vulpes::ui::FormMode::insert, "F8 Save"};
 
     REQUIRE(form.fields().at(1).kind == vulpes::ui::FormFieldKind::lookup);
     CHECK(form.fields().at(1).lookup_options.at(0).label == "Acme");

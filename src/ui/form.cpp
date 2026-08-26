@@ -56,8 +56,8 @@ void erase_last_code_point(std::string& text) {
 
 } // namespace
 
-RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode)
-    : dataset_{&dataset}, title_{std::move(title)} {
+RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions)
+    : dataset_{&dataset}, title_{std::move(title)}, instructions_{std::move(instructions)} {
     if (mode == FormMode::insert)
         dataset_->begin_insert();
     else
@@ -178,7 +178,7 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     }
     const int footer_y = bounds.y + bounds.height - 2;
     buffer.put(bounds.x, footer_y, U'|');
-    write_padded(buffer, bounds.x + 2, footer_y, interior - 2, error_.empty() ? "F8 Save   Esc Cancel" : error_);
+    write_padded(buffer, bounds.x + 2, footer_y, interior - 2, error_.empty() ? instructions_ : error_);
     buffer.put(bounds.x + bounds.width - 1, footer_y, U'|');
     border(bounds.y + bounds.height - 1);
 }

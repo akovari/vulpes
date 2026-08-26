@@ -24,8 +24,8 @@ void erase_last_code_point(std::string& text) {
 
 } // namespace
 
-TextPrompt::TextPrompt(std::string label, std::string initial_value)
-    : label_{std::move(label)}, value_{std::move(initial_value)} {
+TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value)
+    : label_{std::move(label)}, instructions_{std::move(instructions)}, value_{std::move(initial_value)} {
 }
 
 void TextPrompt::set_error(std::string message) {
@@ -70,7 +70,7 @@ void TextPrompt::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     }
     write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, label_);
     write_padded(buffer, bounds.x + 1, bounds.y + 2, interior, "> " + value_, {.reverse = true});
-    write_padded(buffer, bounds.x + 1, bounds.y + 3, interior, error_.empty() ? "Enter Apply   Esc Cancel" : error_);
+    write_padded(buffer, bounds.x + 1, bounds.y + 3, interior, error_.empty() ? instructions_ : error_);
 
     const int bottom = bounds.y + bounds.height - 1;
     buffer.put(bounds.x, bottom, U'+');

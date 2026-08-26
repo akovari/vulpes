@@ -134,8 +134,9 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     };
 
     const auto edit_record = [&](vulpes::ui::FormMode mode) {
-        vulpes::ui::RecordForm form{
-            dataset, mode == vulpes::ui::FormMode::edit ? "Edit " + table.name : "New " + table.name, mode};
+        vulpes::ui::RecordForm form{dataset,
+                                    mode == vulpes::ui::FormMode::edit ? "Edit " + table.name : "New " + table.name,
+                                    mode, messages.translate("form.instructions")};
         for (;;) {
             update_terminal_size();
             current.clear();
@@ -149,7 +150,7 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     };
 
     const auto prompt = [&](std::string label, auto&& apply) {
-        vulpes::ui::TextPrompt text_prompt{std::move(label)};
+        vulpes::ui::TextPrompt text_prompt{std::move(label), messages.translate("prompt.instructions")};
         for (;;) {
             update_terminal_size();
             current.clear();

@@ -14,7 +14,7 @@ enum class PromptResult { unchanged, redraw, submitted, cancelled };
 // submitted text, keeping command, filter, and search parsing out of widgets.
 class TextPrompt {
   public:
-    explicit TextPrompt(std::string label, std::string initial_value = {});
+    TextPrompt(std::string label, std::string instructions, std::string initial_value = {});
 
     [[nodiscard]] auto value() const noexcept -> std::string_view { return value_; }
     void set_error(std::string message);
@@ -23,6 +23,7 @@ class TextPrompt {
 
   private:
     std::string label_;
+    std::string instructions_;
     std::string value_;
     std::string error_;
 };

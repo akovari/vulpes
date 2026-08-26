@@ -28,7 +28,7 @@ struct FormField {
 // text input but delegates validation and persistence to Dataset.
 class RecordForm {
   public:
-    RecordForm(model::Dataset& dataset, std::string title, FormMode mode);
+    RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions);
 
     [[nodiscard]] auto fields() const noexcept -> const std::vector<FormField>& { return fields_; }
     [[nodiscard]] auto selected_field_index() const noexcept -> std::size_t { return selected_field_; }
@@ -46,6 +46,7 @@ class RecordForm {
 
     model::Dataset* dataset_;
     std::string title_;
+    std::string instructions_;
     std::vector<FormField> fields_;
     std::vector<bool> changed_;
     std::size_t selected_field_{};

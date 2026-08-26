@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("text prompt edits Unicode text and exposes its terminal-independent state", "[ui][prompt]") {
-    vulpes::ui::TextPrompt prompt{"Search"};
+    vulpes::ui::TextPrompt prompt{"Search", "Enter Apply"};
     CHECK(prompt.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'A'}) ==
           vulpes::ui::PromptResult::redraw);
     static_cast<void>(
