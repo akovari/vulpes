@@ -8,6 +8,21 @@
 4. Add unit tests for every core behavior and regression.
 5. Update `TODO.md` when scope or sequencing changes.
 
+## Formatting
+
+`.clang-format` is the canonical style definition. It uses `clang-format` to
+enforce layout and regroup includes as project headers, other quoted headers, and
+system/third-party headers. Do not hand-sort includes.
+
+Run `clang-format -i --style=file <files>` to format selected files. When
+`clang-format` is on `PATH` during CMake configuration, use the `format` and
+`format-check` targets instead. Visual Studio 2026 includes `clang-format`;
+its x64 executable is under `VC\Tools\Llvm\x64\bin` in a standard install.
+
+The `Format` GitHub workflow checks every push and pull request. `clang-tidy` is
+intentionally not enabled yet; it will be introduced as a separate, reviewed
+static-analysis policy rather than quietly changing formatting behavior.
+
 Enable `VULPES_WARNINGS_AS_ERRORS` in CI once all supported compiler versions
 produce a clean and stable warning set.
 

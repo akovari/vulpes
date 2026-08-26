@@ -10,4 +10,3 @@ namespace vulpes::db::detail {
 [[nodiscard]] auto quote_identifier(std::string_view identifier) -> std::string;
 
 } // namespace vulpes::db::detail
-

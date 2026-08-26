@@ -10,20 +10,21 @@ namespace vulpes::db {
 auto TableSchema::primary_key_fields() const -> std::vector<std::string> {
     std::vector<const FieldSchema*> key_fields;
     for (const auto& field : fields) {
-        if (field.primary_key) key_fields.push_back(&field);
+        if (field.primary_key)
+            key_fields.push_back(&field);
     }
     std::ranges::sort(key_fields, {}, &FieldSchema::primary_key_position);
     std::vector<std::string> result;
     result.reserve(key_fields.size());
-    for (const auto* field : key_fields) result.push_back(field->name);
+    for (const auto* field : key_fields)
+        result.push_back(field->name);
     return result;
 }
 
 auto inspect_schema(Database& database) -> std::vector<TableSchema> {
     std::vector<TableSchema> tables;
-    auto objects = database.prepare(
-        "SELECT name, type FROM sqlite_schema "
-        "WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name");
+    auto objects = database.prepare("SELECT name, type FROM sqlite_schema "
+                                    "WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name");
 
     while (objects.step()) {
         TableSchema table;
@@ -41,15 +42,17 @@ auto inspect_schema(Database& database) -> std::vector<TableSchema> {
             const auto hidden_value = columns.column_count() > 6 ? columns.column(6).as_int() : 0;
             field.hidden = hidden_value == 1;
             field.generated = hidden_value == 2 || hidden_value == 3;
-            if (!columns.column(4).is_null()) field.default_expression = columns.column(4).as_string();
+            if (!columns.column(4).is_null())
+                field.default_expression = columns.column(4).as_string();
             table.fields.push_back(std::move(field));
         }
 
         auto foreign_keys = database.prepare("PRAGMA foreign_key_list(" + detail::quote_identifier(table.name) + ")");
         while (foreign_keys.step()) {
-            table.foreign_keys.push_back(ForeignKeySchema{
-                foreign_keys.column(3).as_string(), foreign_keys.column(2).as_string(),
-                foreign_keys.column(4).as_string(), foreign_keys.column(5).as_string(), foreign_keys.column(6).as_string()});
+            table.foreign_keys.push_back(
+                ForeignKeySchema{foreign_keys.column(3).as_string(), foreign_keys.column(2).as_string(),
+                                 foreign_keys.column(4).as_string(), foreign_keys.column(5).as_string(),
+                                 foreign_keys.column(6).as_string()});
         }
 
         auto indexes = database.prepare("PRAGMA index_list(" + detail::quote_identifier(table.name) + ")");
@@ -59,11 +62,13 @@ auto inspect_schema(Database& database) -> std::vector<TableSchema> {
             index.unique = indexes.column(2).as_int() != 0;
             auto fields = database.prepare("PRAGMA index_info(" + detail::quote_identifier(index.name) + ")");
             while (fields.step()) {
-                if (!fields.column(2).is_null()) index.fields.push_back(fields.column(2).as_string());
+                if (!fields.column(2).is_null())
+                    index.fields.push_back(fields.column(2).as_string());
             }
             if (index.unique && index.fields.size() == 1) {
                 for (auto& field : table.fields) {
-                    if (field.name == index.fields.front()) field.unique = true;
+                    if (field.name == index.fields.front())
+                        field.unique = true;
                 }
             }
             table.indexes.push_back(std::move(index));

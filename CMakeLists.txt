@@ -7,6 +7,8 @@ include(CTest)
 
 option(VULPES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
+find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22)
+
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
@@ -70,4 +72,21 @@ install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
+endif()
+
+if(VULPES_CLANG_FORMAT)
+    file(GLOB_RECURSE VULPES_FORMAT_FILES CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/include/*.hpp"
+        "${PROJECT_SOURCE_DIR}/src/*.cpp"
+        "${PROJECT_SOURCE_DIR}/tests/*.cpp")
+    add_custom_target(format
+        COMMAND ${VULPES_CLANG_FORMAT} -i --style=file ${VULPES_FORMAT_FILES}
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMENT "Formatting Vulpes C++ sources")
+    add_custom_target(format-check
+        COMMAND ${VULPES_CLANG_FORMAT} --dry-run --Werror --style=file ${VULPES_FORMAT_FILES}
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMENT "Checking Vulpes C++ formatting")
+else()
+    message(STATUS "clang-format not found; format targets are unavailable")
 endif()

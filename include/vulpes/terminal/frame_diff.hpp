@@ -18,7 +18,7 @@ struct RenderOperation {
     auto operator==(const RenderOperation&) const -> bool = default;
 };
 
-[[nodiscard]] auto diff_frames(const ScreenBuffer& previous, const ScreenBuffer& current) -> std::vector<RenderOperation>;
+[[nodiscard]] auto diff_frames(const ScreenBuffer& previous, const ScreenBuffer& current)
+    -> std::vector<RenderOperation>;
 
 } // namespace vulpes::terminal
-

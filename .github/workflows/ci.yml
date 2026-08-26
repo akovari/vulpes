@@ -31,7 +31,7 @@ jobs:
       VCPKG_FEATURE_FLAGS: manifests,versions
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure
         run: cmake --preset ${{ matrix.configure }}
@@ -41,4 +41,3 @@ jobs:
 
       - name: Test
         run: ctest --preset ${{ matrix.test }}
-

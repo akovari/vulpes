@@ -11,15 +11,14 @@ namespace {
 
 auto make_dataset_database() -> db::Database {
     db::Database database{":memory:"};
-    database.execute(
-        "CREATE TABLE customer("
-        "id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT, balance REAL, active INTEGER);"
-        "INSERT INTO customer(name, city, balance, active) VALUES"
-        "('Ábel', 'Prague', 12.5, 1),"
-        "('Beta', 'Brno', 4.0, 1),"
-        "('Cora', NULL, 8.0, 0),"
-        "('Delta', 'Prague', 1.0, 1),"
-        "('Echo', 'Ostrava', 6.0, 0);");
+    database.execute("CREATE TABLE customer("
+                     "id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT, balance REAL, active INTEGER);"
+                     "INSERT INTO customer(name, city, balance, active) VALUES"
+                     "('Ábel', 'Prague', 12.5, 1),"
+                     "('Beta', 'Brno', 4.0, 1),"
+                     "('Cora', NULL, 8.0, 0),"
+                     "('Delta', 'Prague', 1.0, 1),"
+                     "('Echo', 'Ostrava', 6.0, 0);");
     return database;
 }
 

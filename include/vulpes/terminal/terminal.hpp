@@ -7,11 +7,14 @@
 
 namespace vulpes::terminal {
 
-struct Size { int width{}; int height{}; };
+struct Size {
+    int width{};
+    int height{};
+};
 using InputEvent = std::variant<KeyEvent, ResizeEvent>;
 
 class Terminal {
-public:
+  public:
     virtual ~Terminal() = default;
     [[nodiscard]] virtual auto size() const -> Size = 0;
     [[nodiscard]] virtual auto read_event() -> InputEvent = 0;

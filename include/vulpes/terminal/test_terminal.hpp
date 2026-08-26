@@ -8,7 +8,7 @@
 namespace vulpes::terminal {
 
 class TestTerminal final : public Terminal {
-public:
+  public:
     explicit TestTerminal(Size size) : size_{size} {}
 
     [[nodiscard]] auto size() const -> Size override { return size_; }
@@ -19,11 +19,10 @@ public:
     void resize(Size size) { size_ = size; }
     [[nodiscard]] auto frames() const noexcept -> const std::vector<ScreenBuffer>& { return frames_; }
 
-private:
+  private:
     Size size_;
     std::deque<InputEvent> events_;
     std::vector<ScreenBuffer> frames_;
 };
 
 } // namespace vulpes::terminal
-

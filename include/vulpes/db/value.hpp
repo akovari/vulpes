@@ -12,7 +12,7 @@ namespace vulpes::db {
 using Blob = std::vector<std::byte>;
 
 class Value {
-public:
+  public:
     using Storage = std::variant<std::monostate, std::int64_t, double, std::string, Blob>;
 
     Value() = default;
@@ -33,7 +33,7 @@ public:
     [[nodiscard]] auto storage() const noexcept -> const Storage& { return storage_; }
     auto operator==(const Value&) const -> bool = default;
 
-private:
+  private:
     Storage storage_{};
 };
 

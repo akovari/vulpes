@@ -5,7 +5,7 @@ namespace vulpes::db {
 class Database;
 
 class Transaction {
-public:
+  public:
     explicit Transaction(Database& database);
     ~Transaction();
 
@@ -18,10 +18,9 @@ public:
     void rollback();
     [[nodiscard]] auto active() const noexcept -> bool { return active_; }
 
-private:
+  private:
     Database* database_;
     bool active_{true};
 };
 
 } // namespace vulpes::db
-

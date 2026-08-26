@@ -11,4 +11,3 @@ TEST_CASE("screen cells are addressable and Unicode-safe", "[terminal]") {
     CHECK(buffer.cell(2, 3).style.bold);
     CHECK_THROWS_AS(buffer.cell(80, 0), std::out_of_range);
 }
-

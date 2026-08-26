@@ -18,4 +18,3 @@ struct Command {
 [[nodiscard]] auto action_id(CommandId command) -> std::string_view;
 
 } // namespace vulpes::core
-

@@ -15,14 +15,13 @@ struct Rect {
 };
 
 class Grid {
-public:
+  public:
     Grid(const model::Dataset& dataset, std::string title);
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
-private:
+  private:
     const model::Dataset* dataset_;
     std::string title_;
 };
 
 } // namespace vulpes::ui
-

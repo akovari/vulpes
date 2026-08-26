@@ -12,7 +12,7 @@ namespace vulpes::db {
 
 // An owning database row. It deliberately outlives the Statement that produced it.
 class Row {
-public:
+  public:
     Row() = default;
     Row(std::vector<std::string> names, std::vector<Value> values);
 
@@ -21,7 +21,7 @@ public:
     [[nodiscard]] auto at(std::size_t index) const -> const Value&;
     [[nodiscard]] auto at(std::string_view name) const -> const Value&;
 
-private:
+  private:
     std::vector<std::string> names_;
     std::vector<Value> values_;
 };

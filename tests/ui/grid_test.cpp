@@ -7,7 +7,8 @@
 
 TEST_CASE("grid renders dataset fields and selected row to logical cells", "[ui][grid]") {
     vulpes::db::Database database{":memory:"};
-    database.execute("CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO customer VALUES (1, 'Acme')");
+    database.execute(
+        "CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO customer VALUES (1, 'Acme')");
     const auto schema = vulpes::db::inspect_schema(database).front();
     vulpes::model::Dataset dataset{database, schema};
     vulpes::ui::Grid grid{dataset, "Customers"};

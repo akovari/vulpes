@@ -6,7 +6,10 @@
 
 namespace vulpes::terminal {
 
-struct Color { std::uint8_t red{}, green{}, blue{}; auto operator==(const Color&) const -> bool = default; };
+struct Color {
+    std::uint8_t red{}, green{}, blue{};
+    auto operator==(const Color&) const -> bool = default;
+};
 
 struct Style {
     Color foreground{255, 255, 255};
@@ -25,7 +28,7 @@ struct Cell {
 };
 
 class ScreenBuffer {
-public:
+  public:
     ScreenBuffer(int width, int height);
     [[nodiscard]] auto width() const noexcept -> int { return width_; }
     [[nodiscard]] auto height() const noexcept -> int { return height_; }
@@ -34,7 +37,7 @@ public:
     [[nodiscard]] auto write_utf8(int x, int y, std::string_view text, Style style = {}) -> int;
     void clear(Cell fill = {});
 
-private:
+  private:
     [[nodiscard]] auto index(int x, int y) const -> std::size_t;
     int width_;
     int height_;

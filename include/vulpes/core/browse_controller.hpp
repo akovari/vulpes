@@ -8,11 +8,11 @@ namespace vulpes::core {
 enum class BrowseResult { unchanged, redraw, close };
 
 class BrowseController {
-public:
+  public:
     explicit BrowseController(model::Dataset& dataset) : dataset_{&dataset} {}
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> BrowseResult;
 
-private:
+  private:
     model::Dataset* dataset_;
 };
 

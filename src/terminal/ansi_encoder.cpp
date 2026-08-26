@@ -17,7 +17,9 @@ void append_color(std::string& result, int base, Color color) {
 
 } // namespace
 
-auto ansi_reset() -> std::string { return "\x1B[0m"; }
+auto ansi_reset() -> std::string {
+    return "\x1B[0m";
+}
 
 auto encode_ansi(const std::vector<RenderOperation>& operations) -> std::string {
     std::string result;
@@ -31,9 +33,12 @@ auto encode_ansi(const std::vector<RenderOperation>& operations) -> std::string 
             append_color(result, 38, operation.style.foreground);
             result += ';';
             append_color(result, 48, operation.style.background);
-            if (operation.style.bold) result += ";1";
-            if (operation.style.underline) result += ";4";
-            if (operation.style.reverse) result += ";7";
+            if (operation.style.bold)
+                result += ";1";
+            if (operation.style.underline)
+                result += ";4";
+            if (operation.style.reverse)
+                result += ";7";
             result += 'm';
             break;
         case RenderOperationKind::write:
@@ -45,4 +50,3 @@ auto encode_ansi(const std::vector<RenderOperation>& operations) -> std::string 
 }
 
 } // namespace vulpes::terminal
-

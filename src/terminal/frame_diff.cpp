@@ -8,7 +8,8 @@ namespace vulpes::terminal {
 namespace {
 
 void append_changed_cell(std::string& text, const Cell& cell) {
-    if (!cell.continuation) text += encode_utf8(cell.glyph);
+    if (!cell.continuation)
+        text += encode_utf8(cell.glyph);
 }
 
 } // namespace
@@ -29,17 +30,18 @@ auto diff_frames(const ScreenBuffer& previous, const ScreenBuffer& current) -> s
             const int start = x;
             const Style style = current.cell(x, y).style;
             std::string text;
-            while (x < current.width() && previous.cell(x, y) != current.cell(x, y) && current.cell(x, y).style == style) {
+            while (x < current.width() && previous.cell(x, y) != current.cell(x, y) &&
+                   current.cell(x, y).style == style) {
                 append_changed_cell(text, current.cell(x, y));
                 ++x;
             }
             operations.push_back({RenderOperationKind::move_cursor, start, y, {}, {}});
             operations.push_back({RenderOperationKind::set_style, 0, 0, style, {}});
-            if (!text.empty()) operations.push_back({RenderOperationKind::write, 0, 0, {}, std::move(text)});
+            if (!text.empty())
+                operations.push_back({RenderOperationKind::write, 0, 0, {}, std::move(text)});
         }
     }
     return operations;
 }
 
 } // namespace vulpes::terminal
-

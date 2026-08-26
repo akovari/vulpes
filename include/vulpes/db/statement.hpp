@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulpes/db/value.hpp"
 #include "vulpes/db/row.hpp"
+#include "vulpes/db/value.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -12,7 +12,7 @@ struct sqlite3_stmt;
 namespace vulpes::db {
 
 class Statement {
-public:
+  public:
     Statement() noexcept = default;
     explicit Statement(sqlite3_stmt* statement);
     ~Statement();
@@ -33,7 +33,7 @@ public:
     [[nodiscard]] auto column(int index) const -> Value;
     [[nodiscard]] auto row() const -> Row;
 
-private:
+  private:
     sqlite3_stmt* statement_{};
 };
 

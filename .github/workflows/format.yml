@@ -1,0 +1,23 @@
+name: Format
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        with:
+          style: file
+          tidy-checks: ''
+      - name: Fail on formatting drift
+        if: steps.linter.outputs.checks-failed > 0
+        run: exit 1
+

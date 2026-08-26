@@ -4,11 +4,13 @@ namespace vulpes::core {
 
 auto BrowseController::handle(const terminal::InputEvent& event) -> BrowseResult {
     const auto* key = std::get_if<terminal::KeyEvent>(&event);
-    if (key == nullptr) return BrowseResult::redraw;
+    if (key == nullptr)
+        return BrowseResult::redraw;
     switch (key->key) {
     case terminal::Key::escape:
     case terminal::Key::character:
-        if (key->key == terminal::Key::escape || (key->ctrl && (key->character == U'c' || key->character == U'C'))) return BrowseResult::close;
+        if (key->key == terminal::Key::escape || (key->ctrl && (key->character == U'c' || key->character == U'C')))
+            return BrowseResult::close;
         return BrowseResult::unchanged;
     case terminal::Key::up:
         return dataset_->previous() ? BrowseResult::redraw : BrowseResult::unchanged;
@@ -28,4 +30,3 @@ auto BrowseController::handle(const terminal::InputEvent& event) -> BrowseResult
 }
 
 } // namespace vulpes::core
-

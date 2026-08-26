@@ -1,5 +1,3 @@
-#include <CLI/CLI.hpp>
-
 #include "vulpes/core/browse_controller.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/core/localization.hpp"
@@ -11,6 +9,7 @@
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/version.hpp"
 
+#include <CLI/CLI.hpp>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -45,7 +44,8 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         const auto updated_size = terminal.size();
         if (updated_size.width != terminal_size.width || updated_size.height != terminal_size.height) {
             terminal_size = updated_size;
-            if (terminal_size.width < 20 || terminal_size.height < 6) continue;
+            if (terminal_size.width < 20 || terminal_size.height < 6)
+                continue;
             previous = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
             current = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
         }
@@ -53,7 +53,8 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
         terminal.present(previous, current);
         previous = current;
-        if (controller.handle(terminal.read_event()) == vulpes::core::BrowseResult::close) return;
+        if (controller.handle(terminal.read_event()) == vulpes::core::BrowseResult::close)
+            return;
     }
 }
 
@@ -71,7 +72,8 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
         browse(database, *found);
     } else {
         std::cout << messages.translate("database.tables") << ":\n";
-        for (const auto& table : schema) std::cout << "  " << table.name << (table.is_view ? " [view]" : "") << '\n';
+        for (const auto& table : schema)
+            std::cout << "  " << table.name << (table.is_view ? " [view]" : "") << '\n';
     }
     return 0;
 }
@@ -108,7 +110,8 @@ auto main(int argc, char** argv) -> int {
             return 0;
         }
 
-        return run(std::filesystem::path{database_argument}, table_name.empty() ? std::nullopt : std::optional{table_name});
+        return run(std::filesystem::path{database_argument},
+                   table_name.empty() ? std::nullopt : std::optional{table_name});
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;

@@ -9,7 +9,7 @@ namespace vulpes::terminal {
 // Owns raw-mode setup/restoration and normalizes native terminal input. All
 // platform APIs remain in its implementation file.
 class ConsoleTerminal final : public Terminal {
-public:
+  public:
     ConsoleTerminal();
     ~ConsoleTerminal() override;
 
@@ -22,10 +22,9 @@ public:
     [[nodiscard]] auto read_event() -> InputEvent override;
     void present(const ScreenBuffer& previous, const ScreenBuffer& current) override;
 
-private:
+  private:
     class Implementation;
     std::unique_ptr<Implementation> implementation_;
 };
 
 } // namespace vulpes::terminal
-

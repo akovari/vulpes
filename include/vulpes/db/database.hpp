@@ -13,7 +13,7 @@ namespace vulpes::db {
 enum class OpenMode { read_only, read_write, read_write_create };
 
 class Database {
-public:
+  public:
     explicit Database(const std::filesystem::path& path, OpenMode mode = OpenMode::read_write_create);
     ~Database();
 
@@ -28,7 +28,7 @@ public:
     [[nodiscard]] auto changes() const noexcept -> int;
     [[nodiscard]] auto last_insert_rowid() const noexcept -> std::int64_t;
 
-private:
+  private:
     friend class Transaction;
     sqlite3* handle_{};
 };

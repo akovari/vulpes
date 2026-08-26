@@ -36,10 +36,9 @@ TEST_CASE("an uncommitted transaction rolls back", "[db]") {
 
 TEST_CASE("execute accepts a complete SQL script", "[db]") {
     Database database{":memory:"};
-    database.execute(
-        "CREATE TABLE first(value TEXT);"
-        "CREATE TABLE second(value TEXT);"
-        "INSERT INTO second VALUES ('ready');");
+    database.execute("CREATE TABLE first(value TEXT);"
+                     "CREATE TABLE second(value TEXT);"
+                     "INSERT INTO second VALUES ('ready');");
 
     auto query = database.prepare("SELECT value FROM second");
     REQUIRE(query.step());

@@ -11,7 +11,8 @@ on Windows, Linux, and macOS.
 - [x] Windows, Linux, and macOS CI skeleton.
 - [x] Architecture, development, scope, and build documentation.
 - [ ] Confirm the first CI run on all platforms.
-- [ ] Add formatting (`clang-format`) and static analysis presets.
+- [x] Add enforced `clang-format` configuration, CMake targets, and CI check.
+- [ ] Add reviewed `clang-tidy` checks and static-analysis presets.
 - [ ] Add release metadata generated from Git tags.
 
 ## M1 — Safe SQLite foundation

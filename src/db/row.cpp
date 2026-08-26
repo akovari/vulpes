@@ -11,15 +11,19 @@ Row::Row(std::vector<std::string> names, std::vector<Value> values)
     }
 }
 
-auto Row::column_name(std::size_t index) const -> std::string_view { return names_.at(index); }
-auto Row::at(std::size_t index) const -> const Value& { return values_.at(index); }
+auto Row::column_name(std::size_t index) const -> std::string_view {
+    return names_.at(index);
+}
+auto Row::at(std::size_t index) const -> const Value& {
+    return values_.at(index);
+}
 
 auto Row::at(std::string_view name) const -> const Value& {
     for (std::size_t index = 0; index < names_.size(); ++index) {
-        if (names_[index] == name) return values_[index];
+        if (names_[index] == name)
+            return values_[index];
     }
     throw std::out_of_range{"row has no column named '" + std::string{name} + "'"};
 }
 
 } // namespace vulpes::db
-

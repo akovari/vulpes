@@ -12,13 +12,13 @@ using MessageArguments = std::map<std::string, std::string, std::less<>>;
 using MessageCatalog = std::unordered_map<std::string, std::string>;
 
 class Localizer {
-public:
+  public:
     explicit Localizer(std::string locale = "en");
     void add_catalog(std::string locale, MessageCatalog catalog);
     [[nodiscard]] auto locale() const noexcept -> std::string_view { return locale_; }
     [[nodiscard]] auto translate(std::string_view key, const MessageArguments& arguments = {}) const -> std::string;
 
-private:
+  private:
     [[nodiscard]] auto find_template(std::string_view key) const -> const std::string*;
     [[nodiscard]] static auto format(std::string_view text, const MessageArguments& arguments) -> std::string;
 

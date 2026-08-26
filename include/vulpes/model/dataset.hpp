@@ -9,7 +9,9 @@
 #include <string_view>
 #include <vector>
 
-namespace vulpes::db { class Database; }
+namespace vulpes::db {
+class Database;
+}
 
 namespace vulpes::model {
 
@@ -30,7 +32,7 @@ struct RowIdentity {
 // A table-backed, read-only cursor model. It owns query state and rows, so UI
 // code never depends on SQLite statement lifetime or assembles raw SQL.
 class Dataset {
-public:
+  public:
     Dataset(db::Database& database, db::TableSchema schema, std::size_t page_size = 100);
 
     [[nodiscard]] auto schema() const noexcept -> const db::TableSchema& { return schema_; }
@@ -55,7 +57,7 @@ public:
     [[nodiscard]] auto previous() -> bool;
     [[nodiscard]] auto last() -> bool;
 
-private:
+  private:
     void validate_field(std::string_view field) const;
     [[nodiscard]] auto query_where_clause(std::vector<db::Value>& values) const -> std::string;
     [[nodiscard]] auto order_clause() const -> std::string;

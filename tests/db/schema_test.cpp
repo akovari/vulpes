@@ -8,7 +8,8 @@ using namespace vulpes::db;
 TEST_CASE("schema inspection finds fields and relationships", "[db][schema]") {
     Database database{":memory:"};
     database.execute("CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE)");
-    database.execute("CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customer(id) ON UPDATE CASCADE ON DELETE RESTRICT)");
+    database.execute("CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customer(id) ON "
+                     "UPDATE CASCADE ON DELETE RESTRICT)");
 
     const auto schema = inspect_schema(database);
     REQUIRE(schema.size() == 2);

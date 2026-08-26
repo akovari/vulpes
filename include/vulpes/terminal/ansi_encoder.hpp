@@ -11,4 +11,3 @@ namespace vulpes::terminal {
 [[nodiscard]] auto ansi_reset() -> std::string;
 
 } // namespace vulpes::terminal
-

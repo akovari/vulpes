@@ -1,10 +1,10 @@
 #include "vulpes/db/database.hpp"
 
 #include "vulpes/core/error.hpp"
+
 #include "sqlite_error.hpp"
 
 #include <sqlite3.h>
-
 #include <utility>
 
 namespace vulpes::db {
@@ -12,9 +12,12 @@ namespace {
 
 auto flags_for(OpenMode mode) -> int {
     switch (mode) {
-    case OpenMode::read_only: return SQLITE_OPEN_READONLY;
-    case OpenMode::read_write: return SQLITE_OPEN_READWRITE;
-    case OpenMode::read_write_create: return SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    case OpenMode::read_only:
+        return SQLITE_OPEN_READONLY;
+    case OpenMode::read_write:
+        return SQLITE_OPEN_READWRITE;
+    case OpenMode::read_write_create:
+        return SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
     }
     return SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
 }
@@ -36,9 +39,12 @@ Database::Database(const std::filesystem::path& path, OpenMode mode) {
     execute("PRAGMA foreign_keys = ON");
 }
 
-Database::~Database() { sqlite3_close(handle_); }
+Database::~Database() {
+    sqlite3_close(handle_);
+}
 
-Database::Database(Database&& other) noexcept : handle_{std::exchange(other.handle_, nullptr)} {}
+Database::Database(Database&& other) noexcept : handle_{std::exchange(other.handle_, nullptr)} {
+}
 
 auto Database::operator=(Database&& other) noexcept -> Database& {
     if (this != &other) {
@@ -68,8 +74,14 @@ void Database::execute(std::string_view sql) {
     }
 }
 
-auto Database::changes() const noexcept -> int { return sqlite3_changes(handle_); }
-auto Database::last_insert_rowid() const noexcept -> std::int64_t { return sqlite3_last_insert_rowid(handle_); }
-auto Database::in_transaction() const noexcept -> bool { return sqlite3_get_autocommit(handle_) == 0; }
+auto Database::changes() const noexcept -> int {
+    return sqlite3_changes(handle_);
+}
+auto Database::last_insert_rowid() const noexcept -> std::int64_t {
+    return sqlite3_last_insert_rowid(handle_);
+}
+auto Database::in_transaction() const noexcept -> bool {
+    return sqlite3_get_autocommit(handle_) == 0;
+}
 
 } // namespace vulpes::db
