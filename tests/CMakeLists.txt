@@ -9,6 +9,7 @@ add_executable(vulpes_tests
     db/schema_test.cpp
     examples/inventory_test.cpp
     model/dataset_test.cpp
+    ui/form_test.cpp
     ui/grid_test.cpp
     terminal/frame_diff_test.cpp
     terminal/screen_buffer_test.cpp

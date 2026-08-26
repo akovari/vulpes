@@ -1,0 +1,65 @@
+#include "vulpes/db/database.hpp"
+#include "vulpes/db/schema.hpp"
+#include "vulpes/model/dataset.hpp"
+#include "vulpes/terminal/input.hpp"
+#include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/form.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+
+namespace {
+
+auto form_dataset(vulpes::db::Database& database) -> vulpes::model::Dataset {
+    database.execute("CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL, balance REAL, active INTEGER);"
+                     "INSERT INTO customer VALUES (1, 'Acme', 10.5, 1)");
+    return {database, vulpes::db::inspect_schema(database).front()};
+}
+
+} // namespace
+
+TEST_CASE("generated form infers controls and persists keyboard edits", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    auto dataset = form_dataset(database);
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit};
+
+    REQUIRE(form.fields().size() == 4);
+    CHECK(form.fields()[0].kind == vulpes::ui::FormFieldKind::read_only);
+    CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::text);
+    CHECK(form.fields()[2].kind == vulpes::ui::FormFieldKind::number);
+    CHECK(form.fields()[3].kind == vulpes::ui::FormFieldKind::checkbox);
+
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::backspace}));
+    static_cast<void>(
+        form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'e'}));
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) == vulpes::ui::FormResult::saved);
+
+    auto query = database.prepare("SELECT name FROM customer WHERE id = 1");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_string() == "Acme");
+}
+
+TEST_CASE("generated form cancels drafts and renders logical cells", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    auto dataset = form_dataset(database);
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit};
+    vulpes::terminal::ScreenBuffer buffer{40, 10};
+
+    form.render(buffer, {0, 0, 40, 10});
+    CHECK(buffer.cell(2, 0).glyph == U'C');
+    CHECK(buffer.cell(1, 1).glyph == U'i');
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::FormResult::cancelled);
+    CHECK(dataset.mode() == vulpes::model::DatasetMode::browse);
+}
+
+TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE document(id INTEGER PRIMARY KEY, contents BLOB)");
+    vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front()};
+    vulpes::ui::RecordForm form{dataset, "New document", vulpes::ui::FormMode::insert};
+
+    REQUIRE(form.fields().size() == 2);
+    CHECK(form.fields()[1].name == "contents");
+    CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::read_only);
+}

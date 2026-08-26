@@ -48,6 +48,7 @@ add_library(vulpes_core
     src/terminal/screen_buffer.cpp
     src/terminal/test_terminal.cpp
     src/terminal/unicode.cpp
+    src/ui/form.cpp
     src/ui/grid.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)

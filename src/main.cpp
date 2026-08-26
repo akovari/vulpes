@@ -8,6 +8,7 @@
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/version.hpp"
 
@@ -44,6 +45,20 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     vulpes::terminal::ScreenBuffer current{terminal_size.width, terminal_size.height};
     vulpes::ui::Grid grid{dataset, table.name};
 
+    const auto edit_record = [&](vulpes::ui::FormMode mode) {
+        vulpes::ui::RecordForm form{
+            dataset, mode == vulpes::ui::FormMode::edit ? "Edit " + table.name : "New " + table.name, mode};
+        for (;;) {
+            current.clear();
+            form.render(current, {0, 0, terminal_size.width, terminal_size.height});
+            terminal.present(previous, current);
+            previous = current;
+            const auto result = form.handle(terminal.read_event());
+            if (result == vulpes::ui::FormResult::saved || result == vulpes::ui::FormResult::cancelled)
+                return;
+        }
+    };
+
     for (;;) {
         const auto updated_size = terminal.size();
         if (updated_size.width != terminal_size.width || updated_size.height != terminal_size.height) {
@@ -59,6 +74,14 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         previous = current;
         const auto event = terminal.read_event();
         if (const auto* key = std::get_if<vulpes::terminal::KeyEvent>(&event); key != nullptr) {
+            if (key->key == vulpes::terminal::Key::f2) {
+                edit_record(vulpes::ui::FormMode::edit);
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::insert_key) {
+                edit_record(vulpes::ui::FormMode::insert);
+                continue;
+            }
             if (key->key == vulpes::terminal::Key::left && grid.move_left())
                 continue;
             if (key->key == vulpes::terminal::Key::right && grid.move_right())

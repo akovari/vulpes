@@ -74,6 +74,16 @@ paging is the next optimization when a stable unique ordering is available.
 Dataset writes are transactional and schema-validated; see ADR 0001 and ADR
 0005.
 
+### Generated record forms
+
+`ui::RecordForm` turns a dataset draft and schema fields into semantic controls.
+It has no SQLite dependency: it invokes only dataset edit operations and renders
+only to a `ScreenBuffer`. Form field labels currently default to schema names;
+metadata and localized labels will be injected rather than baked into layout.
+The initial inference is intentionally conservative: binary and generated data
+are read-only, numeric declarations get numeric parsing, and boolean hints are
+limited to explicit types and well-known field names. See ADR 0006.
+
 ### Commands
 
 The command parser produces stable `CommandId` values. `ApplicationRuntime`

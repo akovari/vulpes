@@ -7,8 +7,8 @@ application, semantic UI, and rendering layers are deliberately independent.
 The repository is pre-alpha. It currently provides a C++23 build,
 cross-platform CI, RAII SQLite primitives, schema introspection, normalized
 input, a virtual screen buffer, a keyboard-driven `--table` browse view, and a
-transactional dataset editing model. Record-editing controls and the in-app
-command window are the next frontend milestones.
+transactional dataset editing model, and schema-generated record forms. The
+in-app command window is the next frontend milestone.
 
 ## Prerequisites
 
@@ -49,6 +49,14 @@ sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
 ```
 
+The browse view is keyboard driven: arrow keys move through the grid, `F2`
+opens the selected record, `Insert` creates a record, `F8` saves a record form,
+and `Esc` cancels it. Form controls are inferred from SQLite schema information:
+numeric fields use numeric validation, conservative boolean-like fields use a
+checkbox, generated/primary-key fields are protected, and BLOB fields remain
+read-only until a binary editor exists. Failed database validation leaves the
+draft open for correction.
+
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.
@@ -66,8 +74,9 @@ and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.
 
 ## Project status
 
-Version 0.1 is pre-alpha. APIs are expected to evolve and no data-modifying UI
-exists yet. Database backups remain the user's responsibility.
+Version 0.1 is pre-alpha. APIs are expected to evolve; the data-modifying UI is
+currently limited to basic generated forms. Database backups remain the user's
+responsibility.
 
 ## License
 

@@ -2,17 +2,11 @@
 
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/geometry.hpp"
 
 #include <string>
 
 namespace vulpes::ui {
-
-struct Rect {
-    int x{};
-    int y{};
-    int width{};
-    int height{};
-};
 
 class Grid {
   public:
