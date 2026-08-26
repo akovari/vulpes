@@ -14,6 +14,7 @@
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/ui/sql_console.hpp"
 #include "vulpes/ui/text_prompt.hpp"
+#include "vulpes/ui/workspace.hpp"
 #include "vulpes/version.hpp"
 
 #include <CLI/CLI.hpp>
@@ -371,6 +372,59 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
     }
 }
 
+auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths) -> int {
+    vulpes::core::Localizer messages{locale};
+    for (const auto& catalog_path : catalog_paths)
+        messages.load_catalog_file(std::filesystem::path{catalog_path});
+    vulpes::terminal::ConsoleTerminal terminal;
+    auto size = terminal.size();
+    if (size.width < 40 || size.height < 10)
+        throw vulpes::Error{vulpes::ErrorCategory::terminal, "workspace requires at least 40 columns by 10 rows"};
+    vulpes::terminal::ScreenBuffer previous{size.width, size.height};
+    vulpes::terminal::ScreenBuffer current{size.width, size.height};
+    vulpes::core::ActionMap actions;
+    vulpes::ui::Workspace workspace{messages.translate("application.title"), "Open SQLite database",
+                                    "Create SQLite database",
+                                    "Enter a SQLite database path   Enter Apply   Esc Cancel"};
+    std::optional<vulpes::db::Database> database;
+    for (;;) {
+        const auto updated = terminal.size();
+        if (updated.width != size.width || updated.height != size.height) {
+            size = updated;
+            previous = vulpes::terminal::ScreenBuffer{size.width, size.height};
+            current = vulpes::terminal::ScreenBuffer{size.width, size.height};
+        }
+        if (size.width < 40 || size.height < 10)
+            continue;
+        current.clear();
+        workspace.render(current, {0, 0, size.width, size.height});
+        terminal.present(previous, current);
+        previous = current;
+        const auto event = terminal.read_event();
+        const auto outcome = workspace.handle(actions.action_for(event), event);
+        if (outcome == vulpes::ui::WorkspaceResult::quit)
+            return 0;
+        if (outcome == vulpes::ui::WorkspaceResult::open_database ||
+            outcome == vulpes::ui::WorkspaceResult::create_database) {
+            try {
+                const auto path = workspace.requested_path();
+                if (path.empty())
+                    throw vulpes::Error{vulpes::ErrorCategory::validation, "a database path is required"};
+                database.emplace(std::filesystem::path{path}, outcome == vulpes::ui::WorkspaceResult::open_database
+                                                                  ? vulpes::db::OpenMode::read_write
+                                                                  : vulpes::db::OpenMode::read_write_create);
+                workspace.set_database(path, vulpes::db::inspect_schema(*database));
+            } catch (const vulpes::Error& error) {
+                workspace.set_status(error.what());
+            }
+        } else if (outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) {
+            browse(*database, *workspace.selected_table(), messages);
+        } else if (outcome == vulpes::ui::WorkspaceResult::run_sql && database) {
+            sql_console(*database, messages);
+        }
+    }
+}
+
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
          const std::optional<std::string>& command_source, const std::string& locale,
          const std::vector<std::string>& catalog_paths) -> int {
@@ -462,8 +516,7 @@ auto main(int argc, char** argv) -> int {
             return 0;
         }
         if (database_argument.empty()) {
-            std::cout << app.help();
-            return 0;
+            return run_workspace(locale, catalog_paths);
         }
 
         return run(std::filesystem::path{database_argument},

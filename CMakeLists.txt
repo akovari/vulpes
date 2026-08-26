@@ -57,6 +57,7 @@ add_library(vulpes_core
     src/ui/grid.cpp
     src/ui/sql_console.cpp
     src/ui/text_prompt.cpp
+    src/ui/workspace.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)
 
