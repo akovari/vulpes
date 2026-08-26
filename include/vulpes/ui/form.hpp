@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/core/error.hpp"
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
@@ -22,6 +23,7 @@ struct FormField {
     std::string text;
     std::vector<model::LookupOption> lookup_options;
     std::optional<std::size_t> selected_lookup_option;
+    std::string error;
 };
 
 // A schema-generated, terminal-independent record editor. It owns temporary
@@ -32,6 +34,7 @@ class RecordForm {
 
     [[nodiscard]] auto fields() const noexcept -> const std::vector<FormField>& { return fields_; }
     [[nodiscard]] auto selected_field_index() const noexcept -> std::size_t { return selected_field_; }
+    [[nodiscard]] auto error_field_index() const noexcept -> std::optional<std::size_t> { return error_field_; }
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> FormResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
@@ -42,6 +45,8 @@ class RecordForm {
     [[nodiscard]] static auto parse_value(const FormField& field) -> db::Value;
     void move_selection(int direction);
     void move_lookup_selection(FormField& field, int direction);
+    void record_error(const Error& error);
+    void clear_error(std::size_t field);
     void save();
 
     model::Dataset* dataset_;
@@ -50,6 +55,7 @@ class RecordForm {
     std::vector<FormField> fields_;
     std::vector<bool> changed_;
     std::size_t selected_field_{};
+    std::optional<std::size_t> error_field_;
     std::string error_;
 };
 

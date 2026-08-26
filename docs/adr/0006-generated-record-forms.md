@@ -27,6 +27,7 @@ text editing state but not persistence or SQL generation.
 
 - The TUI and future frontends share the same editing lifecycle and validation.
 - A BLOB cannot accidentally be replaced with the displayed placeholder text.
-- Labels, ordering, lookup controls, field-specific errors, dialogs, and
-  metadata overrides remain deliberate follow-up work rather than implicit
-  terminal layout policy.
+- Labels, ordering, lookup controls, dialogs, and metadata overrides remain
+  deliberate follow-up work rather than implicit terminal layout policy.
+- When an error message names a schema field, the form selects and marks it;
+  ambiguous errors map only when one editable field changed.

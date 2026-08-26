@@ -85,6 +85,11 @@ The initial inference is intentionally conservative: binary and generated data
 are read-only, numeric declarations get numeric parsing, and boolean hints are
 limited to explicit types and well-known field names. See ADR 0006.
 
+On a failed save, the form preserves the dataset draft and maps a validation or
+constraint error to the named schema field when SQLite supplies one. It selects
+and marks that field; ambiguous failures are attributed only when exactly one
+editable field changed.
+
 ### Destructive confirmation
 
 `ui::ConfirmationDialog` is a reusable semantic dialog whose default selection

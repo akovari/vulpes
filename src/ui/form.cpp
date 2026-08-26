@@ -105,7 +105,7 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
             save();
             return FormResult::saved;
         } catch (const Error& error) {
-            error_ = error.what();
+            record_error(error);
             return FormResult::redraw;
         }
     }
@@ -124,21 +124,25 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
     if (field.kind == FormFieldKind::lookup && (key->key == terminal::Key::left || key->key == terminal::Key::right)) {
         move_lookup_selection(field, key->key == terminal::Key::left ? -1 : 1);
         changed_[selected_field_] = true;
+        clear_error(selected_field_);
         return FormResult::redraw;
     }
     if (key->key == terminal::Key::backspace) {
         erase_last_code_point(field.text);
         changed_[selected_field_] = true;
+        clear_error(selected_field_);
         return FormResult::redraw;
     }
     if (field.kind == FormFieldKind::checkbox && key->key == terminal::Key::character && key->character == U' ') {
         field.text = field.text == "1" ? "0" : "1";
         changed_[selected_field_] = true;
+        clear_error(selected_field_);
         return FormResult::redraw;
     }
     if (key->key == terminal::Key::character && !key->ctrl && !key->alt) {
         field.text += terminal::encode_utf8(key->character);
         changed_[selected_field_] = true;
+        clear_error(selected_field_);
         return FormResult::redraw;
     }
     return FormResult::unchanged;
@@ -167,7 +171,7 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         if (static_cast<std::size_t>(index) < fields_.size()) {
             const auto& field = fields_[static_cast<std::size_t>(index)];
             const bool selected = static_cast<std::size_t>(index) == selected_field_;
-            write_padded(buffer, bounds.x + 1, y, label_width, field.label + ':');
+            write_padded(buffer, bounds.x + 1, y, label_width, field.label + ':', {.bold = !field.error.empty()});
             std::string value = field.text;
             if (field.kind == FormFieldKind::checkbox)
                 value = field.text == "1" ? "[x]" : "[ ]";
@@ -263,6 +267,40 @@ void RecordForm::move_lookup_selection(FormField& field, int direction) {
                           : (direction < 0 ? count - 1 : 0);
     field.selected_lookup_option = static_cast<std::size_t>(next);
     field.text = field.lookup_options.at(*field.selected_lookup_option).label;
+}
+
+void RecordForm::record_error(const Error& error) {
+    error_ = error.what();
+    error_field_.reset();
+    for (auto& field : fields_)
+        field.error.clear();
+
+    const auto message = std::string_view{error.what()};
+    for (std::size_t index = 0; index < fields_.size(); ++index) {
+        const auto& name = fields_[index].name;
+        if (message.find(name) == std::string_view::npos)
+            continue;
+        error_field_ = index;
+        selected_field_ = index;
+        fields_[index].error = error_;
+        return;
+    }
+
+    const auto changed = std::ranges::find(changed_, true);
+    if (changed != changed_.end() && std::ranges::count(changed_, true) == 1) {
+        const auto index = static_cast<std::size_t>(std::distance(changed_.begin(), changed));
+        error_field_ = index;
+        selected_field_ = index;
+        fields_[index].error = error_;
+    }
+}
+
+void RecordForm::clear_error(std::size_t field) {
+    fields_[field].error.clear();
+    if (error_field_ == field) {
+        error_field_.reset();
+        error_.clear();
+    }
 }
 
 void RecordForm::save() {

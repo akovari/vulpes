@@ -64,6 +64,29 @@ TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
     CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::read_only);
 }
 
+TEST_CASE("generated form selects the failing constraint field and retains its draft", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    auto dataset = form_dataset(database);
+    database.execute("CREATE UNIQUE INDEX customer_name ON customer(name);"
+                     "INSERT INTO customer VALUES (2, 'Beta', 2.0, 1)");
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save"};
+
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    for (int count = 0; count < 4; ++count)
+        static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::backspace}));
+    for (const auto character : std::string_view{"Beta"})
+        static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character,
+                                                                 .character = static_cast<char32_t>(character)}));
+
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) == vulpes::ui::FormResult::redraw);
+    REQUIRE(form.error_field_index());
+    CHECK(*form.error_field_index() == 1);
+    CHECK(form.selected_field_index() == 1);
+    CHECK(form.fields().at(1).error.find("name") != std::string::npos);
+    REQUIRE(dataset.draft_value("name"));
+    CHECK(dataset.draft_value("name")->as_string() == "Beta");
+}
+
 TEST_CASE("generated form selects a foreign key by its inferred display field", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     database.execute(

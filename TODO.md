@@ -80,7 +80,7 @@ on Windows, Linux, and macOS.
 - [ ] Add button and dialog widgets, including destructive-action confirmation.
 - [x] Add transactional insert/edit/delete handling and destructive delete
   confirmation.
-- [ ] Map constraint/validation failures to fields without losing edits.
+- [x] Map constraint/validation failures to fields without losing edits.
 - [ ] Infer boolean-like fields conservatively.
 - [x] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
   implement a bounded keyboard relationship lookup.
