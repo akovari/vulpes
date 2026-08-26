@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "vulpes",
+  "version-semver": "0.1.0",
+  "description": "A keyboard-first RAD environment for local SQLite applications",
+  "license": "MIT",
+  "builtin-baseline": "ddd0023b0eee70986e42ed49d9d4afb8098f212e",
+  "dependencies": [
+    { "name": "sqlite3", "version>=": "3.53.4" },
+    { "name": "catch2", "version>=": "3.15.3" }
+  ]
+}
+

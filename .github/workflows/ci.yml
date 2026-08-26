@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            configure: windows-msvc
+            build: windows-debug
+            test: windows-debug
+          - os: ubuntu-latest
+            configure: linux-gcc
+            build: linux-debug
+            test: linux-debug
+          - os: macos-latest
+            configure: macos-clang
+            build: macos-debug
+            test: macos-debug
+
+    runs-on: ${{ matrix.os }}
+    env:
+      VCPKG_FEATURE_FLAGS: manifests,versions
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+

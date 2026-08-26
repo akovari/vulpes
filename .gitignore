@@ -1,0 +1,10 @@
+/build/
+/out/
+/.vs/
+/.vscode/
+/vcpkg_installed/
+/CMakeUserPresets.json
+*.db-journal
+*.db-shm
+*.db-wal
+
