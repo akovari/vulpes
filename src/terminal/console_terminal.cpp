@@ -149,8 +149,11 @@ ConsoleTerminal::ConsoleTerminal() : implementation_{std::make_unique<Implementa
         !GetConsoleMode(implementation_->output, &implementation_->output_mode)) {
         throw Error{ErrorCategory::terminal, "Vulpes requires an interactive Windows console"};
     }
-    const DWORD input_mode =
-        (implementation_->input_mode | ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT) & ~ENABLE_QUICK_EDIT_MODE;
+    // Ctrl+C must arrive as a normalized key event so the application can
+    // unwind its modal state and restore the screen. Processed input would
+    // terminate the process before this RAII object gets that opportunity.
+    const DWORD input_mode = (implementation_->input_mode | ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT) &
+                             ~(ENABLE_QUICK_EDIT_MODE | ENABLE_PROCESSED_INPUT);
     const DWORD output_mode = implementation_->output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     if (!SetConsoleMode(implementation_->input, input_mode) || !SetConsoleMode(implementation_->output, output_mode)) {
         throw Error{ErrorCategory::terminal, "unable to configure Windows console"};
@@ -178,7 +181,7 @@ ConsoleTerminal::~ConsoleTerminal() {
 #else
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &implementation_->original);
 #endif
-    std::cout << ansi_reset() << "\x1B[?25h" << std::flush;
+    std::cout << ansi_reset() << "\x1B[2J\x1B[H\x1B[?25h" << std::flush;
 }
 
 ConsoleTerminal::ConsoleTerminal(ConsoleTerminal&&) noexcept = default;

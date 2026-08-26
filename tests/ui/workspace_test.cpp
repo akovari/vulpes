@@ -7,6 +7,10 @@
 TEST_CASE("workspace opens path modal and selects database tables", "[ui][workspace]") {
     vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path"};
     CHECK(workspace.handle(vulpes::core::ActionId::database_open, {}) == vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::database_open, {}) == vulpes::ui::WorkspaceResult::redraw);
     static_cast<void>(
         workspace.handle(vulpes::core::ActionId::none,
                          vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'a'}));

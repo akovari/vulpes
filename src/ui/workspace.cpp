@@ -14,6 +14,17 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
         buffer.put(column, y, U' ', style);
 }
 
+constexpr terminal::Style menu_style{.foreground = {230, 242, 255}, .background = {0, 45, 110}, .bold = true};
+constexpr terminal::Style accent_style{
+    .foreground = {255, 220, 90}, .background = {0, 45, 110}, .bold = true, .underline = true};
+constexpr terminal::Style title_style{.foreground = {90, 210, 255}, .background = {0, 0, 0}, .bold = true};
+constexpr terminal::Style selected_style{.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true};
+
+void write_menu(terminal::ScreenBuffer& buffer, int x, int y, std::string_view name) {
+    write(buffer, x, y, static_cast<int>(name.size()), name, menu_style);
+    buffer.put(x, y, static_cast<char32_t>(name.front()), accent_style);
+}
+
 } // namespace
 
 Workspace::Workspace(std::string title, std::string open_label, std::string create_label, std::string path_instructions)
@@ -120,8 +131,13 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
 void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (bounds.width < 40 || bounds.height < 10)
         return;
-    write(buffer, bounds.x, bounds.y, bounds.width, " File  Database  View  Window  Help", {.reverse = true});
-    write(buffer, bounds.x + 2, bounds.y + 2, bounds.width - 4, title_, {.bold = true});
+    write(buffer, bounds.x, bounds.y, bounds.width, "", menu_style);
+    write_menu(buffer, bounds.x + 1, bounds.y, "File");
+    write_menu(buffer, bounds.x + 7, bounds.y, "Database");
+    write_menu(buffer, bounds.x + 17, bounds.y, "View");
+    write_menu(buffer, bounds.x + 23, bounds.y, "Window");
+    write_menu(buffer, bounds.x + 32, bounds.y, "Help");
+    write(buffer, bounds.x + 2, bounds.y + 2, bounds.width - 4, title_, title_style);
     if (database_path_.empty()) {
         write(buffer, bounds.x + 2, bounds.y + 4, bounds.width - 4, "No database open.");
         write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4,
@@ -132,7 +148,7 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 10; ++index)
             write(buffer, bounds.x + 4, bounds.y + 7 + static_cast<int>(index), bounds.width - 8,
                   tables_[index].name + (tables_[index].is_view ? " [view]" : ""),
-                  {.reverse = index == selected_table_});
+                  index == selected_table_ ? selected_style : terminal::Style{});
     }
     if (menu_open_) {
         static constexpr std::array<std::string_view, 3> items{"Open database", "Create database", "Exit"};
@@ -143,8 +159,19 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (prompt_)
         prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,
                                  std::min(60, bounds.width), 5});
-    write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width,
-          status_.empty() ? "F10 Menu   Ctrl+O Open   Ctrl+N Create   Ctrl+C Exit" : status_, {.reverse = true});
+    write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, "", menu_style);
+    if (status_.empty()) {
+        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, 3, "F10", accent_style);
+        write(buffer, bounds.x + 4, bounds.y + bounds.height - 1, 6, " Menu  ", menu_style);
+        write(buffer, bounds.x + 10, bounds.y + bounds.height - 1, 6, "Ctrl+O", accent_style);
+        write(buffer, bounds.x + 16, bounds.y + bounds.height - 1, 7, " Open  ", menu_style);
+        write(buffer, bounds.x + 23, bounds.y + bounds.height - 1, 6, "Ctrl+N", accent_style);
+        write(buffer, bounds.x + 29, bounds.y + bounds.height - 1, 9, " Create  ", menu_style);
+        write(buffer, bounds.x + 38, bounds.y + bounds.height - 1, 6, "Ctrl+C", accent_style);
+        write(buffer, bounds.x + 44, bounds.y + bounds.height - 1, 5, " Exit", menu_style);
+    } else {
+        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, status_, menu_style);
+    }
 }
 
 } // namespace vulpes::ui
