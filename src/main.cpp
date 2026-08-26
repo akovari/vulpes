@@ -16,7 +16,18 @@
 #include <optional>
 #include <string_view>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace {
+
+void initialize_console_encoding() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+}
 
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table) {
     vulpes::model::Dataset dataset{database, table};
@@ -72,6 +83,7 @@ auto wmain(int argc, wchar_t** argv) -> int {
 #else
 auto main(int argc, char** argv) -> int {
 #endif
+    initialize_console_encoding();
     try {
         CLI::App app{"A keyboard-first RAD environment for local SQLite applications"};
         bool version = false;
