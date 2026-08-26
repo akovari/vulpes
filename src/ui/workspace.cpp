@@ -19,6 +19,8 @@ constexpr terminal::Style accent_style{
     .foreground = {255, 220, 90}, .background = {0, 45, 110}, .bold = true, .underline = true};
 constexpr terminal::Style title_style{.foreground = {90, 210, 255}, .background = {0, 0, 0}, .bold = true};
 constexpr terminal::Style selected_style{.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true};
+constexpr terminal::Style popup_style{.foreground = {220, 235, 255}, .background = {0, 25, 65}};
+constexpr terminal::Style popup_selected_style{.foreground = {0, 0, 0}, .background = {255, 220, 90}, .bold = true};
 
 void write_menu(terminal::ScreenBuffer& buffer, int x, int y, std::string_view name) {
     write(buffer, x, y, static_cast<int>(name.size()), name, menu_style);
@@ -152,9 +154,25 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     }
     if (menu_open_) {
         static constexpr std::array<std::string_view, 3> items{"Open database", "Create database", "Exit"};
-        for (std::size_t index = 0; index < items.size(); ++index)
-            write(buffer, bounds.x, bounds.y + 1 + static_cast<int>(index), 24, items[index],
-                  {.reverse = index == menu_selection_});
+        constexpr int menu_width = 30;
+        const int menu_x = bounds.x + 1;
+        const int menu_y = bounds.y + 1;
+        buffer.put(menu_x, menu_y, U'+', popup_style);
+        for (int column = 1; column < menu_width - 1; ++column)
+            buffer.put(menu_x + column, menu_y, U'-', popup_style);
+        buffer.put(menu_x + menu_width - 1, menu_y, U'+', popup_style);
+        for (std::size_t index = 0; index < items.size(); ++index) {
+            const int y = menu_y + 1 + static_cast<int>(index);
+            const auto style = index == menu_selection_ ? popup_selected_style : popup_style;
+            buffer.put(menu_x, y, U'|', popup_style);
+            write(buffer, menu_x + 1, y, menu_width - 2, items[index], style);
+            buffer.put(menu_x + menu_width - 1, y, U'|', popup_style);
+        }
+        const int bottom = menu_y + static_cast<int>(items.size()) + 1;
+        buffer.put(menu_x, bottom, U'+', popup_style);
+        for (int column = 1; column < menu_width - 1; ++column)
+            buffer.put(menu_x + column, bottom, U'-', popup_style);
+        buffer.put(menu_x + menu_width - 1, bottom, U'+', popup_style);
     }
     if (prompt_)
         prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,

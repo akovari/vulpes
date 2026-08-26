@@ -152,8 +152,10 @@ ConsoleTerminal::ConsoleTerminal() : implementation_{std::make_unique<Implementa
     // Ctrl+C must arrive as a normalized key event so the application can
     // unwind its modal state and restore the screen. Processed input would
     // terminate the process before this RAII object gets that opportunity.
-    const DWORD input_mode = (implementation_->input_mode | ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT) &
-                             ~(ENABLE_QUICK_EDIT_MODE | ENABLE_PROCESSED_INPUT);
+    // Use an explicit event-oriented input mode. Inheriting line, echo, or
+    // virtual-terminal input from Windows Terminal can turn arrows/Escape into
+    // a byte stream instead of KEY_EVENT_RECORD values for ReadConsoleInputW.
+    const DWORD input_mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT;
     const DWORD output_mode = implementation_->output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     if (!SetConsoleMode(implementation_->input, input_mode) || !SetConsoleMode(implementation_->output, output_mode)) {
         throw Error{ErrorCategory::terminal, "unable to configure Windows console"};
