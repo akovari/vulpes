@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 namespace vulpes::model {
@@ -50,6 +51,24 @@ namespace {
     }
     pattern += '%';
     return pattern;
+}
+
+[[nodiscard]] auto display_value(const db::Value& value) -> std::string {
+    return std::visit(
+        [](const auto& item) -> std::string {
+            using T = std::decay_t<decltype(item)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return {};
+            else if constexpr (std::is_same_v<T, std::int64_t>)
+                return std::to_string(item);
+            else if constexpr (std::is_same_v<T, double>)
+                return std::to_string(item);
+            else if constexpr (std::is_same_v<T, std::string>)
+                return item;
+            else
+                return "<blob " + std::to_string(item.size()) + " bytes>";
+        },
+        value.storage());
 }
 
 } // namespace
@@ -199,6 +218,40 @@ auto Dataset::draft_value(std::string_view field) const -> std::optional<db::Val
     if (!row)
         return std::nullopt;
     return row->at(index);
+}
+
+auto Dataset::lookup_options(std::string_view field, std::size_t limit) const -> std::vector<LookupOption> {
+    if (limit == 0)
+        throw Error{ErrorCategory::validation, "lookup limit must be greater than zero"};
+    const auto* foreign_key = foreign_key_for(field);
+    if (foreign_key == nullptr)
+        throw Error{ErrorCategory::validation, "field is not a foreign key: " + std::string{field}};
+
+    const auto schemas = db::inspect_schema(*database_);
+    const auto referenced = std::ranges::find(schemas, foreign_key->referenced_table, &db::TableSchema::name);
+    if (referenced == schemas.end())
+        throw Error{ErrorCategory::database, "referenced table does not exist: " + foreign_key->referenced_table};
+
+    static constexpr std::array<std::string_view, 4> display_candidates{"name", "title", "description", "code"};
+    std::string display_field = foreign_key->referenced_field;
+    for (const auto candidate : display_candidates) {
+        if (std::ranges::find(referenced->fields, candidate, &db::FieldSchema::name) != referenced->fields.end()) {
+            display_field = std::string{candidate};
+            break;
+        }
+    }
+
+    const auto key = db::detail::quote_identifier(foreign_key->referenced_field);
+    const auto display = db::detail::quote_identifier(display_field);
+    auto query = database_->prepare("SELECT " + key + ", " + display + " FROM " +
+                                    db::detail::quote_identifier(foreign_key->referenced_table) + " ORDER BY " +
+                                    display + " COLLATE NOCASE, " + key + " LIMIT ?");
+    query.bind(1, db::Value{static_cast<std::int64_t>(limit)});
+
+    std::vector<LookupOption> options;
+    while (query.step())
+        options.push_back({query.column(0), display_value(query.column(1))});
+    return options;
 }
 
 void Dataset::save() {
@@ -480,6 +533,11 @@ auto Dataset::order_clause() const -> std::string {
 
 auto Dataset::has_text_fields() const -> bool {
     return std::ranges::any_of(schema_.fields, [](const auto& field) { return !field.hidden && is_text_field(field); });
+}
+
+auto Dataset::foreign_key_for(std::string_view field) const -> const db::ForeignKeySchema* {
+    const auto foreign_key = std::ranges::find(schema_.foreign_keys, field, &db::ForeignKeySchema::field);
+    return foreign_key == schema_.foreign_keys.end() ? nullptr : &*foreign_key;
 }
 
 } // namespace vulpes::model

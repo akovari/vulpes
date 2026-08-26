@@ -66,13 +66,28 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
     for (const auto& schema_field : dataset_->schema().fields) {
         if (schema_field.hidden)
             continue;
-        const auto kind = field_kind(schema_field, mode);
+        const bool is_foreign_key = std::ranges::any_of(dataset_->schema().foreign_keys, [&](const auto& foreign_key) {
+            return foreign_key.field == schema_field.name;
+        });
+        const auto kind = field_kind(schema_field, mode, is_foreign_key);
         const auto value = dataset_->draft_value(schema_field.name);
-        fields_.push_back({.name = schema_field.name,
-                           .label = schema_field.name,
-                           .kind = kind,
-                           .read_only = kind == FormFieldKind::read_only,
-                           .text = value ? format_value(*value, kind) : std::string{}});
+        FormField form_field{.name = schema_field.name,
+                             .label = schema_field.name,
+                             .kind = kind,
+                             .read_only = kind == FormFieldKind::read_only,
+                             .text = value ? format_value(*value, kind) : std::string{}};
+        if (kind == FormFieldKind::lookup) {
+            form_field.lookup_options = dataset_->lookup_options(schema_field.name);
+            if (value) {
+                const auto selected = std::ranges::find(form_field.lookup_options, *value, &model::LookupOption::value);
+                if (selected != form_field.lookup_options.end()) {
+                    form_field.selected_lookup_option =
+                        static_cast<std::size_t>(std::distance(form_field.lookup_options.begin(), selected));
+                    form_field.text = selected->label;
+                }
+            }
+        }
+        fields_.push_back(std::move(form_field));
         changed_.push_back(false);
     }
 }
@@ -106,6 +121,11 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
         return FormResult::unchanged;
 
     auto& field = fields_[selected_field_];
+    if (field.kind == FormFieldKind::lookup && (key->key == terminal::Key::left || key->key == terminal::Key::right)) {
+        move_lookup_selection(field, key->key == terminal::Key::left ? -1 : 1);
+        changed_[selected_field_] = true;
+        return FormResult::redraw;
+    }
     if (key->key == terminal::Key::backspace) {
         erase_last_code_point(field.text);
         changed_[selected_field_] = true;
@@ -163,12 +183,14 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     border(bounds.y + bounds.height - 1);
 }
 
-auto RecordForm::field_kind(const db::FieldSchema& field, FormMode mode) -> FormFieldKind {
+auto RecordForm::field_kind(const db::FieldSchema& field, FormMode mode, bool is_foreign_key) -> FormFieldKind {
     // Binary data needs a dedicated editor. Rendering it as text is useful for
     // inspection, but converting an edited placeholder back to SQLite TEXT is
     // never a safe default.
     if (field.generated || has_blob_type(field.declared_type) || (mode == FormMode::edit && field.primary_key))
         return FormFieldKind::read_only;
+    if (is_foreign_key)
+        return FormFieldKind::lookup;
     if (has_boolean_hint(field))
         return FormFieldKind::checkbox;
     if (has_numeric_type(field.declared_type))
@@ -195,6 +217,11 @@ auto RecordForm::format_value(const db::Value& value, FormFieldKind kind) -> std
 }
 
 auto RecordForm::parse_value(const FormField& field) -> db::Value {
+    if (field.kind == FormFieldKind::lookup) {
+        if (!field.selected_lookup_option)
+            return db::Value{nullptr};
+        return field.lookup_options.at(*field.selected_lookup_option).value;
+    }
     if (field.kind == FormFieldKind::checkbox)
         return db::Value{field.text == "1"};
     if (field.kind != FormFieldKind::number)
@@ -225,6 +252,17 @@ void RecordForm::move_selection(int direction) {
         next = (next + direction + count) % count;
     } while (fields_[static_cast<std::size_t>(next)].read_only && next != static_cast<int>(selected_field_));
     selected_field_ = static_cast<std::size_t>(next);
+}
+
+void RecordForm::move_lookup_selection(FormField& field, int direction) {
+    if (field.lookup_options.empty())
+        return;
+    const auto count = static_cast<int>(field.lookup_options.size());
+    const auto next = field.selected_lookup_option
+                          ? (static_cast<int>(*field.selected_lookup_option) + direction + count) % count
+                          : (direction < 0 ? count - 1 : 0);
+    field.selected_lookup_option = static_cast<std::size_t>(next);
+    field.text = field.lookup_options.at(*field.selected_lookup_option).label;
 }
 
 void RecordForm::save() {

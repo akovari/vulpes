@@ -89,6 +89,24 @@ TEST_CASE("dataset uses correct NULL predicate semantics", "[model][dataset]") {
     CHECK(dataset.total_count() == 4);
 }
 
+TEST_CASE("dataset exposes bounded foreign-key lookup options with display-field heuristics", "[model][dataset]") {
+    auto database = make_dataset_database();
+    database.execute("CREATE TABLE region(id INTEGER PRIMARY KEY, code TEXT NOT NULL);"
+                     "INSERT INTO region VALUES (1, 'CZ'), (2, 'AT');"
+                     "CREATE TABLE office(id INTEGER PRIMARY KEY, region_id INTEGER REFERENCES region(id));");
+    const auto schemas = db::inspect_schema(database);
+    const auto office = std::ranges::find(schemas, "office", &db::TableSchema::name);
+    REQUIRE(office != schemas.end());
+    model::Dataset dataset{database, *office};
+
+    const auto options = dataset.lookup_options("region_id", 1);
+    REQUIRE(options.size() == 1);
+    CHECK(options.front().value.as_int() == 2);
+    CHECK(options.front().label == "AT");
+    CHECK_THROWS_AS(dataset.lookup_options("id"), Error);
+    CHECK_THROWS_AS(dataset.lookup_options("region_id", 0), Error);
+}
+
 TEST_CASE("dataset rejects unknown fields and invalid NULL comparisons", "[model][dataset]") {
     auto database = make_dataset_database();
     model::Dataset dataset{database, customer_schema(database)};

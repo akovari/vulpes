@@ -4,12 +4,13 @@
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace vulpes::ui {
 
-enum class FormFieldKind { text, number, checkbox, read_only };
+enum class FormFieldKind { text, number, checkbox, lookup, read_only };
 enum class FormMode { insert, edit };
 enum class FormResult { unchanged, redraw, saved, cancelled };
 
@@ -19,6 +20,8 @@ struct FormField {
     FormFieldKind kind{FormFieldKind::text};
     bool read_only{false};
     std::string text;
+    std::vector<model::LookupOption> lookup_options;
+    std::optional<std::size_t> selected_lookup_option;
 };
 
 // A schema-generated, terminal-independent record editor. It owns temporary
@@ -33,10 +36,12 @@ class RecordForm {
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
   private:
-    [[nodiscard]] static auto field_kind(const db::FieldSchema& field, FormMode mode) -> FormFieldKind;
+    [[nodiscard]] static auto field_kind(const db::FieldSchema& field, FormMode mode, bool is_foreign_key)
+        -> FormFieldKind;
     [[nodiscard]] static auto format_value(const db::Value& value, FormFieldKind kind) -> std::string;
     [[nodiscard]] static auto parse_value(const FormField& field) -> db::Value;
     void move_selection(int direction);
+    void move_lookup_selection(FormField& field, int direction);
     void save();
 
     model::Dataset* dataset_;

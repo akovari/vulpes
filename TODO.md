@@ -81,8 +81,10 @@ on Windows, Linux, and macOS.
   confirmation.
 - [ ] Map constraint/validation failures to fields without losing edits.
 - [ ] Infer boolean-like fields conservatively.
-- [ ] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
-  implement a relationship lookup.
+- [x] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
+  implement a bounded keyboard relationship lookup.
+- [ ] Add searchable, metadata-configurable relationship lookups and related-record
+  drill-down.
 - [ ] Validate the complete workshop success scenario on all platforms.
 
 ## M6 — Inventory dogfood and 0.1 packaging

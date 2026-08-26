@@ -63,3 +63,30 @@ TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
     CHECK(form.fields()[1].name == "contents");
     CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::read_only);
 }
+
+TEST_CASE("generated form selects a foreign key by its inferred display field", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute(
+        "CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL);"
+        "INSERT INTO customer VALUES (1, 'Acme'), (2, 'Beta');"
+        "CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customer(id), description TEXT);");
+    const auto schemas = vulpes::db::inspect_schema(database);
+    const auto job = std::ranges::find(schemas, "job", &vulpes::db::TableSchema::name);
+    REQUIRE(job != schemas.end());
+    vulpes::model::Dataset dataset{database, *job};
+    vulpes::ui::RecordForm form{dataset, "New job", vulpes::ui::FormMode::insert};
+
+    REQUIRE(form.fields().at(1).kind == vulpes::ui::FormFieldKind::lookup);
+    CHECK(form.fields().at(1).lookup_options.at(0).label == "Acme");
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    static_cast<void>(
+        form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'J'}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}));
+
+    auto query = database.prepare("SELECT customer_id, description FROM job");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_int() == 1);
+    CHECK(query.column(1).as_string() == "J");
+}

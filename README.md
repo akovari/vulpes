@@ -69,6 +69,12 @@ SQLite parameters; the TUI never interpolates user input into SQL.
 with Left/Right or `Y`, then press Enter. Deletion uses the same transactional,
 primary-key-guarded dataset operation as other writes.
 
+Foreign-key fields in generated forms are rendered as lookups rather than raw
+keys. Vulpes infers a related display field in this order: `name`, `title`,
+`description`, then `code`. Use Left/Right on the lookup to choose from the
+first 100 related rows; Vulpes stores the underlying key. Searchable and
+metadata-configured lookups are intentionally deferred.
+
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.

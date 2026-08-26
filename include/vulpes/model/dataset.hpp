@@ -3,6 +3,7 @@
 #include "vulpes/db/row.hpp"
 #include "vulpes/db/schema.hpp"
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -28,6 +29,11 @@ struct Filter {
 struct RowIdentity {
     std::vector<std::string> fields;
     std::vector<db::Value> values;
+};
+
+struct LookupOption {
+    db::Value value;
+    std::string label;
 };
 
 // A table-backed cursor model. It owns query and editing state, so UI code never
@@ -58,6 +64,8 @@ class Dataset {
     void begin_edit();
     auto set(std::string_view field, db::Value value) -> Dataset&;
     [[nodiscard]] auto draft_value(std::string_view field) const -> std::optional<db::Value>;
+    [[nodiscard]] auto lookup_options(std::string_view field, std::size_t limit = 100) const
+        -> std::vector<LookupOption>;
     void save();
     void cancel() noexcept;
     void erase();
@@ -79,6 +87,7 @@ class Dataset {
     [[nodiscard]] auto query_where_clause(std::vector<db::Value>& values) const -> std::string;
     [[nodiscard]] auto order_clause() const -> std::string;
     [[nodiscard]] auto has_text_fields() const -> bool;
+    [[nodiscard]] auto foreign_key_for(std::string_view field) const -> const db::ForeignKeySchema*;
 
     db::Database* database_;
     db::TableSchema schema_;

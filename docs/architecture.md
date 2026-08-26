@@ -92,6 +92,15 @@ the presentation caller. Browse uses it before delegating deletion to
 `Dataset::erase`; the dataset remains responsible for transactional execution
 and stable primary-key identity. See ADR 0008.
 
+### Relationship lookups
+
+`Dataset::lookup_options` discovers a field's foreign-key schema, resolves a
+small, schema-derived display-field heuristic, and returns bound key/label
+pairs. `RecordForm` renders the label but saves the key. The option list is
+bounded to 100 rows and does not expose database handles or SQL to the widget;
+searchable and metadata-defined lookups remain a later model feature. See ADR
+0009.
+
 ### Commands
 
 The command parser produces stable `CommandId` values. `ApplicationRuntime`
