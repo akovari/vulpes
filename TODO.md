@@ -60,6 +60,14 @@ on Windows, Linux, and macOS.
 - [ ] Add safe sorting, filtering, searching, and refresh.
 - [ ] Reuse Grid for a multiline SQL console.
 
+## Cross-cutting — localization
+
+- [x] Define stable message keys, locale fallback, and named message arguments.
+- [x] Use CLI11 for process-level command-line parsing.
+- [ ] Add external UTF-8 catalog loading and locale selection configuration.
+- [ ] Add ICU-backed plural/select message formatting with the first translated
+  application catalog.
+
 ## M5 — Edit workflow and generated forms
 
 - [ ] Implement text, number, checkbox, button, dialog, and generated record form.

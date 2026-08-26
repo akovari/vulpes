@@ -20,6 +20,8 @@ produce a clean and stable warning set.
 - Dataset identifiers must originate in `TableSchema`; values must be bound rather
   than interpolated. Free-form SQL is reserved for the SQL console boundary.
 - UTF-8 at external text boundaries and `char32_t` for logical screen glyphs.
+- Never use human-readable UI text as an identifier. Use stable action/message
+  keys and localize at the presentation boundary.
 - Exceptions may cross implementation layers, but frontend boundaries convert
   `vulpes::Error` into user-facing structured errors.
 - Platform-specific sources must be isolated and selected by CMake.

@@ -9,6 +9,7 @@ option(VULPES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
 
 add_library(vulpes_options INTERFACE)
 target_compile_features(vulpes_options INTERFACE cxx_std_23)
@@ -26,6 +27,8 @@ else()
 endif()
 
 add_library(vulpes_core
+    src/core/command.cpp
+    src/core/localization.cpp
     src/db/database.cpp
     src/db/identifier.cpp
     src/db/row.cpp
@@ -55,7 +58,11 @@ configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)
 target_include_directories(vulpes_core PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>)
 
 add_executable(vulpes src/main.cpp)
-target_link_libraries(vulpes PRIVATE Vulpes::core)
+target_link_libraries(vulpes PRIVATE Vulpes::core CLI11::CLI11)
+
+if(BUILD_TESTING)
+    add_test(NAME vulpes_version COMMAND vulpes --version)
+endif()
 
 install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
