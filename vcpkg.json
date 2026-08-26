@@ -7,7 +7,7 @@
   "builtin-baseline": "ddd0023b0eee70986e42ed49d9d4afb8098f212e",
   "dependencies": [
     { "name": "sqlite3", "version>=": "3.53.4" },
-    { "name": "catch2", "version>=": "3.15.3" }
+    { "name": "catch2", "version>=": "3.15.3" },
+    { "name": "utf8proc", "version>=": "2.11.3" }
   ]
 }
-

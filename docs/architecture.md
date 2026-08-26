@@ -68,8 +68,8 @@ optimization when a stable unique ordering is available. See ADR 0001.
 ### Terminal rendering
 
 Widgets render semantic cells into `ScreenBuffer`. A backend diffs frames and
-encodes cells for the host. Width is not equivalent to code-point count, so a
-Unicode-width dependency must be selected before text layout is implemented.
+encodes cells for the host. utf8proc supplies current Unicode cell-width data and
+UTF-8 decoding. Extended grapheme layout is deliberately deferred; see ADR 0002.
 
 ## Deferred decisions
 

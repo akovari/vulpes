@@ -64,6 +64,11 @@ auto Dataset::current() const -> std::optional<db::Row> {
     return rows_.at(current_index_);
 }
 
+auto Dataset::current_row_index() const -> std::optional<std::size_t> {
+    if (rows_.empty()) return std::nullopt;
+    return current_index_;
+}
+
 auto Dataset::current_identity() const -> std::optional<RowIdentity> {
     const auto row = current();
     const auto fields = schema_.primary_key_fields();

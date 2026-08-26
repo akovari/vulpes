@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 namespace vulpes::terminal {
@@ -19,6 +20,7 @@ struct Style {
 struct Cell {
     char32_t glyph{U' '};
     Style style{};
+    bool continuation{false};
     auto operator==(const Cell&) const -> bool = default;
 };
 
@@ -29,6 +31,7 @@ public:
     [[nodiscard]] auto height() const noexcept -> int { return height_; }
     [[nodiscard]] auto cell(int x, int y) const -> const Cell&;
     void put(int x, int y, char32_t glyph, Style style = {});
+    [[nodiscard]] auto write_utf8(int x, int y, std::string_view text, Style style = {}) -> int;
     void clear(Cell fill = {});
 
 private:
@@ -39,4 +42,3 @@ private:
 };
 
 } // namespace vulpes::terminal
-

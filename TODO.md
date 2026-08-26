@@ -42,9 +42,10 @@ on Windows, Linux, and macOS.
 ## M3 — Terminal and semantic UI foundation
 
 - [x] `ScreenBuffer`, styles, normalized key/resize events, and backend interface.
-- [ ] Spike Unicode grapheme segmentation/display width and record an ADR.
-- [ ] Implement deterministic screen diffing independent of byte encoding.
-- [ ] Implement `TestTerminal`, then ANSI and Windows backends.
+- [x] Spike Unicode grapheme segmentation/display width and record an ADR.
+- [x] Implement deterministic screen diffing independent of byte encoding.
+- [x] Implement `TestTerminal` and a pure ANSI encoder; Windows and interactive
+  ANSI backends remain pending.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
 - [ ] Implement focus, measure/layout, container, label, and status bar.
@@ -52,8 +53,8 @@ on Windows, Linux, and macOS.
 
 ## M4 — First vertical slice: browse
 
-- [ ] Implement static grid layout and logical-cell tests.
-- [ ] Bind grid rows to a read-only dataset.
+- [x] Implement static grid layout and logical-cell tests.
+- [x] Bind grid rows to a read-only dataset.
 - [ ] Add selection, vertical/horizontal scrolling, and paging.
 - [ ] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
 - [ ] Add safe sorting, filtering, searching, and refresh.

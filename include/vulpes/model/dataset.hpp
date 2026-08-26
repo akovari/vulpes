@@ -37,6 +37,7 @@ public:
     [[nodiscard]] auto rows() const noexcept -> const std::vector<db::Row>& { return rows_; }
     [[nodiscard]] auto total_count() -> std::size_t;
     [[nodiscard]] auto current() const -> std::optional<db::Row>;
+    [[nodiscard]] auto current_row_index() const -> std::optional<std::size_t>;
     [[nodiscard]] auto current_identity() const -> std::optional<RowIdentity>;
     [[nodiscard]] auto is_editable() const noexcept -> bool;
     [[nodiscard]] auto page_size() const noexcept -> std::size_t { return page_size_; }
@@ -72,4 +73,3 @@ private:
 };
 
 } // namespace vulpes::model
-
