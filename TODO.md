@@ -50,7 +50,16 @@ on Windows, Linux, and macOS.
   `ConsoleTerminal` adapter for browse navigation.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
-- [ ] Implement focus, measure/layout, container, label, and status bar.
+- [ ] Complete Windows raw-input verification for Escape, arrows, Ctrl+C, function
+  keys, Alt chords, and terminal restoration on Windows Terminal and legacy hosts.
+- [ ] Complete Linux/macOS raw-input verification for Escape ambiguity, resize,
+  Ctrl+C, UTF-8, and terminal restoration.
+- [ ] Implement focus traversal, measure/layout, container, label, button, and
+  reusable status-bar primitives.
+- [ ] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
+  rendering without hard-coded colors in individual screens.
+- [ ] Add terminal capability/redirected-stream diagnostics and a user-facing
+  terminal failure screen.
 - [x] Map configurable keys to semantic action IDs.
 
 ## M4 — First vertical slice: browse
@@ -72,6 +81,16 @@ on Windows, Linux, and macOS.
 - [ ] Open or create SQLite databases through a portable path-entry dialog.
 - [ ] Manage active document tabs, modal input, focus, and a status bar.
 - [ ] Host browse and SQL-console surfaces as workspace documents.
+- [ ] Make File-menu Escape/Left/Right/Alt mnemonic behavior reliable on all
+  supported Windows terminal hosts.
+- [ ] Implement the Database, View, Window, and Help menus rather than only the
+  File-menu prototype.
+- [ ] Add document tabs, active-document switching, close confirmation, and a
+  tab-local title/status model.
+- [ ] Add a command window/palette using the existing command dispatcher.
+- [ ] Add recent databases, safe create/open mode selection, read-only indication,
+  and persistent workspace preferences.
+- [ ] Design an optional directory browser separately from portable path entry.
 
 ## Cross-cutting — localization
 
@@ -80,6 +99,8 @@ on Windows, Linux, and macOS.
 - [x] Add external UTF-8 catalog loading and locale selection configuration.
 - [ ] Add ICU-backed plural/select message formatting with the first translated
   application catalog.
+- [ ] Localize all workspace/menu/status/help text and add Czech catalog coverage.
+- [ ] Add locale-aware date, time, number, and currency display policies.
 
 ## M5 — Edit workflow and generated forms
 
@@ -95,6 +116,10 @@ on Windows, Linux, and macOS.
 - [ ] Add searchable, metadata-configurable relationship lookups and related-record
   drill-down.
 - [ ] Validate the complete workshop success scenario on all platforms.
+- [ ] Add field labels, ordering, hidden/read-only overrides, formats, and lookup
+  behavior from optional application metadata.
+- [ ] Add date/time display/edit controls only after an explicit SQLite annotation
+  policy is defined.
 
 ## M6 — Inventory dogfood and 0.1 packaging
 
@@ -104,11 +129,31 @@ on Windows, Linux, and macOS.
 - [ ] Fix framework weaknesses without inventory-specific runtime code.
 - [ ] Package standalone artifacts for Windows, Linux, and macOS.
 - [ ] Document backup, recovery, compatibility, and upgrade behavior.
+- [ ] Add versioned installer/archive conventions, checksums, licenses, and release
+  notes for each supported platform.
 
 ## Post-0.1 — deliberately deferred
 
-- [ ] Metadata schema and application mode.
-- [ ] Named reports and export formats.
-- [ ] Deliberate Lua API and lifecycle hooks.
+- [ ] Define and migrate SQLite-resident `_app_*` metadata tables.
+- [ ] Load metadata as enhancements to ordinary SQLite schema introspection.
+- [ ] Support metadata-defined form labels, field order, visibility, read-only
+  state, formatting, views, commands, menus, reports, and settings.
+- [ ] Launch a metadata-defined application from a `.vulpes` SQLite file while
+  retaining ordinary SQLite-tool compatibility.
+
+## Reports and export
+
+- [ ] Define named SQL-query report metadata and workspace commands.
+- [ ] Render reports through Grid with sorting/navigation shared with browse.
+- [ ] Export report/query results to CSV, JSON, plain text, HTML, and PDF.
+- [ ] Define encoding, locale, overwrite, and error-handling behavior for exports.
+
+## Lua business logic
+
+- [ ] Select/package Lua and define a deliberately small, safe host API.
+- [ ] Add lifecycle hooks: `on_open`, `before_insert`, `before_update`,
+  `after_update`, `before_delete`, and `on_command`.
+- [ ] Define script storage, error presentation, transaction interaction, and
+  testing/sandbox policy.
 - [ ] GUI/web renderers, networking, designer, and extension ecosystem only after
   the core browse/edit workflow is demonstrably strong.
