@@ -12,12 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        with:
-          style: file
-          tidy-checks: ''
-      - name: Fail on formatting drift
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
-
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install --yes clang-format-21
+      - name: Check formatting
+        shell: bash
+        run: |
+          find include src tests \( -name '*.cpp' -o -name '*.hpp' \) -print0 | \
+            xargs -0 clang-format-21 --dry-run --Werror --style=file

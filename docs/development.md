@@ -19,7 +19,9 @@ Run `clang-format -i --style=file <files>` to format selected files. When
 `format-check` targets instead. Visual Studio 2026 includes `clang-format`;
 its x64 executable is under `VC\Tools\Llvm\x64\bin` in a standard install.
 
-The `Format` GitHub workflow checks every push and pull request.
+The `Format` GitHub workflow uses clang-format directly on every push and pull
+request. It does not run clang-tidy: static analysis needs a configured
+compilation database and is covered by the dedicated target below.
 
 ### Static analysis
 

@@ -29,9 +29,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VCPKG_FEATURE_FLAGS: manifests,versions
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          doNotCache: false
 
       - name: Configure
         run: cmake --preset ${{ matrix.configure }}
