@@ -1,9 +1,14 @@
 #include <CLI/CLI.hpp>
 
+#include "vulpes/core/browse_controller.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/model/dataset.hpp"
+#include "vulpes/terminal/console_terminal.hpp"
+#include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/grid.hpp"
 #include "vulpes/version.hpp"
 
 #include <filesystem>
@@ -12,6 +17,34 @@
 #include <string_view>
 
 namespace {
+
+void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table) {
+    vulpes::model::Dataset dataset{database, table};
+    vulpes::core::BrowseController controller{dataset};
+    vulpes::terminal::ConsoleTerminal terminal;
+    auto terminal_size = terminal.size();
+    if (terminal_size.width < 20 || terminal_size.height < 6) {
+        throw vulpes::Error{vulpes::ErrorCategory::terminal, "terminal must be at least 20 columns by 6 rows"};
+    }
+    vulpes::terminal::ScreenBuffer previous{terminal_size.width, terminal_size.height};
+    vulpes::terminal::ScreenBuffer current{terminal_size.width, terminal_size.height};
+    vulpes::ui::Grid grid{dataset, table.name};
+
+    for (;;) {
+        const auto updated_size = terminal.size();
+        if (updated_size.width != terminal_size.width || updated_size.height != terminal_size.height) {
+            terminal_size = updated_size;
+            if (terminal_size.width < 20 || terminal_size.height < 6) continue;
+            previous = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+            current = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+        }
+        current.clear();
+        grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
+        terminal.present(previous, current);
+        previous = current;
+        if (controller.handle(terminal.read_event()) == vulpes::core::BrowseResult::close) return;
+    }
+}
 
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name) -> int {
     vulpes::db::Database database{database_path};
@@ -24,8 +57,7 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
             throw vulpes::Error{vulpes::ErrorCategory::validation,
                                 messages.translate("error.unknown_table", {{"name", *table_name}})};
         }
-        std::cout << found->name << (found->is_view ? " [view]" : "") << ":\n";
-        for (const auto& field : found->fields) std::cout << "  " << field.name << "  " << field.declared_type << '\n';
+        browse(database, *found);
     } else {
         std::cout << messages.translate("database.tables") << ":\n";
         for (const auto& table : schema) std::cout << "  " << table.name << (table.is_view ? " [view]" : "") << '\n';

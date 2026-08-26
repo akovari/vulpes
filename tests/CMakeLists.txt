@@ -1,6 +1,7 @@
 find_package(Catch2 3 CONFIG REQUIRED)
 
 add_executable(vulpes_tests
+    core/browse_controller_test.cpp
     core/command_test.cpp
     core/localization_test.cpp
     db/database_test.cpp

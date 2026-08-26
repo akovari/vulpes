@@ -27,6 +27,7 @@ else()
 endif()
 
 add_library(vulpes_core
+    src/core/browse_controller.cpp
     src/core/command.cpp
     src/core/localization.cpp
     src/db/database.cpp
@@ -38,6 +39,7 @@ add_library(vulpes_core
     src/db/value.cpp
     src/model/dataset.cpp
     src/terminal/ansi_encoder.cpp
+    src/terminal/console_terminal.cpp
     src/terminal/frame_diff.cpp
     src/terminal/screen_buffer.cpp
     src/terminal/test_terminal.cpp

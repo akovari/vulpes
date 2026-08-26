@@ -44,8 +44,8 @@ on Windows, Linux, and macOS.
 - [x] `ScreenBuffer`, styles, normalized key/resize events, and backend interface.
 - [x] Spike Unicode grapheme segmentation/display width and record an ADR.
 - [x] Implement deterministic screen diffing independent of byte encoding.
-- [x] Implement `TestTerminal` and a pure ANSI encoder; Windows and interactive
-  ANSI backends remain pending.
+- [x] Implement `TestTerminal`, a pure ANSI encoder, and an isolated native
+  `ConsoleTerminal` adapter for browse navigation.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
 - [ ] Implement focus, measure/layout, container, label, and status bar.
@@ -55,7 +55,8 @@ on Windows, Linux, and macOS.
 
 - [x] Implement static grid layout and logical-cell tests.
 - [x] Bind grid rows to a read-only dataset.
-- [ ] Add selection, vertical/horizontal scrolling, and paging.
+- [x] Add selected-row state, vertical navigation, and dataset paging.
+- [ ] Add horizontal grid navigation and scrolling.
 - [ ] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
 - [ ] Add safe sorting, filtering, searching, and refresh.
 - [ ] Reuse Grid for a multiline SQL console.

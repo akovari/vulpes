@@ -70,6 +70,7 @@ optimization when a stable unique ordering is available. See ADR 0001.
 Widgets render semantic cells into `ScreenBuffer`. A backend diffs frames and
 encodes cells for the host. utf8proc supplies current Unicode cell-width data and
 UTF-8 decoding. Extended grapheme layout is deliberately deferred; see ADR 0002.
+`ConsoleTerminal` is the current native adapter and is replaceable; see ADR 0004.
 
 ## Deferred decisions
 
