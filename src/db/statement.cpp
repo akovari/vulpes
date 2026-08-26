@@ -50,6 +50,8 @@ auto Statement::bind(int index, const Value& value) -> Statement& {
                 return sqlite3_bind_double(statement_, index, item);
             else if constexpr (std::is_same_v<T, std::string>)
                 return sqlite3_bind_text64(statement_, index, item.data(), item.size(), SQLITE_TRANSIENT, SQLITE_UTF8);
+            else if (item.empty())
+                return sqlite3_bind_zeroblob64(statement_, index, 0);
             else
                 return sqlite3_bind_blob64(statement_, index, item.data(), item.size(), SQLITE_TRANSIENT);
         },
@@ -106,11 +108,15 @@ auto Statement::column(int index) const -> Value {
     case SQLITE_TEXT: {
         const auto* data = reinterpret_cast<const char*>(sqlite3_column_text(statement_, index));
         const auto size = static_cast<std::size_t>(sqlite3_column_bytes(statement_, index));
+        if (size == 0)
+            return Value{std::string{}};
         return Value{std::string{data, size}};
     }
     case SQLITE_BLOB: {
         const auto* data = static_cast<const std::byte*>(sqlite3_column_blob(statement_, index));
         const auto size = static_cast<std::size_t>(sqlite3_column_bytes(statement_, index));
+        if (size == 0)
+            return Value{Blob{}};
         return Value{Blob{data, data + size}};
     }
     default:

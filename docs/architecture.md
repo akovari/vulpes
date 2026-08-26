@@ -56,7 +56,10 @@ One `Database` owns one connection and is movable, not copyable. Statements are
 movable, not copyable, and cannot outlive their database. This lifetime rule will
 be made mechanically explicit if asynchronous execution is later introduced.
 Foreign keys and extended result codes are enabled per connection; busy timeout
-is initially five seconds and will become configuration.
+is initially five seconds and will become configuration. SQLite TEXT values are
+kept as raw byte strings by the database layer, including invalid UTF-8, to
+preserve SQLite semantics. The terminal boundary is responsible for safe display
+of externally supplied text.
 
 ### Dataset paging and editing
 

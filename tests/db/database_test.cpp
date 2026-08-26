@@ -2,9 +2,33 @@
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/transaction.hpp"
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
+#include <filesystem>
 
 using namespace vulpes::db;
+
+namespace {
+
+class TemporaryDatabaseFile {
+  public:
+    TemporaryDatabaseFile()
+        : path_{std::filesystem::temp_directory_path() /
+                ("vulpes-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+                 ".sqlite")} {}
+    ~TemporaryDatabaseFile() {
+        std::error_code error;
+        std::filesystem::remove(path_, error);
+    }
+
+    [[nodiscard]] auto path() const -> const std::filesystem::path& { return path_; }
+
+  private:
+    std::filesystem::path path_;
+};
+
+} // namespace
 
 TEST_CASE("values round-trip through SQLite", "[db]") {
     Database database{":memory:"};
@@ -77,4 +101,63 @@ TEST_CASE("constraint failures retain SQLite result codes", "[db]") {
         CHECK(error.category() == vulpes::ErrorCategory::constraint);
         CHECK(error.native_code() != 0);
     }
+}
+
+TEST_CASE("values preserve blobs, empty values, and SQLite text bytes", "[db]") {
+    Database database{":memory:"};
+    database.execute("CREATE TABLE sample(empty_text TEXT, empty_blob BLOB, payload BLOB, raw_text TEXT)");
+    const Blob payload{std::byte{0x00}, std::byte{0x7F}, std::byte{0xFF}};
+    const std::string invalid_utf8 = std::string{"valid"} + static_cast<char>(0xFF) + "bytes";
+
+    auto insert = database.prepare("INSERT INTO sample VALUES (:text, :empty_blob, :payload, :raw_text)");
+    insert.bind(":text", "")
+        .bind(":empty_blob", Blob{})
+        .bind(":payload", payload)
+        .bind(":raw_text", invalid_utf8)
+        .execute();
+
+    auto query = database.prepare("SELECT empty_text, empty_blob, payload, raw_text FROM sample");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_string().empty());
+    CHECK(query.column(1).as_blob().empty());
+    CHECK(std::ranges::equal(query.column(2).as_blob(), payload));
+    CHECK(query.column(3).as_string() == invalid_utf8);
+}
+
+TEST_CASE("database is movable and read-only mode rejects writes", "[db]") {
+    TemporaryDatabaseFile file;
+    {
+        Database writer{file.path()};
+        writer.execute("CREATE TABLE sample(value INTEGER); INSERT INTO sample VALUES (7)");
+        Database moved{std::move(writer)};
+        auto query = moved.prepare("SELECT value FROM sample");
+        REQUIRE(query.step());
+        CHECK(query.column(0).as_int() == 7);
+    }
+    {
+        Database read_only{file.path(), OpenMode::read_only};
+        auto query = read_only.prepare("SELECT value FROM sample");
+        REQUIRE(query.step());
+        CHECK(query.column(0).as_int() == 7);
+        CHECK_THROWS_AS(read_only.execute("INSERT INTO sample VALUES (8)"), vulpes::Error);
+    }
+}
+
+TEST_CASE("a locked database reports a busy error after its configured timeout", "[db]") {
+    TemporaryDatabaseFile file;
+    Database first{file.path()};
+    first.execute("CREATE TABLE sample(value INTEGER)");
+    Database second{file.path()};
+    second.execute("PRAGMA busy_timeout = 1");
+
+    Transaction transaction{first};
+    first.execute("INSERT INTO sample VALUES (1)");
+    try {
+        second.execute("INSERT INTO sample VALUES (2)");
+        FAIL("expected a busy error");
+    } catch (const vulpes::Error& error) {
+        CHECK(error.category() == vulpes::ErrorCategory::database);
+        CHECK(error.native_code() != 0);
+    }
+    transaction.rollback();
 }

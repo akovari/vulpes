@@ -26,7 +26,7 @@ on Windows, Linux, and macOS.
 - [x] Discover unique constraints, indexes, generated/hidden columns, composite
   keys, and foreign-key actions.
 - [x] Classify constraint errors and preserve extended SQLite result codes.
-- [ ] Test blobs, empty values, invalid UTF-8 policy, nested transaction policy,
+- [x] Test blobs, empty values, invalid UTF-8 policy, nested transaction policy,
   busy handling, read-only mode, and move semantics.
 - [x] Add safe identifier quoting as an internal shared utility.
 
