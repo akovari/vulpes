@@ -8,5 +8,5 @@ repos:
         name: clang-format
         entry: clang-format -i --style=file
         language: unsupported
-        files: '\\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+        files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
         stages: [pre-commit]
