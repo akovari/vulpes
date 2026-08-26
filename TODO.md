@@ -51,7 +51,7 @@ on Windows, Linux, and macOS.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
 - [ ] Implement focus, measure/layout, container, label, and status bar.
-- [ ] Map configurable keys to semantic action IDs.
+- [x] Map configurable keys to semantic action IDs.
 
 ## M4 — First vertical slice: browse
 

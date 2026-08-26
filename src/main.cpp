@@ -1,3 +1,4 @@
+#include "vulpes/core/actions.hpp"
 #include "vulpes/core/application.hpp"
 #include "vulpes/core/browse_controller.hpp"
 #include "vulpes/core/command.hpp"
@@ -115,6 +116,7 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
             const vulpes::core::Localizer& messages) {
     vulpes::model::Dataset dataset{database, table};
     vulpes::core::BrowseController controller{dataset};
+    vulpes::core::ActionMap actions;
     vulpes::terminal::ConsoleTerminal terminal;
     auto terminal_size = terminal.size();
     if (terminal_size.width < 20 || terminal_size.height < 6) {
@@ -208,66 +210,70 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         terminal.present(previous, current);
         previous = current;
         const auto event = terminal.read_event();
-        if (const auto* key = std::get_if<vulpes::terminal::KeyEvent>(&event); key != nullptr) {
-            if (key->key == vulpes::terminal::Key::f2 && dataset.is_editable()) {
+        const auto action = actions.action_for(event);
+        switch (action) {
+        case vulpes::core::ActionId::record_edit:
+            if (dataset.is_editable())
                 edit_record(vulpes::ui::FormMode::edit);
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::insert_key && dataset.is_editable()) {
+            continue;
+        case vulpes::core::ActionId::record_new:
+            if (dataset.is_editable())
                 edit_record(vulpes::ui::FormMode::insert);
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::delete_key && dataset.is_editable() && dataset.current() &&
-                confirm_delete()) {
+            continue;
+        case vulpes::core::ActionId::record_delete:
+            if (dataset.is_editable() && dataset.current() && confirm_delete())
                 dataset.erase();
-                continue;
+            continue;
+        case vulpes::core::ActionId::dataset_search:
+            prompt(messages.translate("browse.search_prompt"), [&](std::string_view text) {
+                if (text.empty())
+                    dataset.clear_search();
+                else
+                    dataset.search(text);
+            });
+            continue;
+        case vulpes::core::ActionId::dataset_filter: {
+            const auto* field = grid.selected_field();
+            if (field != nullptr) {
+                prompt(messages.translate("browse.filter_prompt", {{"field", field->name}}),
+                       [&](std::string_view text) {
+                           if (text.empty()) {
+                               dataset.clear_filters();
+                               return;
+                           }
+                           const auto filter = parse_filter(*field, text);
+                           dataset.where({field->name, filter.comparison, filter.value});
+                       });
             }
-            if (key->key == vulpes::terminal::Key::f3) {
-                prompt(messages.translate("browse.search_prompt"), [&](std::string_view text) {
-                    if (text.empty())
-                        dataset.clear_search();
-                    else
-                        dataset.search(text);
-                });
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::f4) {
-                const auto* field = grid.selected_field();
-                if (field != nullptr) {
-                    prompt(messages.translate("browse.filter_prompt", {{"field", field->name}}),
-                           [&](std::string_view text) {
-                               if (text.empty()) {
-                                   dataset.clear_filters();
-                                   return;
-                               }
-                               const auto filter = parse_filter(*field, text);
-                               dataset.where({field->name, filter.comparison, filter.value});
-                           });
-                }
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::f5) {
-                dataset.refresh();
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::f6) {
-                const auto* field = grid.selected_field();
-                if (field != nullptr) {
-                    const auto direction =
-                        sort && sort->first == field->name && sort->second == vulpes::model::SortDirection::ascending
-                            ? vulpes::model::SortDirection::descending
-                            : vulpes::model::SortDirection::ascending;
-                    dataset.order_by(field->name, direction);
-                    sort = std::pair{field->name, direction};
-                }
-                continue;
-            }
-            if (key->key == vulpes::terminal::Key::left && grid.move_left())
-                continue;
-            if (key->key == vulpes::terminal::Key::right && grid.move_right())
-                continue;
+            continue;
         }
-        if (controller.handle(event) == vulpes::core::BrowseResult::close)
+        case vulpes::core::ActionId::dataset_refresh:
+            dataset.refresh();
+            continue;
+        case vulpes::core::ActionId::dataset_sort: {
+            const auto* field = grid.selected_field();
+            if (field != nullptr) {
+                const auto direction =
+                    sort && sort->first == field->name && sort->second == vulpes::model::SortDirection::ascending
+                        ? vulpes::model::SortDirection::descending
+                        : vulpes::model::SortDirection::ascending;
+                dataset.order_by(field->name, direction);
+                sort = std::pair{field->name, direction};
+            }
+            continue;
+        }
+        case vulpes::core::ActionId::grid_previous_column:
+            if (grid.move_left())
+                continue;
+            break;
+        case vulpes::core::ActionId::grid_next_column:
+            if (grid.move_right())
+                continue;
+            break;
+        default:
+            break;
+        }
+        if (controller.handle(action) == vulpes::core::BrowseResult::close)
             return;
     }
 }

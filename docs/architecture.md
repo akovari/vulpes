@@ -125,6 +125,16 @@ comparison prefix grammar and calls `Dataset::search`, `where`, `order_by`, or
 dataset model. User-facing prompt and footer text comes from the `Localizer`,
 so adding a translation does not alter commands, actions, or database names.
 
+### Semantic actions and key bindings
+
+`core::ActionMap` maps normalized `KeyEvent` values to stable `ActionId`
+values such as `record.edit` and `dataset.refresh`. Browse controllers receive
+only actions, so neither Windows virtual keys nor ANSI sequences become part of
+application behavior. The built-in mapping supplies the documented browse keys;
+callers can replace individual bindings through `ActionMap::bind`. Persisting
+user-configured bindings is deliberately deferred until the configuration
+format exists.
+
 ### SQL console boundary
 
 `Database::run_sql` is the sole arbitrary-SQL boundary. It keeps the SQLite C

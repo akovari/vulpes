@@ -57,6 +57,11 @@ checkbox, generated/primary-key fields are protected, and BLOB fields remain
 read-only until a binary editor exists. Failed database validation leaves the
 draft open for correction.
 
+Browse keys are mapped to stable semantic actions (for example,
+`record.edit` and `dataset.refresh`) before they reach application controllers.
+The shipped mapping can be replaced programmatically; persistent user keybinding
+configuration will arrive with the configuration layer.
+
 Within a browse view, `F3` opens a text search over text columns, `F4` filters
 the selected column, `F5` refreshes, and `F6` sorts the selected column
 (repeating it reverses the direction). Filter values are parsed according to

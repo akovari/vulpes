@@ -32,6 +32,7 @@ else()
 endif()
 
 add_library(vulpes_core
+    src/core/actions.cpp
     src/core/application.cpp
     src/core/browse_controller.cpp
     src/core/command.cpp

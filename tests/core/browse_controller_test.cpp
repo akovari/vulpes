@@ -10,12 +10,9 @@ TEST_CASE("browse controller converts normalized keys into dataset movement", "[
     vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front(), 2};
     vulpes::core::BrowseController controller{dataset};
 
-    CHECK(controller.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
-          vulpes::core::BrowseResult::redraw);
+    CHECK(controller.handle(vulpes::core::ActionId::dataset_next) == vulpes::core::BrowseResult::redraw);
     CHECK(dataset.current()->at("id").as_int() == 2);
-    CHECK(controller.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
-          vulpes::core::BrowseResult::redraw);
+    CHECK(controller.handle(vulpes::core::ActionId::dataset_next) == vulpes::core::BrowseResult::redraw);
     CHECK(dataset.current()->at("id").as_int() == 3);
-    CHECK(controller.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
-          vulpes::core::BrowseResult::close);
+    CHECK(controller.handle(vulpes::core::ActionId::application_back) == vulpes::core::BrowseResult::close);
 }
