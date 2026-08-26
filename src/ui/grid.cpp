@@ -38,13 +38,29 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 
 } // namespace
 
+auto GridRows::from_sql_result(db::SqlResult result) -> GridRows {
+    GridRows grid_rows;
+    grid_rows.fields.reserve(result.columns.size());
+    for (auto& column : result.columns)
+        grid_rows.fields.push_back({.name = std::move(column)});
+    grid_rows.rows = std::move(result.rows);
+    return grid_rows;
+}
+
 Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer)
     : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)} {
 }
 
+Grid::Grid(const GridRows& rows, std::string title, std::string footer)
+    : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)} {
+    if (!rows.rows.empty())
+        selected_result_row_ = 0;
+}
+
 auto Grid::selected_field() const -> const db::FieldSchema* {
     std::size_t visible_index{};
-    for (const auto& field : dataset_->schema().fields) {
+    const auto& fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
+    for (const auto& field : fields) {
         if (field.hidden)
             continue;
         if (visible_index == selected_column_)
@@ -64,7 +80,8 @@ auto Grid::move_left() -> bool {
 
 auto Grid::move_right() -> bool {
     std::size_t field_count{};
-    for (const auto& field : dataset_->schema().fields) {
+    const auto& fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
+    for (const auto& field : fields) {
         if (!field.hidden)
             ++field_count;
     }
@@ -74,13 +91,28 @@ auto Grid::move_right() -> bool {
     return true;
 }
 
+auto Grid::move_previous_row() -> bool {
+    if (rows_ == nullptr || !selected_result_row_ || *selected_result_row_ == 0)
+        return false;
+    --*selected_result_row_;
+    return true;
+}
+
+auto Grid::move_next_row() -> bool {
+    if (rows_ == nullptr || !selected_result_row_ || *selected_result_row_ + 1 >= rows_->rows.size())
+        return false;
+    ++*selected_result_row_;
+    return true;
+}
+
 void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     if (bounds.width < 4 || bounds.height < 6 || bounds.x < 0 || bounds.y < 0 ||
         bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
         return;
 
     std::vector<const db::FieldSchema*> all_fields;
-    for (const auto& field : dataset_->schema().fields)
+    const auto& schema_fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
+    for (const auto& field : schema_fields)
         if (!field.hidden)
             all_fields.push_back(&field);
     if (all_fields.empty())
@@ -136,23 +168,30 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     }
     draw_border(bounds.y + 2);
 
-    const auto selected = dataset_->current_row_index();
     const int maximum_rows = bounds.height - 5;
+    if (selected_result_row_) {
+        if (*selected_result_row_ < first_visible_result_row_)
+            first_visible_result_row_ = *selected_result_row_;
+        else if (*selected_result_row_ >= first_visible_result_row_ + static_cast<std::size_t>(maximum_rows))
+            first_visible_result_row_ = *selected_result_row_ - static_cast<std::size_t>(maximum_rows) + 1;
+    }
+    const auto selected = dataset_ != nullptr ? dataset_->current_row_index() : selected_result_row_;
+    const auto& displayed_rows = dataset_ != nullptr ? dataset_->rows() : rows_->rows;
     for (int row_index = 0; row_index < maximum_rows; ++row_index) {
         const int y = bounds.y + 3 + row_index;
         buffer.put(bounds.x, y, U'|');
         x = bounds.x + 1;
-        const auto row_exists = static_cast<std::size_t>(row_index) < dataset_->rows().size();
+        const auto source_index = dataset_ != nullptr ? static_cast<std::size_t>(row_index)
+                                                      : first_visible_result_row_ + static_cast<std::size_t>(row_index);
+        const auto row_exists = source_index < displayed_rows.size();
         for (std::size_t field_index = 0; field_index < fields.size(); ++field_index) {
             const int width = base_width + (static_cast<int>(field_index) < remainder ? 1 : 0);
             const terminal::Style style{
                 .underline = first_visible + field_index == selected_column_,
-                .reverse = selected && *selected == static_cast<std::size_t>(row_index),
+                .reverse = selected && *selected == source_index,
             };
             const auto text =
-                row_exists
-                    ? display_value(dataset_->rows()[static_cast<std::size_t>(row_index)].at(fields[field_index]->name))
-                    : std::string{};
+                row_exists ? display_value(displayed_rows[source_index].at(fields[field_index]->name)) : std::string{};
             write_padded(buffer, x, y, width, text, style);
             x += width;
             buffer.put(x++, y, U'|', style);

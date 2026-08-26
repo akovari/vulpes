@@ -50,3 +50,19 @@ TEST_CASE("grid selects and scrolls columns independently of dataset navigation"
     REQUIRE(grid.selected_field());
     CHECK(grid.selected_field()->name == "first");
 }
+
+TEST_CASE("grid reuses its renderer for owned SQL results", "[ui][grid][sql]") {
+    vulpes::db::Database database{":memory:"};
+    const auto result = database.run_sql("SELECT 1 AS id, 'Acme' AS name UNION ALL SELECT 2, 'Delta'");
+    const auto rows = vulpes::ui::GridRows::from_sql_result(result);
+    vulpes::ui::Grid grid{rows, "Results", "Up/Down Rows"};
+    vulpes::terminal::ScreenBuffer buffer{32, 8};
+
+    grid.render(buffer, {0, 0, 32, 8});
+
+    CHECK(buffer.cell(1, 3).glyph == U'1');
+    CHECK(buffer.cell(1, 3).style.reverse);
+    REQUIRE(grid.move_next_row());
+    grid.render(buffer, {0, 0, 32, 8});
+    CHECK(buffer.cell(1, 4).style.reverse);
+}

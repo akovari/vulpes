@@ -12,7 +12,17 @@ class Database;
 
 namespace vulpes::core {
 
-enum class CommandOutcome { help, tables, schema, browse, quit, unknown_command, invalid_arguments, table_not_found };
+enum class CommandOutcome {
+    help,
+    tables,
+    schema,
+    browse,
+    sql,
+    quit,
+    unknown_command,
+    invalid_arguments,
+    table_not_found
+};
 
 // A semantic result deliberately contains no terminal coordinates or rendered
 // text. Frontends localize and render the result for their own presentation.

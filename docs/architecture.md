@@ -140,8 +140,10 @@ format exists.
 `Database::run_sql` is the sole arbitrary-SQL boundary. It keeps the SQLite C
 API internal, executes a complete script, and returns an owned `SqlResult` for
 the final statement with columns. Result rows are bounded to protect terminal
-renderers from accidental unbounded queries. The SQL console widget will adapt
-this result to the semantic grid rather than implement a second result table.
+renderers from accidental unbounded queries. `ui::SqlConsole` owns multiline
+editing only; the frontend performs execution, converts an owned `SqlResult` to
+`ui::GridRows`, and reuses `Grid` for result rendering. Neither widget performs
+SQLite work.
 
 ## Deferred decisions
 

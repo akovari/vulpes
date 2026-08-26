@@ -22,6 +22,8 @@ auto ApplicationRuntime::execute(const Command& command) const -> CommandRespons
         return requires_no_arguments(command, CommandOutcome::help);
     case CommandId::quit:
         return requires_no_arguments(command, CommandOutcome::quit);
+    case CommandId::sql:
+        return requires_no_arguments(command, CommandOutcome::sql);
     case CommandId::unknown:
         return {.outcome = CommandOutcome::unknown_command, .command = command.id};
     case CommandId::tables: {

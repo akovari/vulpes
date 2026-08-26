@@ -11,6 +11,8 @@ TEST_CASE("commands have stable semantic IDs and preserve UTF-8 arguments", "[co
     REQUIRE(command.arguments.size() == 1);
     CHECK(command.arguments.front() == "zákazníci 2026");
     CHECK(action_id(command.id) == "dataset.browse");
+    CHECK(parse_command("sql").id == CommandId::sql);
+    CHECK(action_id(CommandId::sql) == "database.sql");
 }
 
 TEST_CASE("command parser handles aliases and invalid quotation", "[core][command]") {

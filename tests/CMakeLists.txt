@@ -13,6 +13,7 @@ add_executable(vulpes_tests
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp
     ui/grid_test.cpp
+    ui/sql_console_test.cpp
     ui/text_prompt_test.cpp
     terminal/frame_diff_test.cpp
     terminal/ansi_input_test.cpp

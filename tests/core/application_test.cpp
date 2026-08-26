@@ -26,6 +26,8 @@ TEST_CASE("application runtime dispatches database commands without frontend dep
     REQUIRE(browse.outcome == core::CommandOutcome::browse);
     REQUIRE(browse.table);
     CHECK(browse.table->is_view);
+
+    CHECK(application.execute(core::parse_command("sql")).outcome == core::CommandOutcome::sql);
 }
 
 TEST_CASE("application runtime returns semantic command failures", "[core][application]") {
@@ -38,4 +40,5 @@ TEST_CASE("application runtime returns semantic command failures", "[core][appli
     CHECK(application.execute(core::parse_command("schema")).outcome == core::CommandOutcome::invalid_arguments);
     CHECK(application.execute(core::parse_command("browse absent")).outcome == core::CommandOutcome::table_not_found);
     CHECK(application.execute(core::parse_command("quit now")).outcome == core::CommandOutcome::invalid_arguments);
+    CHECK(application.execute(core::parse_command("sql extra")).outcome == core::CommandOutcome::invalid_arguments);
 }

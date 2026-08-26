@@ -55,6 +55,7 @@ add_library(vulpes_core
     src/ui/confirmation_dialog.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
+    src/ui/sql_console.cpp
     src/ui/text_prompt.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)

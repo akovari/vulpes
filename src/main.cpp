@@ -12,6 +12,7 @@
 #include "vulpes/ui/confirmation_dialog.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
+#include "vulpes/ui/sql_console.hpp"
 #include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/version.hpp"
 
@@ -278,6 +279,80 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     }
 }
 
+void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& messages) {
+    vulpes::core::ActionMap actions;
+    vulpes::terminal::ConsoleTerminal terminal;
+    auto terminal_size = terminal.size();
+    if (terminal_size.width < 20 || terminal_size.height < 8) {
+        throw vulpes::Error{vulpes::ErrorCategory::terminal, "terminal must be at least 20 columns by 8 rows"};
+    }
+    vulpes::terminal::ScreenBuffer previous{terminal_size.width, terminal_size.height};
+    vulpes::terminal::ScreenBuffer current{terminal_size.width, terminal_size.height};
+    vulpes::ui::SqlConsole console{messages.translate("sql.title"), messages.translate("sql.instructions")};
+    std::optional<vulpes::ui::GridRows> result_rows;
+    std::optional<vulpes::ui::Grid> result_grid;
+
+    const auto update_terminal_size = [&] {
+        const auto updated_size = terminal.size();
+        if (updated_size.width == terminal_size.width && updated_size.height == terminal_size.height)
+            return;
+        terminal_size = updated_size;
+        previous = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+        current = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+    };
+
+    for (;;) {
+        update_terminal_size();
+        if (terminal_size.width < 20 || terminal_size.height < 8)
+            continue;
+        current.clear();
+        const int editor_height = result_grid && terminal_size.height >= 13 ? 7 : terminal_size.height;
+        console.render(current, {0, 0, terminal_size.width, editor_height});
+        if (result_grid && editor_height < terminal_size.height)
+            result_grid->render(current, {0, editor_height, terminal_size.width, terminal_size.height - editor_height});
+        terminal.present(previous, current);
+        previous = current;
+
+        const auto event = terminal.read_event();
+        const auto action = actions.action_for(event);
+        if (result_grid) {
+            if (action == vulpes::core::ActionId::dataset_previous && result_grid->move_previous_row())
+                continue;
+            if (action == vulpes::core::ActionId::dataset_next && result_grid->move_next_row())
+                continue;
+            if (action == vulpes::core::ActionId::grid_previous_column && result_grid->move_left())
+                continue;
+            if (action == vulpes::core::ActionId::grid_next_column && result_grid->move_right())
+                continue;
+        }
+
+        const auto outcome = console.handle(event);
+        if (outcome == vulpes::ui::SqlConsoleResult::cancelled)
+            return;
+        if (outcome != vulpes::ui::SqlConsoleResult::execute)
+            continue;
+        try {
+            if (trim_ascii(console.script()).empty())
+                throw vulpes::Error{vulpes::ErrorCategory::validation, messages.translate("sql.empty_error")};
+            result_grid.reset();
+            auto result = database.run_sql(console.script());
+            const auto rows = result.rows.size();
+            const auto changes = result.changes;
+            const auto truncated = result.truncated ? messages.translate("sql.truncated") : std::string{};
+            result_rows = vulpes::ui::GridRows::from_sql_result(std::move(result));
+            if (!result_rows->fields.empty()) {
+                result_grid.emplace(*result_rows, messages.translate("sql.results"),
+                                    messages.translate("sql.result_footer"));
+            }
+            console.set_status(messages.translate(
+                "sql.status",
+                {{"rows", std::to_string(rows)}, {"changes", std::to_string(changes)}, {"truncated", truncated}}));
+        } catch (const vulpes::Error& error) {
+            console.set_error(error.what());
+        }
+    }
+}
+
 void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Localizer& messages) {
     std::cout << messages.translate("schema.title", {{"name", table.name}}) << '\n';
     for (const auto& field : table.fields) {
@@ -328,6 +403,9 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::browse:
         browse(database, *response.table, messages);
         break;
+    case vulpes::core::CommandOutcome::sql:
+        sql_console(database, messages);
+        break;
     case vulpes::core::CommandOutcome::quit:
         break;
     case vulpes::core::CommandOutcome::unknown_command:
@@ -359,13 +437,17 @@ auto main(int argc, char** argv) -> int {
         std::string database_argument;
         std::string table_name;
         std::string command_source;
+        bool sql = false;
         std::string locale{"en"};
         std::vector<std::string> catalog_paths;
         app.add_flag("--version", version, "Show Vulpes version and exit");
         app.add_option("database", database_argument, "SQLite database path");
         const auto table_option = app.add_option("--table", table_name, "Browse one table or view");
         const auto command_option = app.add_option("--command", command_source, "Run one Vulpes command and exit");
+        const auto sql_option = app.add_flag("--sql", sql, "Open the interactive SQL console");
         table_option->excludes(command_option);
+        table_option->excludes(sql_option);
+        command_option->excludes(sql_option);
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
         app.set_help_flag("-h,--help", "Show this help and exit");
@@ -386,7 +468,10 @@ auto main(int argc, char** argv) -> int {
 
         return run(std::filesystem::path{database_argument},
                    table_name.empty() ? std::nullopt : std::optional{table_name},
-                   command_source.empty() ? std::nullopt : std::optional{command_source}, locale, catalog_paths);
+                   sql                      ? std::optional{std::string{"sql"}}
+                   : command_source.empty() ? std::nullopt
+                                            : std::optional{command_source},
+                   locale, catalog_paths);
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;

@@ -63,7 +63,7 @@ on Windows, Linux, and macOS.
 - [x] Add safe sorting, filtering, searching, and refresh through typed dataset
   APIs and a reusable prompt widget.
 - [x] Add bounded, owned SQL-script result execution for the console boundary.
-- [ ] Reuse Grid for a multiline SQL console.
+- [x] Reuse Grid for a multiline SQL console.
 
 ## Cross-cutting — localization
 

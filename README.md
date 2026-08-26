@@ -80,13 +80,15 @@ keys. Vulpes infers a related display field in this order: `name`, `title`,
 first 100 related rows; Vulpes stores the underlying key. Searchable and
 metadata-configured lookups are intentionally deferred.
 
-The database layer also provides a bounded SQL execution model for the upcoming
-SQL console: it executes a script, reports affected rows, and retains owned
-rows from its final row-producing statement (up to 1,000 by default). The
-interactive console and grid adapter are the next step.
+Open the interactive SQL console with `--sql` or `--command sql`. It accepts
+multiline input (`Enter` adds a line; `F8` executes) and presents the final
+row-producing statement through the same Grid widget as `browse`. Execution is
+bounded to 1,000 result rows by default; the console reports truncation and
+affected-row counts. `Esc` returns to the shell. SQL history, parameter prompts,
+and multiple displayed result sets remain deliberately deferred.
 
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
-<table>`, and `quit`. It is a non-interactive bridge to the same application
+<table>`, `sql`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.
 
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For

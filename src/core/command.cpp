@@ -26,6 +26,8 @@ auto command_id(std::string_view verb) -> CommandId {
         return CommandId::schema;
     if (verb == "browse")
         return CommandId::browse;
+    if (verb == "sql")
+        return CommandId::sql;
     if (verb == "quit" || verb == "exit")
         return CommandId::quit;
     return CommandId::unknown;
@@ -84,6 +86,8 @@ auto action_id(CommandId command) -> std::string_view {
         return "database.schema";
     case CommandId::browse:
         return "dataset.browse";
+    case CommandId::sql:
+        return "database.sql";
     case CommandId::quit:
         return "application.quit";
     case CommandId::none:
