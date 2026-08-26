@@ -23,6 +23,29 @@ The `Format` GitHub workflow checks every push and pull request. `clang-tidy` is
 intentionally not enabled yet; it will be introduced as a separate, reviewed
 static-analysis policy rather than quietly changing formatting behavior.
 
+### Pre-commit hook
+
+The repository includes a [pre-commit](https://pre-commit.com/) configuration
+that applies `clang-format` only to staged C/C++ source files. It updates the
+working tree and stops the commit when formatting changes were made; review and
+stage those changes, then commit again. CI still rejects unformatted code, so
+the local hook is a fast feedback mechanism rather than the only safeguard.
+
+Install Python and the `pre-commit` command, ensure `clang-format` is on `PATH`,
+then run:
+
+```powershell
+python -m pip install --user pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+On a standard Visual Studio 2026 installation, add
+`$env:ProgramFiles\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin`
+to `PATH` for the current shell if `clang-format` is not already available.
+The hook deliberately uses the local formatter rather than downloading an
+unrelated toolchain, which keeps its behavior aligned with CMake and the IDE.
+
 Enable `VULPES_WARNINGS_AS_ERRORS` in CI once all supported compiler versions
 produce a clean and stable warning set.
 

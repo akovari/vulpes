@@ -12,6 +12,7 @@ on Windows, Linux, and macOS.
 - [x] Architecture, development, scope, and build documentation.
 - [ ] Confirm the first CI run on all platforms.
 - [x] Add enforced `clang-format` configuration, CMake targets, and CI check.
+- [x] Add an opt-in pre-commit hook for staged C/C++ formatting.
 - [ ] Add reviewed `clang-tidy` checks and static-analysis presets.
 - [ ] Add release metadata generated from Git tags.
 
