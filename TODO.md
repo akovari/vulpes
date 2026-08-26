@@ -81,7 +81,7 @@ on Windows, Linux, and macOS.
 - [x] Add transactional insert/edit/delete handling and destructive delete
   confirmation.
 - [x] Map constraint/validation failures to fields without losing edits.
-- [ ] Infer boolean-like fields conservatively.
+- [x] Infer boolean-like fields conservatively.
 - [x] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
   implement a bounded keyboard relationship lookup.
 - [ ] Add searchable, metadata-configurable relationship lookups and related-record

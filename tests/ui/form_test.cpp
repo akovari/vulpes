@@ -64,6 +64,17 @@ TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
     CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::read_only);
 }
 
+TEST_CASE("generated form infers boolean controls without treating ordinary integers as booleans", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE member(id INTEGER PRIMARY KEY, subscribed BOOLEAN, quantity INTEGER)");
+    vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front()};
+    vulpes::ui::RecordForm form{dataset, "New member", vulpes::ui::FormMode::insert, "F8 Save"};
+
+    REQUIRE(form.fields().size() == 3);
+    CHECK(form.fields().at(1).kind == vulpes::ui::FormFieldKind::checkbox);
+    CHECK(form.fields().at(2).kind == vulpes::ui::FormFieldKind::number);
+}
+
 TEST_CASE("generated form selects the failing constraint field and retains its draft", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     auto dataset = form_dataset(database);
