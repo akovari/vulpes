@@ -11,6 +11,7 @@ add_executable(vulpes_tests
     model/dataset_test.cpp
     ui/form_test.cpp
     ui/grid_test.cpp
+    ui/text_prompt_test.cpp
     terminal/frame_diff_test.cpp
     terminal/screen_buffer_test.cpp
     terminal/test_terminal_test.cpp

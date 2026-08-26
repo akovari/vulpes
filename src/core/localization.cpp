@@ -103,6 +103,9 @@ auto english_catalog() -> MessageCatalog {
     return {
         {"application.title", "Vulpes"},
         {"application.unknown_command", "Unknown command. Type help for available commands."},
+        {"browse.filter_prompt", "Filter {field} (for example: >= 10; blank clears filters)"},
+        {"browse.footer", "F2 Edit  Ins New  F3 Search  F4 Filter  F5 Refresh  F6 Sort  Esc Back"},
+        {"browse.search_prompt", "Search text (blank clears search)"},
         {"command.help", "Commands: help, tables, schema <table>, browse <table>, quit"},
         {"database.tables", "Tables and views"},
         {"error.invalid_command_arguments", "Invalid arguments for '{command}'."},

@@ -10,9 +10,12 @@
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
+#include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/version.hpp"
 
 #include <CLI/CLI.hpp>
+#include <cctype>
+#include <charconv>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -33,7 +36,82 @@ void initialize_console_encoding() {
 #endif
 }
 
-void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table) {
+auto trim_ascii(std::string_view text) -> std::string_view {
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0)
+        text.remove_prefix(1);
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0)
+        text.remove_suffix(1);
+    return text;
+}
+
+auto lowercase_ascii(std::string_view text) -> std::string {
+    std::string result{text};
+    for (auto& character : result)
+        character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+    return result;
+}
+
+auto is_numeric_field(const vulpes::db::FieldSchema& field) -> bool {
+    const auto type = lowercase_ascii(field.declared_type);
+    return type.find("int") != std::string::npos || type.find("real") != std::string::npos ||
+           type.find("floa") != std::string::npos || type.find("doub") != std::string::npos ||
+           type.find("num") != std::string::npos || type.find("dec") != std::string::npos;
+}
+
+struct ParsedFilter {
+    vulpes::model::FilterOperator comparison{vulpes::model::FilterOperator::equal};
+    vulpes::db::Value value;
+};
+
+auto parse_filter(const vulpes::db::FieldSchema& field, std::string_view source) -> ParsedFilter {
+    auto text = trim_ascii(source);
+    ParsedFilter result;
+    const auto consume_operator = [&](std::string_view prefix, vulpes::model::FilterOperator comparison) {
+        if (text.starts_with(prefix)) {
+            result.comparison = comparison;
+            text = trim_ascii(text.substr(prefix.size()));
+            return true;
+        }
+        return false;
+    };
+    static_cast<void>(consume_operator(">=", vulpes::model::FilterOperator::greater_equal) ||
+                      consume_operator("<=", vulpes::model::FilterOperator::less_equal) ||
+                      consume_operator("!=", vulpes::model::FilterOperator::not_equal) ||
+                      consume_operator("<>", vulpes::model::FilterOperator::not_equal) ||
+                      consume_operator(">", vulpes::model::FilterOperator::greater) ||
+                      consume_operator("<", vulpes::model::FilterOperator::less) ||
+                      consume_operator("=", vulpes::model::FilterOperator::equal));
+    if (text.empty())
+        throw vulpes::Error{vulpes::ErrorCategory::validation, "a filter value is required"};
+    if (lowercase_ascii(text) == "null") {
+        result.value = nullptr;
+        return result;
+    }
+    if (!is_numeric_field(field)) {
+        result.value = std::string{text};
+        return result;
+    }
+
+    if (text.find_first_of(".eE") == std::string_view::npos) {
+        std::int64_t value{};
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (error == std::errc{} && end == text.data() + text.size()) {
+            result.value = value;
+            return result;
+        }
+    } else {
+        double value{};
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (error == std::errc{} && end == text.data() + text.size()) {
+            result.value = value;
+            return result;
+        }
+    }
+    throw vulpes::Error{vulpes::ErrorCategory::validation, "invalid number for filter: " + field.name};
+}
+
+void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
+            const vulpes::core::Localizer& messages) {
     vulpes::model::Dataset dataset{database, table};
     vulpes::core::BrowseController controller{dataset};
     vulpes::terminal::ConsoleTerminal terminal;
@@ -43,12 +121,22 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
     }
     vulpes::terminal::ScreenBuffer previous{terminal_size.width, terminal_size.height};
     vulpes::terminal::ScreenBuffer current{terminal_size.width, terminal_size.height};
-    vulpes::ui::Grid grid{dataset, table.name};
+    vulpes::ui::Grid grid{dataset, table.name, messages.translate("browse.footer")};
+
+    const auto update_terminal_size = [&] {
+        const auto updated_size = terminal.size();
+        if (updated_size.width == terminal_size.width && updated_size.height == terminal_size.height)
+            return;
+        terminal_size = updated_size;
+        previous = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+        current = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+    };
 
     const auto edit_record = [&](vulpes::ui::FormMode mode) {
         vulpes::ui::RecordForm form{
             dataset, mode == vulpes::ui::FormMode::edit ? "Edit " + table.name : "New " + table.name, mode};
         for (;;) {
+            update_terminal_size();
             current.clear();
             form.render(current, {0, 0, terminal_size.width, terminal_size.height});
             terminal.present(previous, current);
@@ -59,27 +147,89 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
         }
     };
 
-    for (;;) {
-        const auto updated_size = terminal.size();
-        if (updated_size.width != terminal_size.width || updated_size.height != terminal_size.height) {
-            terminal_size = updated_size;
-            if (terminal_size.width < 20 || terminal_size.height < 6)
+    const auto prompt = [&](std::string label, auto&& apply) {
+        vulpes::ui::TextPrompt text_prompt{std::move(label)};
+        for (;;) {
+            update_terminal_size();
+            current.clear();
+            grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
+            const int prompt_height = 5;
+            text_prompt.render(current,
+                               {0, (terminal_size.height - prompt_height) / 2, terminal_size.width, prompt_height});
+            terminal.present(previous, current);
+            previous = current;
+            const auto result = text_prompt.handle(terminal.read_event());
+            if (result == vulpes::ui::PromptResult::cancelled)
+                return;
+            if (result != vulpes::ui::PromptResult::submitted)
                 continue;
-            previous = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
-            current = vulpes::terminal::ScreenBuffer{terminal_size.width, terminal_size.height};
+            try {
+                apply(text_prompt.value());
+                return;
+            } catch (const vulpes::Error& error) {
+                text_prompt.set_error(error.what());
+            }
         }
+    };
+
+    std::optional<std::pair<std::string, vulpes::model::SortDirection>> sort;
+
+    for (;;) {
+        update_terminal_size();
+        if (terminal_size.width < 20 || terminal_size.height < 6)
+            continue;
         current.clear();
         grid.render(current, {0, 0, terminal_size.width, terminal_size.height});
         terminal.present(previous, current);
         previous = current;
         const auto event = terminal.read_event();
         if (const auto* key = std::get_if<vulpes::terminal::KeyEvent>(&event); key != nullptr) {
-            if (key->key == vulpes::terminal::Key::f2) {
+            if (key->key == vulpes::terminal::Key::f2 && dataset.is_editable()) {
                 edit_record(vulpes::ui::FormMode::edit);
                 continue;
             }
-            if (key->key == vulpes::terminal::Key::insert_key) {
+            if (key->key == vulpes::terminal::Key::insert_key && dataset.is_editable()) {
                 edit_record(vulpes::ui::FormMode::insert);
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::f3) {
+                prompt(messages.translate("browse.search_prompt"), [&](std::string_view text) {
+                    if (text.empty())
+                        dataset.clear_search();
+                    else
+                        dataset.search(text);
+                });
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::f4) {
+                const auto* field = grid.selected_field();
+                if (field != nullptr) {
+                    prompt(messages.translate("browse.filter_prompt", {{"field", field->name}}),
+                           [&](std::string_view text) {
+                               if (text.empty()) {
+                                   dataset.clear_filters();
+                                   return;
+                               }
+                               const auto filter = parse_filter(*field, text);
+                               dataset.where({field->name, filter.comparison, filter.value});
+                           });
+                }
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::f5) {
+                dataset.refresh();
+                continue;
+            }
+            if (key->key == vulpes::terminal::Key::f6) {
+                const auto* field = grid.selected_field();
+                if (field != nullptr) {
+                    const auto direction =
+                        sort && sort->first == field->name && sort->second == vulpes::model::SortDirection::ascending
+                            ? vulpes::model::SortDirection::descending
+                            : vulpes::model::SortDirection::ascending;
+                    dataset.order_by(field->name, direction);
+                    sort = std::pair{field->name, direction};
+                }
                 continue;
             }
             if (key->key == vulpes::terminal::Key::left && grid.move_left())
@@ -140,7 +290,7 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
         print_schema(*response.table, messages);
         break;
     case vulpes::core::CommandOutcome::browse:
-        browse(database, *response.table);
+        browse(database, *response.table, messages);
         break;
     case vulpes::core::CommandOutcome::quit:
         break;

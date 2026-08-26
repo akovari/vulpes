@@ -3,6 +3,9 @@
   "messages": {
     "application.title": "Vulpes",
     "application.unknown_command": "Neznámý příkaz. Pro nápovědu zadejte help.",
+    "browse.filter_prompt": "Filtr {field} (například: >= 10; prázdné zruší filtry)",
+    "browse.footer": "F2 Upravit  Ins Nový  F3 Hledat  F4 Filtr  F5 Obnovit  F6 Řazení  Esc Zpět",
+    "browse.search_prompt": "Hledaný text (prázdné zruší hledání)",
     "command.help": "Příkazy: help, tables, schema <tabulka>, browse <tabulka>, quit",
     "database.tables": "Tabulky a pohledy",
     "error.invalid_command_arguments": "Neplatné argumenty příkazu '{command}'.",

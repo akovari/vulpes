@@ -60,7 +60,8 @@ on Windows, Linux, and macOS.
 - [x] Add selected-row state, vertical navigation, and dataset paging.
 - [x] Add horizontal grid navigation and scrolling.
 - [x] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
-- [ ] Add safe sorting, filtering, searching, and refresh.
+- [x] Add safe sorting, filtering, searching, and refresh through typed dataset
+  APIs and a reusable prompt widget.
 - [ ] Reuse Grid for a multiline SQL console.
 
 ## Cross-cutting — localization

@@ -57,6 +57,14 @@ checkbox, generated/primary-key fields are protected, and BLOB fields remain
 read-only until a binary editor exists. Failed database validation leaves the
 draft open for correction.
 
+Within a browse view, `F3` opens a text search over text columns, `F4` filters
+the selected column, `F5` refreshes, and `F6` sorts the selected column
+(repeating it reverses the direction). Filter values are parsed according to
+the selected field's declared numeric type, accept `=`, `!=`, `<>`, `<`, `<=`,
+`>`, and `>=` prefixes, and accept `NULL` for null comparisons. A blank search
+or filter input clears its respective constraint. Values are still bound as
+SQLite parameters; the TUI never interpolates user input into SQL.
+
 `--command` currently accepts `help`, `tables`, `schema <table>`, `browse
 <table>`, and `quit`. It is a non-interactive bridge to the same application
 command dispatcher that will power the in-app command window.

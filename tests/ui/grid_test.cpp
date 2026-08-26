@@ -11,7 +11,7 @@ TEST_CASE("grid renders dataset fields and selected row to logical cells", "[ui]
         "CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO customer VALUES (1, 'Acme')");
     const auto schema = vulpes::db::inspect_schema(database).front();
     vulpes::model::Dataset dataset{database, schema};
-    vulpes::ui::Grid grid{dataset, "Customers"};
+    vulpes::ui::Grid grid{dataset, "Customers", "F2 Edit"};
     vulpes::terminal::ScreenBuffer buffer{40, 8};
 
     grid.render(buffer, {0, 0, 40, 8});
@@ -21,6 +21,9 @@ TEST_CASE("grid renders dataset fields and selected row to logical cells", "[ui]
     CHECK(buffer.cell(1, 1).glyph == U'i');
     CHECK(buffer.cell(1, 3).glyph == U'1');
     CHECK(buffer.cell(1, 3).style.reverse);
+    CHECK(buffer.cell(1, 6).glyph == U'F');
+    REQUIRE(grid.selected_field());
+    CHECK(grid.selected_field()->name == "id");
 }
 
 TEST_CASE("grid selects and scrolls columns independently of dataset navigation", "[ui][grid]") {
@@ -29,7 +32,7 @@ TEST_CASE("grid selects and scrolls columns independently of dataset navigation"
                      "INSERT INTO sample VALUES (1, 'a', 'b', 'c', 'd')");
     const auto schema = vulpes::db::inspect_schema(database).front();
     vulpes::model::Dataset dataset{database, schema};
-    vulpes::ui::Grid grid{dataset, "Sample"};
+    vulpes::ui::Grid grid{dataset, "Sample", "F2 Edit"};
 
     CHECK_FALSE(grid.move_left());
     REQUIRE(grid.move_right());
@@ -44,4 +47,6 @@ TEST_CASE("grid selects and scrolls columns independently of dataset navigation"
 
     CHECK(grid.move_left());
     CHECK(grid.selected_column_index() == 1);
+    REQUIRE(grid.selected_field());
+    CHECK(grid.selected_field()->name == "first");
 }

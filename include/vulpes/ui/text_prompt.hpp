@@ -1,0 +1,30 @@
+#pragma once
+
+#include "vulpes/terminal/terminal.hpp"
+#include "vulpes/ui/geometry.hpp"
+
+#include <string>
+#include <string_view>
+
+namespace vulpes::ui {
+
+enum class PromptResult { unchanged, redraw, submitted, cancelled };
+
+// A small, reusable semantic text entry overlay. Callers own the meaning of the
+// submitted text, keeping command, filter, and search parsing out of widgets.
+class TextPrompt {
+  public:
+    explicit TextPrompt(std::string label, std::string initial_value = {});
+
+    [[nodiscard]] auto value() const noexcept -> std::string_view { return value_; }
+    void set_error(std::string message);
+    [[nodiscard]] auto handle(const terminal::InputEvent& event) -> PromptResult;
+    void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
+
+  private:
+    std::string label_;
+    std::string value_;
+    std::string error_;
+};
+
+} // namespace vulpes::ui

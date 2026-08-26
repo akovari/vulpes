@@ -99,6 +99,15 @@ encodes cells for the host. utf8proc supplies current Unicode cell-width data an
 UTF-8 decoding. Extended grapheme layout is deliberately deferred; see ADR 0002.
 `ConsoleTerminal` is the current native adapter and is replaceable; see ADR 0004.
 
+### Browse query controls
+
+The browse frontend uses a semantic `TextPrompt` widget for text search and
+field filters. The widget owns text editing only; the frontend parses a small
+comparison prefix grammar and calls `Dataset::search`, `where`, `order_by`, or
+`refresh`. This keeps SQLite identifiers and values parameterized through the
+dataset model. User-facing prompt and footer text comes from the `Localizer`,
+so adding a translation does not alter commands, actions, or database names.
+
 ## Deferred decisions
 
 - Terminal library versus small native ANSI/Windows backends.

@@ -38,7 +38,20 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 
 } // namespace
 
-Grid::Grid(const model::Dataset& dataset, std::string title) : dataset_{&dataset}, title_{std::move(title)} {
+Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer)
+    : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)} {
+}
+
+auto Grid::selected_field() const -> const db::FieldSchema* {
+    std::size_t visible_index{};
+    for (const auto& field : dataset_->schema().fields) {
+        if (field.hidden)
+            continue;
+        if (visible_index == selected_column_)
+            return &field;
+        ++visible_index;
+    }
+    return nullptr;
 }
 
 auto Grid::move_left() -> bool {
@@ -62,7 +75,7 @@ auto Grid::move_right() -> bool {
 }
 
 void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
-    if (bounds.width < 4 || bounds.height < 5 || bounds.x < 0 || bounds.y < 0 ||
+    if (bounds.width < 4 || bounds.height < 6 || bounds.x < 0 || bounds.y < 0 ||
         bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
         return;
 
@@ -124,7 +137,7 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     draw_border(bounds.y + 2);
 
     const auto selected = dataset_->current_row_index();
-    const int maximum_rows = bounds.height - 4;
+    const int maximum_rows = bounds.height - 5;
     for (int row_index = 0; row_index < maximum_rows; ++row_index) {
         const int y = bounds.y + 3 + row_index;
         buffer.put(bounds.x, y, U'|');
@@ -145,6 +158,10 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
             buffer.put(x++, y, U'|', style);
         }
     }
+    const int footer_y = bounds.y + bounds.height - 2;
+    buffer.put(bounds.x, footer_y, U'|');
+    write_padded(buffer, bounds.x + 1, footer_y, interior_width, footer_);
+    buffer.put(bounds.x + bounds.width - 1, footer_y, U'|');
     draw_border(bounds.y + bounds.height - 1);
 }
 

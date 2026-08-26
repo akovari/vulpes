@@ -50,6 +50,7 @@ add_library(vulpes_core
     src/terminal/unicode.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
+    src/ui/text_prompt.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)
 
