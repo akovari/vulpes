@@ -17,6 +17,7 @@ auto default_bindings() -> std::vector<KeyBinding> {
         {{.key = Key::escape}, ActionId::application_back},
         {{.key = Key::character, .character = U'c', .ctrl = true}, ActionId::application_quit},
         {{.key = Key::f10}, ActionId::application_menu},
+        {{.key = Key::character, .character = U'f', .alt = true}, ActionId::application_menu},
         {{.key = Key::character, .character = U'o', .ctrl = true}, ActionId::database_open},
         {{.key = Key::character, .character = U'n', .ctrl = true}, ActionId::database_create},
         {{.key = Key::tab, .ctrl = true}, ActionId::workspace_next_document},

@@ -223,6 +223,10 @@ auto ConsoleTerminal::read_event() -> InputEvent {
         key.shift = (modifiers & SHIFT_PRESSED) != 0;
         key.character = event.uChar.UnicodeChar;
         key.key = map_key(event.wVirtualKeyCode);
+        if (key.key == Key::unknown && key.character == U'\0' && event.wVirtualKeyCode >= 'A' &&
+            event.wVirtualKeyCode <= 'Z') {
+            key.character = static_cast<char32_t>(U'a' + (event.wVirtualKeyCode - 'A'));
+        }
         if (key.key == Key::unknown && key.ctrl)
             key.character = normalize_control_character(key.character);
         if (key.key == Key::unknown)

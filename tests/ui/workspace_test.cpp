@@ -28,3 +28,20 @@ TEST_CASE("workspace opens path modal and selects database tables", "[ui][worksp
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
           vulpes::ui::WorkspaceResult::browse_table);
 }
+
+TEST_CASE("workspace closes File menu with Escape or Left and accepts Alt+F", "[ui][workspace]") {
+    vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path"};
+    CHECK(workspace.handle(vulpes::core::ActionId::application_menu,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f10}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::grid_previous_column,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::left}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::application_menu,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'f', .alt = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+}

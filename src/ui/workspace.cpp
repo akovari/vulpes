@@ -59,7 +59,13 @@ void Workspace::begin_path_prompt(Modal modal) {
 }
 
 auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult {
+    const auto* key = std::get_if<terminal::KeyEvent>(&event);
     if (prompt_) {
+        if (key != nullptr && key->key == terminal::Key::escape) {
+            prompt_.reset();
+            modal_ = Modal::none;
+            return WorkspaceResult::redraw;
+        }
         const auto outcome = prompt_->handle(event);
         if (outcome == PromptResult::cancelled) {
             prompt_.reset();
@@ -74,7 +80,8 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     }
     if (action == core::ActionId::application_quit)
         return WorkspaceResult::quit;
-    if (action == core::ActionId::application_menu) {
+    if (action == core::ActionId::application_menu ||
+        (key != nullptr && key->alt && (key->character == U'f' || key->character == U'F'))) {
         menu_open_ = !menu_open_;
         return WorkspaceResult::redraw;
     }
@@ -87,6 +94,13 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         return WorkspaceResult::redraw;
     }
     if (menu_open_) {
+        if ((key != nullptr && key->key == terminal::Key::escape) || action == core::ActionId::application_back ||
+            action == core::ActionId::grid_previous_column) {
+            menu_open_ = false;
+            return WorkspaceResult::redraw;
+        }
+        if (action == core::ActionId::grid_next_column)
+            return WorkspaceResult::redraw;
         if (action == core::ActionId::dataset_next) {
             menu_selection_ = (menu_selection_ + 1) % 3;
             return WorkspaceResult::redraw;
@@ -95,7 +109,7 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
             menu_selection_ = (menu_selection_ + 2) % 3;
             return WorkspaceResult::redraw;
         }
-        if (const auto* key = std::get_if<terminal::KeyEvent>(&event); key && key->key == terminal::Key::enter) {
+        if (key && key->key == terminal::Key::enter) {
             menu_open_ = false;
             if (menu_selection_ == 0) {
                 begin_path_prompt(Modal::open);
@@ -107,10 +121,6 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
             }
             return WorkspaceResult::quit;
         }
-        if (action == core::ActionId::application_back) {
-            menu_open_ = false;
-            return WorkspaceResult::redraw;
-        }
         return WorkspaceResult::unchanged;
     }
     if (action == core::ActionId::dataset_next && selected_table_ + 1 < tables_.size()) {
@@ -121,11 +131,9 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         --selected_table_;
         return WorkspaceResult::redraw;
     }
-    if (const auto* key = std::get_if<terminal::KeyEvent>(&event);
-        key && key->key == terminal::Key::enter && selected_table())
+    if (key && key->key == terminal::Key::enter && selected_table())
         return WorkspaceResult::browse_table;
-    if (const auto* key = std::get_if<terminal::KeyEvent>(&event);
-        key && key->key == terminal::Key::f7 && !database_path_.empty())
+    if (key && key->key == terminal::Key::f7 && !database_path_.empty())
         return WorkspaceResult::run_sql;
     return WorkspaceResult::unchanged;
 }
