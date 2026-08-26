@@ -42,5 +42,4 @@ FROM products AS p
 LEFT JOIN stock_movements AS m ON m.product_id = p.id
 WHERE p.active = 1
 GROUP BY p.id
-HAVING quantity <= p.reorder_level;
-
+HAVING COALESCE(SUM(m.quantity), 0) <= p.reorder_level;

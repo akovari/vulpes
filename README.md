@@ -43,6 +43,7 @@ To exercise the first schema-listing vertical slice after creating a database:
 
 ```powershell
 sqlite3 inventory.db ".read examples/inventory/schema.sql"
+sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --command "schema products"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
@@ -55,6 +56,10 @@ command dispatcher that will power the in-app command window.
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
 example, use the shipped Czech translation with `--locale cs-CZ --catalog
 translations\cs.json`. See [docs/localization.md](docs/localization.md).
+
+The inventory example's seed data and acceptance test exercise only generic
+Vulpes capabilities: schema-driven datasets, transactional editing, stock
+movement insertion, and SQL views. It contains no runtime special cases.
 
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
 and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.

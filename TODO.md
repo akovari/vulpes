@@ -84,7 +84,7 @@ on Windows, Linux, and macOS.
 ## M6 — Inventory dogfood and 0.1 packaging
 
 - [x] Add generic inventory example schema and low-stock view.
-- [ ] Add representative seed data and scripted acceptance scenario.
+- [x] Add representative seed data and scripted acceptance scenario.
 - [ ] Exercise product edit, relationship navigation, stock movement, and report.
 - [ ] Fix framework weaknesses without inventory-specific runtime code.
 - [ ] Package standalone artifacts for Windows, Linux, and macOS.
