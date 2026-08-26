@@ -2,6 +2,7 @@
 
 #include "vulpes/core/error.hpp"
 #include "vulpes/terminal/ansi_encoder.hpp"
+#include "vulpes/terminal/ansi_input.hpp"
 #include "vulpes/terminal/frame_diff.hpp"
 #include "vulpes/terminal/unicode.hpp"
 
@@ -123,6 +124,20 @@ namespace {
     const auto consumed = utf8proc_iterate(bytes.data(), length, &code_point);
     return consumed == length ? static_cast<char32_t>(code_point) : U'\uFFFD';
 }
+
+[[nodiscard]] auto read_ansi_sequence() -> Key {
+    std::string sequence;
+    sequence.reserve(8);
+    for (int index = 0; index < 8; ++index) {
+        char byte{};
+        if (read(STDIN_FILENO, &byte, 1) != 1)
+            return Key::unknown;
+        sequence += byte;
+        if ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') || byte == '~')
+            return decode_ansi_key_sequence(sequence);
+    }
+    return Key::unknown;
+}
 #endif
 
 } // namespace
@@ -218,38 +233,7 @@ auto ConsoleTerminal::read_event() -> InputEvent {
         pollfd descriptor{.fd = STDIN_FILENO, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 30) <= 0)
             return KeyEvent{.key = Key::escape};
-        char prefix{};
-        if (read(STDIN_FILENO, &prefix, 1) != 1 || prefix != '[')
-            return KeyEvent{.key = Key::escape};
-        char sequence{};
-        if (read(STDIN_FILENO, &sequence, 1) != 1)
-            return KeyEvent{.key = Key::escape};
-        switch (sequence) {
-        case 'A':
-            return KeyEvent{.key = Key::up};
-        case 'B':
-            return KeyEvent{.key = Key::down};
-        case 'C':
-            return KeyEvent{.key = Key::right};
-        case 'D':
-            return KeyEvent{.key = Key::left};
-        case 'H':
-            return KeyEvent{.key = Key::home};
-        case 'F':
-            return KeyEvent{.key = Key::end};
-        case '5': {
-            char ignored{};
-            read(STDIN_FILENO, &ignored, 1);
-            return KeyEvent{.key = Key::page_up};
-        }
-        case '6': {
-            char ignored{};
-            read(STDIN_FILENO, &ignored, 1);
-            return KeyEvent{.key = Key::page_down};
-        }
-        default:
-            return KeyEvent{.key = Key::unknown};
-        }
+        return KeyEvent{.key = read_ansi_sequence()};
     }
     if (byte == '\r' || byte == '\n')
         return KeyEvent{.key = Key::enter};

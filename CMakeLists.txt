@@ -42,6 +42,7 @@ add_library(vulpes_core
     src/db/transaction.cpp
     src/db/value.cpp
     src/model/dataset.cpp
+    src/terminal/ansi_input.cpp
     src/terminal/ansi_encoder.cpp
     src/terminal/console_terminal.cpp
     src/terminal/frame_diff.cpp
