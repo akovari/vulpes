@@ -24,9 +24,10 @@ code because it parses a persistent command language (`browse "table name"`), no
 an `argv` vector; it produces stable semantic `CommandId` and action IDs.
 
 The existing virtual-screen renderer remains the frontend boundary. FTXUI was
-considered but would replace that boundary; cpp-terminal was considered for input
-but is not available from the pinned vcpkg registry. Either can be adopted later
-only through a `Terminal` adapter, never from application or widget code.
+considered but would replace that boundary. CPP-Terminal is adopted as a pinned
+source dependency for host input and terminal lifecycle because it is not
+available from the pinned vcpkg registry. It is used only through a `Terminal`
+adapter, never from application or widget code; see ADR 0014.
 
 ## Consequences
 
@@ -35,4 +36,3 @@ only through a `Terminal` adapter, never from application or widget code.
   rewrite of every caller.
 - CLI parsing does not grow a home-grown flags implementation.
 - Terminal backend selection remains reversible.
-

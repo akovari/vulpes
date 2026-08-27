@@ -1,5 +1,7 @@
 #include "vulpes/core/actions.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/terminal/frame_diff.hpp"
+#include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/workspace.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -54,4 +56,22 @@ TEST_CASE("workspace closes File menu with Escape or Left and accepts Alt+F", "[
     CHECK(workspace.handle(vulpes::core::ActionId::application_back,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::WorkspaceResult::redraw);
+}
+
+TEST_CASE("workspace clears a dismissed modal from the next frame", "[ui][workspace]") {
+    vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path"};
+    vulpes::terminal::ScreenBuffer modal_frame{80, 25};
+    vulpes::terminal::ScreenBuffer next_frame{80, 25};
+
+    CHECK(workspace.handle(vulpes::core::ActionId::database_open, {}) == vulpes::ui::WorkspaceResult::redraw);
+    workspace.render(modal_frame, {.x = 0, .y = 0, .width = 80, .height = 25});
+    CHECK(modal_frame.cell(10, 10).glyph != U' ');
+
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    workspace.render(next_frame, {.x = 0, .y = 0, .width = 80, .height = 25});
+
+    CHECK(next_frame.cell(10, 10).glyph == U' ');
+    CHECK_FALSE(vulpes::terminal::diff_frames(modal_frame, next_frame).empty());
 }

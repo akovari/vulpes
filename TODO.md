@@ -48,6 +48,10 @@ on Windows, Linux, and macOS.
 - [x] Implement deterministic screen diffing independent of byte encoding.
 - [x] Implement `TestTerminal`, a pure ANSI encoder, and an isolated native
   `ConsoleTerminal` adapter for browse navigation.
+- [x] Adopt CPP-Terminal behind the `Terminal` adapter with deterministic
+  normalization tests for keyboard chords and resize events.
+- [ ] Verify CPP-Terminal keyboard input, resize notifications, and cleanup on
+  supported Windows, Linux, and macOS hosts.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
 - [ ] Complete Windows raw-input verification for Escape, arrows, Ctrl+C, function

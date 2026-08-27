@@ -51,8 +51,11 @@ implemented vocabulary types so platform support remains practical.
 The checked-in registry baseline makes dependency resolution reproducible.
 SQLite, Catch2, utf8proc, CLI11, and nlohmann/json each have a narrow boundary:
 database access, tests, Unicode cell handling, process argument parsing, and
-external message-catalog parsing respectively. Terminal rendering remains behind
-Vulpes abstractions rather than a framework-specific widget model.
+external message-catalog parsing respectively. CPP-Terminal is fetched at a
+pinned commit because it is unavailable in the pinned vcpkg registry; it owns
+host-terminal raw mode and event transport behind `terminal::ConsoleTerminal`.
+Terminal rendering remains behind Vulpes abstractions rather than a
+framework-specific widget model.
 
 ### SQLite threading and ownership
 

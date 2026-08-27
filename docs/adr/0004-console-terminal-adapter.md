@@ -12,23 +12,23 @@ application code.
 
 ## Decision
 
-`terminal::ConsoleTerminal` is the sole native terminal adapter. It owns setup
-and restoration, maps Windows Console events and common Unix ANSI sequences to
-`InputEvent`, reads terminal dimensions, and presents semantic frame diffs as
-ANSI. `BrowseController` consumes only normalized events and `Dataset` methods.
+`terminal::ConsoleTerminal` is the sole Vulpes terminal adapter. It owns a
+CPP-Terminal session for setup, restoration, native keyboard events, and resize
+events, then maps those events to `InputEvent`. It reads terminal dimensions and
+presents semantic frame diffs as ANSI. `BrowseController` consumes only
+normalized events and `Dataset` methods.
 
 The adapter intentionally has no business logic, widget behavior, SQL, or
 localized strings. It is a replaceable implementation of `Terminal`.
 
 ## Current limitations
 
-- Unix arrow/home/end/page navigation and UTF-8 character input are normalized;
-  more complete function-key, modified-key, and terminal capability support is
-  pending.
-- Resize is checked before every frame. Signal-driven redraw and more complete
-  terminal capability negotiation are pending.
-- Real host testing is manual; deterministic behavior is covered through
-  `TestTerminal`, frame-diff, and browse-controller tests.
+- CPP-Terminal covers the common key, modifier, Unicode, and resize transport;
+  real host verification is still required before each supported-platform claim.
+- Vulpes intentionally ignores mouse and focus events until corresponding
+  semantic UI behavior is implemented.
+- Deterministic behavior is covered through `TestTerminal`, frame-diff,
+  browse-controller, workspace, and adapter normalization tests.
 
 ## Consequences
 

@@ -4,11 +4,11 @@ Vulpes is a local-first, keyboard-driven RAD environment that turns an ordinary
 SQLite schema into an application. The first frontend is a TUI; its database,
 application, semantic UI, and rendering layers are deliberately independent.
 
-The repository is pre-alpha. It currently provides a C++23 build,
-cross-platform CI, RAII SQLite primitives, schema introspection, normalized
-input, a virtual screen buffer, a keyboard-driven `--table` browse view, and a
-transactional dataset editing model, and schema-generated record forms. The
-in-app command window is the next frontend milestone.
+The repository is pre-alpha. It currently provides a C++23 build, RAII SQLite
+primitives, schema introspection, a CPP-Terminal-backed input layer, virtual
+screen rendering, a keyboard-driven workspace, browse/edit views, and
+schema-generated record forms. The workspace is still being expanded into a
+full document host.
 
 ## Prerequisites
 
@@ -27,8 +27,9 @@ $env:VCPKG_ROOT = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpk
 ```
 
 Alternatively, clone and bootstrap vcpkg separately. CMake manifest mode installs
-SQLite and Catch2 automatically. The `sqlite3` CLI is optional and is used only
-by the example-database command below.
+SQLite and Catch2 automatically. CPP-Terminal is fetched at a reviewed, pinned
+commit by CMake because it is not present in the pinned vcpkg registry. The
+`sqlite3` CLI is optional and is used only by the example-database command below.
 
 ## Build and test on Windows
 
@@ -48,6 +49,18 @@ sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --command "schema products"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
 ```
+
+To try the workspace without a database, run:
+
+```powershell
+.\build\windows-msvc\Debug\vulpes.exe
+```
+
+Use `Ctrl+O` to open a SQLite file, `Ctrl+N` to create one, `F10` (or `Alt+F`)
+for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
+`Ctrl+C` to exit. Browse and SQL tabs are represented by the workspace document
+manager; hosting their full interactive surfaces in those tabs remains tracked
+in [TODO.md](TODO.md).
 
 The browse view is keyboard driven: arrow keys move through the grid, `F2`
 opens the selected record, `Insert` creates a record, `F8` saves a record form,

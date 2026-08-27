@@ -4,6 +4,7 @@ project(Vulpes VERSION 0.1.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CTest)
+include(FetchContent)
 
 option(VULPES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
@@ -15,6 +16,20 @@ find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+
+# CPP-Terminal owns host-specific raw-mode, keyboard, and resize handling.
+# Keep it behind Vulpes' Terminal interface so widgets and the runtime remain
+# independent of a particular terminal library.
+set(CPPTERMINAL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CPPTERMINAL_ENABLE_DOCS OFF CACHE BOOL "" FORCE)
+set(CPPTERMINAL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(CPPTERMINAL_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    cpp_terminal
+    GIT_REPOSITORY https://github.com/jupyter-xeus/cpp-terminal.git
+    GIT_TAG 945f4931ff3974850401693d13ad8bd9bbd0619e
+)
+FetchContent_MakeAvailable(cpp_terminal)
 
 add_library(vulpes_options INTERFACE)
 target_compile_features(vulpes_options INTERFACE cxx_std_23)
@@ -47,6 +62,7 @@ add_library(vulpes_core
     src/model/dataset.cpp
     src/terminal/ansi_input.cpp
     src/terminal/ansi_encoder.cpp
+    src/terminal/cpp_terminal_adapter.cpp
     src/terminal/console_terminal.cpp
     src/terminal/frame_diff.cpp
     src/terminal/screen_buffer.cpp
@@ -69,7 +85,7 @@ target_include_directories(vulpes_core
 )
 target_link_libraries(vulpes_core
     PUBLIC vulpes_options
-    PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json)
+    PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json cpp-terminal::cpp-terminal)
 target_compile_definitions(vulpes_core PRIVATE VULPES_BUILDING_LIBRARY)
 
 configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)

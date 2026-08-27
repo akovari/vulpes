@@ -6,8 +6,8 @@
 
 namespace vulpes::terminal {
 
-// Owns raw-mode setup/restoration and normalizes native terminal input. All
-// platform APIs remain in its implementation file.
+// Owns the CPP-Terminal session and normalizes its platform-native events. The
+// rest of Vulpes only depends on Terminal, never on CPP-Terminal directly.
 class ConsoleTerminal final : public Terminal {
   public:
     ConsoleTerminal();
