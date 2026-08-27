@@ -18,6 +18,7 @@ enum class ActionId {
     database_open,
     database_create,
     workspace_next_document,
+    workspace_close_document,
     dataset_previous,
     dataset_next,
     dataset_first,

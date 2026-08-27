@@ -5,6 +5,7 @@
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
 #include "vulpes/ui/text_prompt.hpp"
+#include "vulpes/ui/window_manager.hpp"
 
 #include <optional>
 #include <string>
@@ -41,6 +42,7 @@ class Workspace {
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;
+    WindowManager windows_;
 };
 
 } // namespace vulpes::ui

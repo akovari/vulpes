@@ -21,6 +21,7 @@ auto default_bindings() -> std::vector<KeyBinding> {
         {{.key = Key::character, .character = U'o', .ctrl = true}, ActionId::database_open},
         {{.key = Key::character, .character = U'n', .ctrl = true}, ActionId::database_create},
         {{.key = Key::tab, .ctrl = true}, ActionId::workspace_next_document},
+        {{.key = Key::character, .character = U'w', .ctrl = true}, ActionId::workspace_close_document},
         {{.key = Key::up}, ActionId::dataset_previous},
         {{.key = Key::down}, ActionId::dataset_next},
         {{.key = Key::home}, ActionId::dataset_first},
@@ -78,6 +79,8 @@ auto action_id(ActionId action) -> std::string_view {
         return "database.create";
     case ActionId::workspace_next_document:
         return "workspace.next_document";
+    case ActionId::workspace_close_document:
+        return "workspace.close_document";
     case ActionId::dataset_previous:
         return "dataset.previous";
     case ActionId::dataset_next:

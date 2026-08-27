@@ -37,6 +37,7 @@ Workspace::Workspace(std::string title, std::string open_label, std::string crea
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables) {
     prompt_.reset();
     modal_ = Modal::none;
+    windows_.dismiss_modal();
     database_path_ = std::move(path);
     tables_ = std::move(tables);
     selected_table_ = 0;
@@ -56,6 +57,7 @@ auto Workspace::selected_table() const -> const db::TableSchema* {
 void Workspace::begin_path_prompt(Modal modal) {
     modal_ = modal;
     prompt_.emplace(modal == Modal::open ? open_label_ : create_label_, path_instructions_);
+    windows_.show_modal(modal == Modal::open ? open_label_ : create_label_);
 }
 
 auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult {
@@ -64,12 +66,14 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         if (key != nullptr && key->key == terminal::Key::escape) {
             prompt_.reset();
             modal_ = Modal::none;
+            windows_.dismiss_modal();
             return WorkspaceResult::redraw;
         }
         const auto outcome = prompt_->handle(event);
         if (outcome == PromptResult::cancelled) {
             prompt_.reset();
             modal_ = Modal::none;
+            windows_.dismiss_modal();
             return WorkspaceResult::redraw;
         }
         if (outcome != PromptResult::submitted)
@@ -80,6 +84,13 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     }
     if (action == core::ActionId::application_quit)
         return WorkspaceResult::quit;
+    if (action == core::ActionId::workspace_close_document) {
+        if (windows_.close_active())
+            return WorkspaceResult::redraw;
+        return WorkspaceResult::unchanged;
+    }
+    if (windows_.handle(action))
+        return WorkspaceResult::redraw;
     if (action == core::ActionId::application_menu ||
         (key != nullptr && key->alt && (key->character == U'f' || key->character == U'F'))) {
         menu_open_ = !menu_open_;
@@ -131,10 +142,15 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         --selected_table_;
         return WorkspaceResult::redraw;
     }
-    if (key && key->key == terminal::Key::enter && selected_table())
+    if (key && key->key == terminal::Key::enter && selected_table()) {
+        const auto& table = *selected_table();
+        windows_.open({.id = "browse:" + table.name, .title = "Browse " + table.name, .kind = DocumentKind::browse});
         return WorkspaceResult::browse_table;
-    if (key && key->key == terminal::Key::f7 && !database_path_.empty())
+    }
+    if (key && key->key == terminal::Key::f7 && !database_path_.empty()) {
+        windows_.open({.id = "sql", .title = "SQL", .kind = DocumentKind::sql_console});
         return WorkspaceResult::run_sql;
+    }
     return WorkspaceResult::unchanged;
 }
 
@@ -147,16 +163,17 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     write_menu(buffer, bounds.x + 17, bounds.y, "View");
     write_menu(buffer, bounds.x + 23, bounds.y, "Window");
     write_menu(buffer, bounds.x + 32, bounds.y, "Help");
-    write(buffer, bounds.x + 2, bounds.y + 2, bounds.width - 4, title_, title_style);
+    windows_.render_tabs(buffer, {bounds.x, bounds.y + 1, bounds.width, 1});
+    write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, title_, title_style);
     if (database_path_.empty()) {
-        write(buffer, bounds.x + 2, bounds.y + 4, bounds.width - 4, "No database open.");
-        write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4,
+        write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, "No database open.");
+        write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4,
               "Ctrl+O Open database   Ctrl+N Create database   F10 Menu");
     } else {
-        write(buffer, bounds.x + 2, bounds.y + 4, bounds.width - 4, database_path_);
-        write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4, "Tables and views:", {.bold = true});
-        for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 10; ++index)
-            write(buffer, bounds.x + 4, bounds.y + 7 + static_cast<int>(index), bounds.width - 8,
+        write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, database_path_);
+        write(buffer, bounds.x + 2, bounds.y + 7, bounds.width - 4, "Tables and views:", {.bold = true});
+        for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 11; ++index)
+            write(buffer, bounds.x + 4, bounds.y + 8 + static_cast<int>(index), bounds.width - 8,
                   tables_[index].name + (tables_[index].is_view ? " [view]" : ""),
                   index == selected_table_ ? selected_style : terminal::Style{});
     }

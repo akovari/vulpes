@@ -27,6 +27,16 @@ TEST_CASE("workspace opens path modal and selects database tables", "[ui][worksp
     CHECK(workspace.handle(vulpes::core::ActionId::none,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
           vulpes::ui::WorkspaceResult::browse_table);
+    CHECK(workspace.handle(vulpes::core::ActionId::workspace_next_document,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::tab, .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::workspace_next_document,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::tab, .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::workspace_close_document,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'w', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
 }
 
 TEST_CASE("workspace closes File menu with Escape or Left and accepts Alt+F", "[ui][workspace]") {
