@@ -80,6 +80,11 @@
     "workspace.command_title": "Příkaz",
     "workspace.document.schema": "Schéma: {table}",
     "workspace.shortcut.command.key": "Ctrl+P",
-    "workspace.shortcut.command.label": " Příkaz  "
+    "workspace.shortcut.command.label": " Příkaz  ",
+    "workspace.close_document_cancel": "Zrušit",
+    "workspace.close_document_confirm": "Zavřít",
+    "workspace.close_document_instructions": "Vlevo/Vpravo Vybrat   Enter Potvrdit   Esc Zrušit",
+    "workspace.close_document_message": "Zavřít dokument {title}?",
+    "workspace.close_document_title": "Zavřít dokument"
   }
 }

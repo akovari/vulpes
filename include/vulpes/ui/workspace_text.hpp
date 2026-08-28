@@ -22,6 +22,11 @@ struct WorkspaceText {
     std::string path_instructions;
     std::string command_title;
     std::string command_instructions;
+    std::string close_document_title;
+    std::string close_document_message;
+    std::string close_document_confirm;
+    std::string close_document_cancel;
+    std::string close_document_instructions;
     std::string no_database_open;
     std::string open_before_browse;
     std::string open_before_sql;

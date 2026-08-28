@@ -40,6 +40,17 @@ auto WindowManager::close_active() -> bool {
 auto WindowManager::active() const -> const Document& {
     return documents_.at(active_index_);
 }
+void WindowManager::set_active_status(std::string status) {
+    documents_.at(active_index_).status = std::move(status);
+}
+auto WindowManager::active_status() const -> std::string_view {
+    return active().status;
+}
+void WindowManager::reset_documents() {
+    documents_.erase(documents_.begin() + 1, documents_.end());
+    active_index_ = 0;
+    dismiss_modal();
+}
 void WindowManager::show_modal(std::string title) {
     modal_title_ = std::move(title);
 }

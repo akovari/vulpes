@@ -44,13 +44,15 @@ Workspace::Workspace(WorkspaceText text, const Theme& theme)
 
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables) {
     prompt_.reset();
+    close_confirmation_.reset();
     modal_ = Modal::none;
     submitted_value_.clear();
     windows_.dismiss_modal();
+    windows_.reset_documents();
     database_path_ = std::move(path);
     set_tables(std::move(tables));
-    status_ = replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
-                               std::to_string(tables_.size()));
+    set_status(replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
+                                std::to_string(tables_.size())));
 }
 
 void Workspace::set_tables(std::vector<db::TableSchema> tables) {
@@ -66,7 +68,7 @@ void Workspace::set_tables(std::vector<db::TableSchema> tables) {
 }
 
 void Workspace::set_status(std::string status) {
-    status_ = std::move(status);
+    windows_.set_active_status(std::move(status));
 }
 auto Workspace::requested_path() const -> std::string {
     return submitted_value_;
@@ -118,6 +120,15 @@ void Workspace::begin_command_prompt() {
     windows_.show_modal(text_.command_title);
 }
 
+void Workspace::begin_close_confirmation() {
+    if (!windows_.active().closable)
+        return;
+    close_confirmation_.emplace(
+        text_.close_document_title, replace_argument(text_.close_document_message, "title", windows_.active().title),
+        text_.close_document_confirm, text_.close_document_cancel, text_.close_document_instructions);
+    windows_.show_modal(text_.close_document_title);
+}
+
 auto Workspace::activate_menu_item() -> WorkspaceResult {
     const auto selected = menu_selection_;
     const auto active_menu = menu_;
@@ -147,14 +158,14 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
         if (selected == 2) {
             const auto* table = selected_table();
             if (table == nullptr) {
-                status_ = text_.open_before_browse;
+                set_status(text_.open_before_browse);
                 return WorkspaceResult::redraw;
             }
             open_browse(*table);
             return WorkspaceResult::browse_table;
         }
         if (database_path_.empty()) {
-            status_ = text_.open_before_sql;
+            set_status(text_.open_before_sql);
             return WorkspaceResult::redraw;
         }
         open_sql_console();
@@ -169,10 +180,10 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
         if (selected == 0)
             static_cast<void>(windows_.handle(core::ActionId::workspace_next_document));
         else
-            static_cast<void>(windows_.close_active());
+            begin_close_confirmation();
         return WorkspaceResult::redraw;
     case Menu::help:
-        status_ = text_.help_shortcuts;
+        set_status(text_.help_shortcuts);
         return WorkspaceResult::redraw;
     case Menu::none:
         return WorkspaceResult::unchanged;
@@ -182,6 +193,22 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
 
 auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult {
     const auto* key = std::get_if<terminal::KeyEvent>(&event);
+    if (action == core::ActionId::application_quit)
+        return WorkspaceResult::quit;
+    if (close_confirmation_) {
+        const auto result = close_confirmation_->handle(event);
+        if (result == ConfirmationResult::confirmed) {
+            close_confirmation_.reset();
+            windows_.dismiss_modal();
+            return windows_.close_active() ? WorkspaceResult::redraw : WorkspaceResult::unchanged;
+        }
+        if (result == ConfirmationResult::cancelled) {
+            close_confirmation_.reset();
+            windows_.dismiss_modal();
+            return WorkspaceResult::redraw;
+        }
+        return result == ConfirmationResult::unchanged ? WorkspaceResult::unchanged : WorkspaceResult::redraw;
+    }
     const auto menu_from_mnemonic = [this, key] {
         if (key == nullptr || !key->alt)
             return Menu::none;
@@ -245,8 +272,6 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         windows_.dismiss_modal();
         return result;
     }
-    if (action == core::ActionId::application_quit)
-        return WorkspaceResult::quit;
     if (action == core::ActionId::application_command_palette) {
         begin_command_prompt();
         return WorkspaceResult::redraw;
@@ -286,8 +311,10 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         return WorkspaceResult::unchanged;
     }
     if (action == core::ActionId::workspace_close_document) {
-        if (windows_.close_active())
+        if (windows_.active().closable) {
+            begin_close_confirmation();
             return WorkspaceResult::redraw;
+        }
         return WorkspaceResult::unchanged;
     }
     if (windows_.handle(action))
@@ -417,8 +444,15 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (prompt_)
         prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,
                                  std::min(60, bounds.width), 5});
+    if (close_confirmation_) {
+        constexpr int dialog_height = 6;
+        const int dialog_width = std::min(60, bounds.width);
+        close_confirmation_->render(buffer,
+                                    {bounds.x + (bounds.width - dialog_width) / 2,
+                                     bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+    }
     write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, "", current_theme.style(ThemeRole::menu));
-    if (status_.empty()) {
+    if (windows_.active_status().empty()) {
         const int status_end = bounds.x + bounds.width - 1;
         int status_x = bounds.x + 1;
         for (const auto& shortcut : text_.status_shortcuts) {
@@ -436,7 +470,7 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
             status_x += label_width;
         }
     } else {
-        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, status_,
+        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, windows_.active_status(),
               current_theme.style(ThemeRole::menu));
     }
 }

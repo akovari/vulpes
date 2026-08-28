@@ -60,7 +60,9 @@ Use `Ctrl+O` to open a SQLite file, `Ctrl+N` to create one, `F10` (or `Alt+F`)
 for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
 `Ctrl+C` to exit. `Alt+D`, `Alt+V`, `Alt+W`, and `Alt+H` open the other menu
 groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
-switches tabs and `Ctrl+W` closes the active non-workspace tab.
+switches tabs and `Ctrl+W` asks before closing the active non-workspace tab.
+Opening or creating another database closes its old documents, so no tab can
+retain a dataset from the previous database.
 
 Press `Ctrl+P` to open the command palette. It uses the same parser and
 runtime as `--command`: `help`, `tables`, `schema <table>`, `browse <table>`,

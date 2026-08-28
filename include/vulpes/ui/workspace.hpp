@@ -3,6 +3,7 @@
 #include "vulpes/core/actions.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/terminal/terminal.hpp"
+#include "vulpes/ui/confirmation_dialog.hpp"
 #include "vulpes/ui/geometry.hpp"
 #include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/ui/theme.hpp"
@@ -42,16 +43,17 @@ class Workspace {
 
     void begin_path_prompt(Modal modal);
     void begin_command_prompt();
+    void begin_close_confirmation();
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
     WorkspaceText text_;
     std::string database_path_;
-    std::string status_;
     std::vector<db::TableSchema> tables_;
     std::size_t selected_table_{};
     Menu menu_{Menu::none};
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;
+    std::optional<ConfirmationDialog> close_confirmation_;
     std::string submitted_value_;
     const Theme* theme_;
     WindowManager windows_;

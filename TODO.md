@@ -89,7 +89,7 @@ on Windows, Linux, and macOS.
   supported Windows terminal hosts.
 - [x] Implement the Database, View, Window, and Help menus rather than only the
   File-menu prototype, with deterministic keyboard tests.
-- [ ] Add document tabs, active-document switching, close confirmation, and a
+- [x] Add document tabs, active-document switching, close confirmation, and a
   tab-local title/status model.
 - [x] Add a command window/palette using the existing command dispatcher.
 - [ ] Add recent databases, safe create/open mode selection, read-only indication,

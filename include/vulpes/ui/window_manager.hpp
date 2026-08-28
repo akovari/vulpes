@@ -17,6 +17,7 @@ enum class DocumentKind { workspace, browse, schema, sql_console };
 struct Document {
     std::string id;
     std::string title;
+    std::string status;
     DocumentKind kind{DocumentKind::workspace};
     bool closable{true};
 };
@@ -30,6 +31,9 @@ class WindowManager {
     void open(Document document);
     [[nodiscard]] auto close_active() -> bool;
     [[nodiscard]] auto active() const -> const Document&;
+    void set_active_status(std::string status);
+    [[nodiscard]] auto active_status() const -> std::string_view;
+    void reset_documents();
     [[nodiscard]] auto documents() const noexcept -> const std::vector<Document>& { return documents_; }
     [[nodiscard]] auto active_index() const noexcept -> std::size_t { return active_index_; }
     void show_modal(std::string title);

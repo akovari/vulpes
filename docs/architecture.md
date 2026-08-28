@@ -44,6 +44,12 @@ events to the active surface. Neither layer knows terminal escape sequences;
 database operations remain inside `Dataset` or the explicit SQL-console
 boundary.
 
+`WindowManager` owns document identity, the active tab, modal priority, and a
+tab-local status string. Explicit window closure is confirmation-gated by the
+workspace; document Escape remains a semantic back action. Replacing the open
+database resets all non-workspace tabs before a new database is exposed, which
+prevents stale datasets from crossing connection boundaries.
+
 `DocumentSession` is the direct-mode terminal host for a single
 `DocumentSurface`. Consequently `vulpes database.db --table customers` and the
 workspace Browse command run the same browse/form/filter implementation; the

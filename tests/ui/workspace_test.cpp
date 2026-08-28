@@ -100,6 +100,41 @@ TEST_CASE("workspace command prompt submits semantic command text and preserves 
     CHECK(workspace.requested_command().empty());
 }
 
+TEST_CASE("workspace asks before closing a document and clears stale tabs for a new database", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    workspace.set_database("first.db", {{.name = "customers"}});
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::browse_table);
+    CHECK(workspace.has_document("browse:customers"));
+
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::workspace_close_document,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'w', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.has_document("browse:customers"));
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.has_document("browse:customers"));
+
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::workspace_close_document,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'w', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::grid_next_column,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK_FALSE(workspace.has_document("browse:customers"));
+
+    workspace.set_database("second.db", {{.name = "orders"}});
+    CHECK_FALSE(workspace.has_document("browse:customers"));
+    CHECK(workspace.active_document().kind == vulpes::ui::DocumentKind::workspace);
+}
+
 TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspace]") {
     auto workspace = english_workspace();
     workspace.set_database("workshop.db", {{.name = "customers"}});
