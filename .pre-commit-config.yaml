@@ -6,7 +6,8 @@ repos:
     hooks:
       - id: clang-format
         name: clang-format
-        entry: clang-format -i --style=file
-        language: unsupported
+        entry: python scripts/clang_format_hook.py
+        language: python
         files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+        require_serial: true
         stages: [pre-commit]
