@@ -22,9 +22,18 @@ parameter.
 related label and cycles the list with Left/Right, while persistence receives
 the original referenced key.
 
+The later searchable window remains bounded and accepts only inspected display
+and search-field identifiers. `Dataset::lookup_option` resolves the form's
+current key separately from that bounded page. This matters for existing rows:
+the current relationship must retain its readable label even when it sorts
+after the first page. F2 obtains an owned related row through
+`Dataset::related_record`; neither relationship widget executes SQLite itself.
+
 ## Consequences
 
-- Generated forms give readable relationship selection for small local tables.
-- A hard limit of 100 avoids unintentionally loading a large related table.
-- Search, async paging, composite foreign keys, display overrides, and
-  related-record drill-down need deliberate metadata and interaction design.
+- Generated forms give readable, searchable relationship selection for local
+  tables without leaking a raw key at page boundaries.
+- A configurable hard limit, validated between 1 and 1,000, avoids
+  unintentionally loading an entire related table.
+- Composite foreign keys and async/keyset lookup paging still require deliberate
+  model and interaction design.

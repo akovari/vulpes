@@ -176,8 +176,8 @@ on Windows, Linux, and macOS.
 
 - [x] Add generic inventory example schema and low-stock view.
 - [x] Add representative seed data and scripted acceptance scenario.
-- [ ] Exercise product edit, relationship navigation, stock movement, and report.
-- [ ] Fix framework weaknesses without inventory-specific runtime code.
+- [x] Exercise product edit, relationship navigation, stock movement, and report.
+- [x] Fix framework weaknesses without inventory-specific runtime code.
 - [ ] Package standalone artifacts for Windows, Linux, and macOS.
 - [ ] Document backup, recovery, compatibility, and upgrade behavior.
 - [ ] Add versioned installer/archive conventions, checksums, licenses, and release

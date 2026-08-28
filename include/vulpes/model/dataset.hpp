@@ -80,6 +80,8 @@ class Dataset {
         -> std::vector<LookupOption>;
     [[nodiscard]] auto lookup_options(std::string_view field, const LookupQuery& query) const
         -> std::vector<LookupOption>;
+    [[nodiscard]] auto lookup_option(std::string_view field, const db::Value& value,
+                                     const LookupQuery& query = {}) const -> std::optional<LookupOption>;
     [[nodiscard]] auto related_record(std::string_view field, const db::Value& value) const
         -> std::optional<RelatedRecord>;
     void save();

@@ -306,6 +306,36 @@ auto Dataset::related_record(std::string_view field, const db::Value& value) con
     return RelatedRecord{.schema = std::move(schema), .row = statement.row()};
 }
 
+auto Dataset::lookup_option(std::string_view field, const db::Value& value, const LookupQuery& request) const
+    -> std::optional<LookupOption> {
+    const auto* foreign_key = foreign_key_for(field);
+    if (foreign_key == nullptr)
+        throw Error{ErrorCategory::validation, "field is not a foreign key: " + std::string{field}};
+    const auto record = related_record(field, value);
+    if (!record)
+        return std::nullopt;
+
+    std::string display_field = foreign_key->referenced_field;
+    if (request.display_field) {
+        if (std::ranges::find(record->schema.fields, *request.display_field, &db::FieldSchema::name) ==
+            record->schema.fields.end()) {
+            throw Error{ErrorCategory::validation,
+                        "unknown lookup display field: " + record->schema.name + "." + *request.display_field};
+        }
+        display_field = *request.display_field;
+    } else {
+        static constexpr std::array<std::string_view, 4> display_candidates{"name", "title", "description", "code"};
+        for (const auto candidate : display_candidates) {
+            if (std::ranges::find(record->schema.fields, candidate, &db::FieldSchema::name) !=
+                record->schema.fields.end()) {
+                display_field = std::string{candidate};
+                break;
+            }
+        }
+    }
+    return LookupOption{.value = value, .label = display_value(record->row.at(display_field))};
+}
+
 auto Dataset::referenced_schema(const db::ForeignKeySchema& foreign_key) const -> db::TableSchema {
     const auto schemas = db::inspect_schema(*database_);
     const auto referenced = std::ranges::find(schemas, foreign_key.referenced_table, &db::TableSchema::name);

@@ -110,6 +110,11 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
                     form_field.selected_lookup_option =
                         static_cast<std::size_t>(std::distance(form_field.lookup_options.begin(), selected));
                     form_field.editor.set_text(selected->label);
+                } else if (const auto current =
+                               dataset_->lookup_option(schema_field.name, *value, form_field.lookup_query)) {
+                    form_field.lookup_options.push_back(*current);
+                    form_field.selected_lookup_option = form_field.lookup_options.size() - 1;
+                    form_field.editor.set_text(current->label);
                 }
             }
         }

@@ -222,6 +222,36 @@ TEST_CASE("generated form requests a configured searchable relationship lookup",
     CHECK(form.is_dirty());
 }
 
+TEST_CASE("generated form resolves a current relationship outside the bounded lookup page",
+          "[ui][form][lookup][appmeta]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL);"
+                     "WITH RECURSIVE customer_number(value) AS ("
+                     "  VALUES(1) UNION ALL SELECT value + 1 FROM customer_number WHERE value < 120"
+                     ") INSERT INTO customer SELECT value, printf('Customer %03d', value) FROM customer_number;"
+                     "CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customer(id));"
+                     "INSERT INTO job VALUES (1, 120);");
+    const auto schemas = vulpes::db::inspect_schema(database);
+    const auto job = std::ranges::find(schemas, "job", &vulpes::db::TableSchema::name);
+    REQUIRE(job != schemas.end());
+    vulpes::model::Dataset dataset{database, *job};
+    const vulpes::appmeta::TableMetadata metadata{
+        .name = "job",
+        .fields = {{.name = "customer_id",
+                    .label = "Customer",
+                    .lookup = vulpes::appmeta::LookupMetadata{.display_field = "name", .result_limit = 10}}},
+    };
+
+    vulpes::ui::RecordForm form{
+        dataset, "Job",    vulpes::ui::FormMode::edit, "F8 Save", vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+        nullptr, &metadata};
+
+    REQUIRE(form.fields().size() == 2);
+    CHECK(form.fields()[1].lookup_options.size() == 11);
+    CHECK(form.fields()[1].selected_lookup_option == 10);
+    CHECK(form.fields()[1].editor.text() == "Customer 120");
+}
+
 TEST_CASE("generated temporal controls normalize explicitly annotated text fields", "[ui][form][appmeta][temporal]") {
     vulpes::db::Database database{":memory:"};
     database.execute("CREATE TABLE event(id INTEGER PRIMARY KEY, occurred_at TEXT)");

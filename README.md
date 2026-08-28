@@ -66,6 +66,11 @@ sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
 ```
 
+The smaller workshop acceptance database from the product definition can be
+created in the same way from `examples/workshop/schema.sql` and
+`examples/workshop/seed.sql`. See [examples/README.md](examples/README.md) for
+the workflows each example is expected to exercise.
+
 To try the workspace without a database, run:
 
 ```powershell
@@ -203,8 +208,13 @@ primary-key-guarded dataset operation as other writes.
 Foreign-key fields in generated forms are rendered as lookups rather than raw
 keys. Vulpes infers a related display field in this order: `name`, `title`,
 `description`, then `code`. Use Left/Right on the lookup to choose from the
-first 100 related rows; Vulpes stores the underlying key. Searchable and
-metadata-configured lookups are intentionally deferred.
+bounded initial result, or Enter to open its searchable relationship window.
+Up/Down moves through matches, F2 opens the selected related record, Enter
+applies it, and Esc returns one window at a time. Optional application metadata
+configures display/search fields, the result bound, and drill-down policy;
+Vulpes always stores the underlying key. When an existing relationship falls
+outside the initial result page, the form resolves that exact row independently
+so it never substitutes a raw key for its display label.
 
 Open the interactive SQL console with `--sql` or `--command sql`. It accepts
 cursor-aware multiline input: arrows move by character or line, Home/End move
@@ -233,9 +243,10 @@ ICU MessageFormat supplies translated plural/select grammar, and ICU/CLDR
 supplies locale-aware numeric display. Currency and date/time presentation stay
 explicit metadata policies rather than being guessed from SQLite declarations.
 
-The inventory example's seed data and acceptance test exercise only generic
-Vulpes capabilities: schema-driven datasets, transactional editing, stock
-movement insertion, and SQL views. It contains no runtime special cases.
+The inventory and workshop acceptance tests exercise only generic Vulpes
+capabilities: schema-driven datasets, transactional editing, searchable
+relationships and drill-down, SQL results rendered through Grid, filtering,
+searching, and stock movement insertion. They contain no runtime special cases.
 
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
 and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.

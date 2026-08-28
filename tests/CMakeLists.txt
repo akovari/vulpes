@@ -12,6 +12,7 @@ add_executable(vulpes_tests
     db/database_test.cpp
     db/schema_test.cpp
     examples/inventory_test.cpp
+    examples/workshop_test.cpp
     model/dataset_test.cpp
     ui/button_test.cpp
     ui/form_test.cpp

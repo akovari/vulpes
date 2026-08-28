@@ -32,7 +32,7 @@ CREATE TABLE stock_movements (
   product_id INTEGER NOT NULL REFERENCES products(id),
   location_id INTEGER NOT NULL REFERENCES locations(id),
   quantity INTEGER NOT NULL CHECK (quantity <> 0),
-  occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  occurred_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   note TEXT
 );
 
