@@ -52,6 +52,21 @@ TEST_CASE("workspace opens path modal and selects database tables", "[ui][worksp
           vulpes::ui::WorkspaceResult::redraw);
 }
 
+TEST_CASE("workspace requests an explicit read-only database open", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::database_open_read_only,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'r', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    static_cast<void>(
+        workspace.handle(vulpes::core::ActionId::none,
+                         vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'a'}));
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::open_database_read_only);
+    CHECK(workspace.requested_path() == "a");
+}
+
 TEST_CASE("workspace opens a selected recent database from its home screen", "[ui][workspace]") {
     auto workspace = english_workspace();
     workspace.set_recent_databases({"first.db", "second.db"});
@@ -159,12 +174,11 @@ TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspa
               vulpes::core::ActionId::none,
               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
           vulpes::ui::WorkspaceResult::redraw);
-    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
-                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
-          vulpes::ui::WorkspaceResult::redraw);
-    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
-                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
-          vulpes::ui::WorkspaceResult::redraw);
+    for (int count = 0; count < 3; ++count) {
+        CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+              vulpes::ui::WorkspaceResult::redraw);
+    }
     CHECK(workspace.handle(vulpes::core::ActionId::none,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
           vulpes::ui::WorkspaceResult::browse_table);
@@ -173,7 +187,7 @@ TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspa
               vulpes::core::ActionId::none,
               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
           vulpes::ui::WorkspaceResult::redraw);
-    for (int count = 0; count < 3; ++count) {
+    for (int count = 0; count < 4; ++count) {
         CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
                                vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
               vulpes::ui::WorkspaceResult::redraw);

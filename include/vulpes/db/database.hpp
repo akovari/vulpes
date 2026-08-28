@@ -38,12 +38,14 @@ class Database {
     [[nodiscard]] auto run_sql(std::string_view script, std::size_t row_limit = 1'000) -> SqlResult;
     void execute(std::string_view sql);
     [[nodiscard]] auto in_transaction() const noexcept -> bool;
+    [[nodiscard]] auto is_read_only() const noexcept -> bool { return read_only_; }
     [[nodiscard]] auto changes() const noexcept -> int;
     [[nodiscard]] auto last_insert_rowid() const noexcept -> std::int64_t;
 
   private:
     friend class Transaction;
     sqlite3* handle_{};
+    bool read_only_{false};
 };
 
 } // namespace vulpes::db

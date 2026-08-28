@@ -99,7 +99,8 @@ on Windows, Linux, and macOS.
 - [x] Add a command window/palette using the existing command dispatcher.
 - [x] Persist a bounded recent-database list in versioned, user-local workspace
   preferences and expose it on the home screen.
-- [ ] Add safe create/open mode selection and read-only indication.
+- [x] Add explicit read/write, read-only, and create workspace open modes with
+  read-only dataset guards, visual indication, and a CLI non-creation test.
 - [ ] Design an optional directory browser separately from portable path entry.
 
 ## Cross-cutting — localization

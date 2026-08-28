@@ -25,7 +25,7 @@ auto flags_for(OpenMode mode) -> int {
 
 } // namespace
 
-Database::Database(const std::filesystem::path& path, OpenMode mode) {
+Database::Database(const std::filesystem::path& path, OpenMode mode) : read_only_{mode == OpenMode::read_only} {
     const auto utf8_path = path.u8string();
     const auto* filename = reinterpret_cast<const char*>(utf8_path.c_str());
     const int result = sqlite3_open_v2(filename, &handle_, flags_for(mode), nullptr);
@@ -44,13 +44,15 @@ Database::~Database() {
     sqlite3_close(handle_);
 }
 
-Database::Database(Database&& other) noexcept : handle_{std::exchange(other.handle_, nullptr)} {
+Database::Database(Database&& other) noexcept
+    : handle_{std::exchange(other.handle_, nullptr)}, read_only_{std::exchange(other.read_only_, false)} {
 }
 
 auto Database::operator=(Database&& other) noexcept -> Database& {
     if (this != &other) {
         sqlite3_close(handle_);
         handle_ = std::exchange(other.handle_, nullptr);
+        read_only_ = std::exchange(other.read_only_, false);
     }
     return *this;
 }

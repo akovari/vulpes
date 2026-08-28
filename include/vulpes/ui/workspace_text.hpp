@@ -14,6 +14,7 @@ struct WorkspaceText {
     std::string title;
     std::string workspace_document;
     std::string open_database_title;
+    std::string open_read_only_database_title;
     std::string create_database_title;
     std::string path_instructions;
     std::string command_title;
@@ -31,14 +32,15 @@ struct WorkspaceText {
     std::string home_shortcuts;
     std::string help_shortcuts;
     std::string database_status;
+    std::string read_only_suffix;
     std::string browse_document;
     std::string schema_document;
     std::string sql_document;
     std::string view_suffix;
     std::array<std::string, 5> menu_bar;
     std::array<ShortcutHint, 5> status_shortcuts;
-    std::array<std::string, 3> file_menu;
-    std::array<std::string, 4> database_menu;
+    std::array<std::string, 4> file_menu;
+    std::array<std::string, 5> database_menu;
     std::array<std::string, 2> view_menu;
     std::array<std::string, 2> window_menu;
     std::array<std::string, 1> help_menu;

@@ -108,6 +108,13 @@ target_link_libraries(vulpes PRIVATE Vulpes::core CLI11::CLI11)
 
 if(BUILD_TESTING)
     add_test(NAME vulpes_version COMMAND vulpes --version)
+    add_test(
+        NAME vulpes_missing_database_does_not_create
+        COMMAND ${CMAKE_COMMAND}
+            -DVULPES_EXE=$<TARGET_FILE:vulpes>
+            -DTEST_DATABASE=${CMAKE_CURRENT_BINARY_DIR}/vulpes-missing-database.sqlite
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_missing_database_does_not_create.cmake
+    )
 endif()
 
 install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

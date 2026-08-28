@@ -1,6 +1,8 @@
 #include "vulpes/core/error.hpp"
 #include "vulpes/db/database.hpp"
+#include "vulpes/db/schema.hpp"
 #include "vulpes/db/transaction.hpp"
+#include "vulpes/model/dataset.hpp"
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
@@ -152,10 +154,15 @@ TEST_CASE("database is movable and read-only mode rejects writes", "[db]") {
     }
     {
         Database read_only{file.path(), OpenMode::read_only};
+        CHECK(read_only.is_read_only());
         auto query = read_only.prepare("SELECT value FROM sample");
         REQUIRE(query.step());
         CHECK(query.column(0).as_int() == 7);
         CHECK_THROWS_AS(read_only.execute("INSERT INTO sample VALUES (8)"), vulpes::Error);
+
+        vulpes::model::Dataset dataset{read_only, vulpes::db::inspect_schema(read_only).front()};
+        CHECK_FALSE(dataset.is_editable());
+        CHECK_THROWS_AS(dataset.begin_insert(), vulpes::Error);
     }
 }
 

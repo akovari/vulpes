@@ -85,6 +85,12 @@ cannot alter ordinary SQLite compatibility or become a second application
 format. It uses the platform configuration directory by default and accepts an
 explicit path for portable/test use.
 
+`Database` retains its SQLite open mode. Read-only connections make table
+datasets non-editable before a UI action can create a form or delete
+confirmation; the browse surface changes its footer accordingly. Workspace
+Open, Open read-only, and Create map explicitly to SQLite read/write,
+read-only, and read/write-create modes.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

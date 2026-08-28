@@ -77,7 +77,8 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
 
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages)
     : messages_{&messages}, dataset_{database, std::move(table)}, controller_{dataset_},
-      grid_{dataset_, dataset_.schema().name, messages.translate("browse.footer")} {
+      grid_{dataset_, dataset_.schema().name,
+            messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer")} {
 }
 
 void BrowseDocument::begin_form(FormMode mode) {

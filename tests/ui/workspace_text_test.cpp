@@ -10,7 +10,7 @@ TEST_CASE("workspace text uses the selected Czech catalog for labels and mnemoni
     messages.load_catalog_file(std::filesystem::path{VULPES_SOURCE_DIR} / "translations" / "cs.json");
     const auto text = vulpes::ui::make_workspace_text(messages);
     CHECK(text.menu_bar[0] == "Soubor");
-    CHECK(text.database_menu[2] == "Procházet vybranou tabulku");
+    CHECK(text.database_menu[3] == "Procházet vybranou tabulku");
     CHECK(text.browse_document == "Procházet {table}");
     CHECK(text.command_title == "Příkaz");
 

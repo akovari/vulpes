@@ -17,6 +17,7 @@ enum class ActionId {
     application_menu,
     application_command_palette,
     database_open,
+    database_open_read_only,
     database_create,
     workspace_next_document,
     workspace_close_document,

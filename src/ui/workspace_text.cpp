@@ -7,6 +7,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .title = messages.translate("application.title"),
         .workspace_document = messages.translate("workspace.document.workspace"),
         .open_database_title = messages.translate("workspace.open_title"),
+        .open_read_only_database_title = messages.translate("workspace.open_read_only_title"),
         .create_database_title = messages.translate("workspace.create_title"),
         .path_instructions = messages.translate("workspace.path_instructions"),
         .command_title = messages.translate("workspace.command_title"),
@@ -24,6 +25,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .home_shortcuts = messages.translate("workspace.home_shortcuts"),
         .help_shortcuts = messages.translate("workspace.help_shortcuts"),
         .database_status = messages.translate("workspace.database_status"),
+        .read_only_suffix = messages.translate("workspace.read_only_suffix"),
         .browse_document = messages.translate("workspace.document.browse"),
         .schema_document = messages.translate("workspace.document.schema"),
         .sql_document = messages.translate("workspace.document.sql"),
@@ -52,12 +54,14 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .file_menu =
             {
                 messages.translate("workspace.menu.file.open"),
+                messages.translate("workspace.menu.file.open_read_only"),
                 messages.translate("workspace.menu.file.create"),
                 messages.translate("workspace.menu.file.exit"),
             },
         .database_menu =
             {
                 messages.translate("workspace.menu.database.open"),
+                messages.translate("workspace.menu.database.open_read_only"),
                 messages.translate("workspace.menu.database.create"),
                 messages.translate("workspace.menu.database.browse"),
                 messages.translate("workspace.menu.database.sql"),

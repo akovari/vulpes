@@ -58,8 +58,9 @@ To try the workspace without a database, run:
 
 Use `Ctrl+O` to open a SQLite file, `Ctrl+N` to create one, `F10` (or `Alt+F`)
 for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
-`Ctrl+C` to exit. `Alt+D`, `Alt+V`, `Alt+W`, and `Alt+H` open the other menu
-groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
+`Ctrl+C` to exit. `Ctrl+R` and the File/Database menus open an existing database
+read-only; only **Create database** uses SQLite's create mode. `Alt+D`, `Alt+V`,
+`Alt+W`, and `Alt+H` open the other menu groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
 switches tabs and `Ctrl+W` asks before closing the active non-workspace tab.
 Opening or creating another database closes its old documents, so no tab can
 retain a dataset from the previous database.
@@ -97,6 +98,12 @@ numeric fields use numeric validation, conservative boolean-like fields use a
 checkbox, generated/primary-key fields are protected, and BLOB fields remain
 read-only until a binary editor exists. Failed database validation leaves the
 draft open for correction.
+
+Read-only database sessions keep browse, sort, filter, search, schema, and SQL
+result viewing available, but generated form and delete actions are disabled and
+the browse footer is labeled **read-only**. An explicit database path supplied
+on the command line is opened read/write without create permission, so a typo
+cannot silently create a new SQLite file.
 
 Browse keys are mapped to stable semantic actions (for example,
 `record.edit` and `dataset.refresh`) before they reach application controllers.

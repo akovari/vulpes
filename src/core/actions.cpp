@@ -20,6 +20,7 @@ auto default_bindings() -> std::vector<KeyBinding> {
         {{.key = Key::character, .character = U'f', .alt = true}, ActionId::application_menu},
         {{.key = Key::character, .character = U'p', .ctrl = true}, ActionId::application_command_palette},
         {{.key = Key::character, .character = U'o', .ctrl = true}, ActionId::database_open},
+        {{.key = Key::character, .character = U'r', .ctrl = true}, ActionId::database_open_read_only},
         {{.key = Key::character, .character = U'n', .ctrl = true}, ActionId::database_create},
         {{.key = Key::tab, .ctrl = true}, ActionId::workspace_next_document},
         {{.key = Key::character, .character = U'w', .ctrl = true}, ActionId::workspace_close_document},
@@ -78,6 +79,8 @@ auto action_id(ActionId action) -> std::string_view {
         return "application.command_palette";
     case ActionId::database_open:
         return "database.open";
+    case ActionId::database_open_read_only:
+        return "database.open_read_only";
     case ActionId::database_create:
         return "database.create";
     case ActionId::workspace_next_document:

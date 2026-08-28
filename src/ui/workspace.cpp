@@ -43,7 +43,7 @@ Workspace::Workspace(WorkspaceText text, const Theme& theme)
     : text_{std::move(text)}, theme_{&theme}, windows_{theme, text_.workspace_document} {
 }
 
-void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables) {
+void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables, bool read_only) {
     prompt_.reset();
     close_confirmation_.reset();
     modal_ = Modal::none;
@@ -51,9 +51,13 @@ void Workspace::set_database(std::string path, std::vector<db::TableSchema> tabl
     windows_.dismiss_modal();
     windows_.reset_documents();
     database_path_ = std::move(path);
+    database_read_only_ = read_only;
     set_tables(std::move(tables));
-    set_status(replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
-                                std::to_string(tables_.size())));
+    auto status = replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
+                                   std::to_string(tables_.size()));
+    if (database_read_only_)
+        status += text_.read_only_suffix;
+    set_status(std::move(status));
 }
 
 void Workspace::set_recent_databases(std::vector<std::string> paths) {
@@ -115,9 +119,11 @@ void Workspace::open_sql_console() {
 void Workspace::begin_path_prompt(Modal modal) {
     modal_ = modal;
     submitted_value_.clear();
-    prompt_.emplace(modal == Modal::open ? text_.open_database_title : text_.create_database_title,
-                    text_.path_instructions);
-    windows_.show_modal(modal == Modal::open ? text_.open_database_title : text_.create_database_title);
+    const auto& title = modal == Modal::open             ? text_.open_database_title
+                        : modal == Modal::open_read_only ? text_.open_read_only_database_title
+                                                         : text_.create_database_title;
+    prompt_.emplace(title, text_.path_instructions);
+    windows_.show_modal(title);
 }
 
 void Workspace::begin_command_prompt() {
@@ -149,6 +155,10 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
             return WorkspaceResult::redraw;
         }
         if (selected == 1) {
+            begin_path_prompt(Modal::open_read_only);
+            return WorkspaceResult::redraw;
+        }
+        if (selected == 2) {
             begin_path_prompt(Modal::create);
             return WorkspaceResult::redraw;
         }
@@ -159,10 +169,14 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
             return WorkspaceResult::redraw;
         }
         if (selected == 1) {
-            begin_path_prompt(Modal::create);
+            begin_path_prompt(Modal::open_read_only);
             return WorkspaceResult::redraw;
         }
         if (selected == 2) {
+            begin_path_prompt(Modal::create);
+            return WorkspaceResult::redraw;
+        }
+        if (selected == 3) {
             const auto* table = selected_table();
             if (table == nullptr) {
                 set_status(text_.open_before_browse);
@@ -230,9 +244,9 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     const auto menu_item_count = [this] {
         switch (menu_) {
         case Menu::file:
-            return std::size_t{3};
-        case Menu::database:
             return std::size_t{4};
+        case Menu::database:
+            return std::size_t{5};
         case Menu::view:
         case Menu::window:
             return std::size_t{2};
@@ -272,9 +286,10 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
             return outcome == PromptResult::unchanged ? WorkspaceResult::unchanged : WorkspaceResult::redraw;
         submitted_value_ = prompt_->value();
         prompt_.reset();
-        const auto result = modal_ == Modal::open     ? WorkspaceResult::open_database
-                            : modal_ == Modal::create ? WorkspaceResult::create_database
-                                                      : WorkspaceResult::command;
+        const auto result = modal_ == Modal::open             ? WorkspaceResult::open_database
+                            : modal_ == Modal::open_read_only ? WorkspaceResult::open_database_read_only
+                            : modal_ == Modal::create         ? WorkspaceResult::create_database
+                                                              : WorkspaceResult::command;
         modal_ = Modal::none;
         windows_.dismiss_modal();
         return result;
@@ -338,6 +353,10 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     }
     if (action == core::ActionId::database_open) {
         begin_path_prompt(Modal::open);
+        return WorkspaceResult::redraw;
+    }
+    if (action == core::ActionId::database_open_read_only) {
+        begin_path_prompt(Modal::open_read_only);
         return WorkspaceResult::redraw;
     }
     if (action == core::ActionId::database_create) {

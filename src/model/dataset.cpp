@@ -119,7 +119,7 @@ auto Dataset::current_identity() const -> std::optional<RowIdentity> {
 }
 
 auto Dataset::is_editable() const noexcept -> bool {
-    return !schema_.is_view && !schema_.primary_key_fields().empty();
+    return !database_->is_read_only() && !schema_.is_view && !schema_.primary_key_fields().empty();
 }
 
 auto Dataset::order_by(std::string_view field, SortDirection direction) -> Dataset& {

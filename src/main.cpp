@@ -170,6 +170,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         if (outcome == vulpes::ui::WorkspaceResult::quit)
             return 0;
         if (outcome == vulpes::ui::WorkspaceResult::open_database ||
+            outcome == vulpes::ui::WorkspaceResult::open_database_read_only ||
             outcome == vulpes::ui::WorkspaceResult::create_database) {
             try {
                 const auto path = workspace.requested_path();
@@ -178,10 +179,14 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                                         messages.translate("workspace.path_required")};
                 surfaces.clear();
                 const std::filesystem::path database_path{path};
-                database.emplace(database_path, outcome == vulpes::ui::WorkspaceResult::open_database
-                                                    ? vulpes::db::OpenMode::read_write
-                                                    : vulpes::db::OpenMode::read_write_create);
-                workspace.set_database(path, vulpes::db::inspect_schema(*database));
+                const auto open_mode = outcome == vulpes::ui::WorkspaceResult::create_database
+                                           ? vulpes::db::OpenMode::read_write_create
+                                       : outcome == vulpes::ui::WorkspaceResult::open_database_read_only
+                                           ? vulpes::db::OpenMode::read_only
+                                           : vulpes::db::OpenMode::read_write;
+                database.emplace(database_path, open_mode);
+                workspace.set_database(path, vulpes::db::inspect_schema(*database),
+                                       open_mode == vulpes::db::OpenMode::read_only);
                 preferences.add_recent_database(database_path);
                 preferences.save(preferences_path);
                 refresh_recent_databases();
@@ -280,7 +285,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
          const std::optional<std::string>& command_source, const std::string& locale,
          const std::vector<std::string>& catalog_paths) -> int {
-    vulpes::db::Database database{database_path};
+    vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
     vulpes::core::Localizer messages{locale};
     for (const auto& catalog_path : catalog_paths)
         messages.load_catalog_file(std::filesystem::path{catalog_path});
