@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/terminal/terminal.hpp"
+#include "vulpes/ui/focus_ring.hpp"
 #include "vulpes/ui/geometry.hpp"
 
 #include <string>
@@ -16,7 +17,7 @@ class ConfirmationDialog {
     ConfirmationDialog(std::string title, std::string message, std::string confirm_label, std::string cancel_label,
                        std::string instructions);
 
-    [[nodiscard]] auto confirmed() const noexcept -> bool { return confirmed_; }
+    [[nodiscard]] auto confirmed() const noexcept -> bool { return button_focus_.current().value_or(1) == 0; }
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> ConfirmationResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
@@ -26,7 +27,7 @@ class ConfirmationDialog {
     std::string confirm_label_;
     std::string cancel_label_;
     std::string instructions_;
-    bool confirmed_{false};
+    FocusRing button_focus_;
 };
 
 } // namespace vulpes::ui

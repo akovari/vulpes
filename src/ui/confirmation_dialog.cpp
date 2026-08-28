@@ -20,7 +20,8 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 ConfirmationDialog::ConfirmationDialog(std::string title, std::string message, std::string confirm_label,
                                        std::string cancel_label, std::string instructions)
     : title_{std::move(title)}, message_{std::move(message)}, confirm_label_{std::move(confirm_label)},
-      cancel_label_{std::move(cancel_label)}, instructions_{std::move(instructions)} {
+      cancel_label_{std::move(cancel_label)}, instructions_{std::move(instructions)}, button_focus_{{true, true}} {
+    static_cast<void>(button_focus_.select(1));
 }
 
 auto ConfirmationDialog::handle(const terminal::InputEvent& event) -> ConfirmationResult {
@@ -29,22 +30,26 @@ auto ConfirmationDialog::handle(const terminal::InputEvent& event) -> Confirmati
         return ConfirmationResult::redraw;
     if (key->key == terminal::Key::escape)
         return ConfirmationResult::cancelled;
-    if (key->key == terminal::Key::left || key->key == terminal::Key::right || key->key == terminal::Key::tab) {
-        confirmed_ = !confirmed_;
+    if (key->key == terminal::Key::left || (key->key == terminal::Key::tab && key->shift)) {
+        static_cast<void>(button_focus_.move(-1));
+        return ConfirmationResult::redraw;
+    }
+    if (key->key == terminal::Key::right || key->key == terminal::Key::tab) {
+        static_cast<void>(button_focus_.move(1));
         return ConfirmationResult::redraw;
     }
     if (key->key == terminal::Key::character && !key->ctrl && !key->alt) {
         if (key->character == U'y' || key->character == U'Y') {
-            confirmed_ = true;
+            static_cast<void>(button_focus_.select(0));
             return ConfirmationResult::redraw;
         }
         if (key->character == U'n' || key->character == U'N') {
-            confirmed_ = false;
+            static_cast<void>(button_focus_.select(1));
             return ConfirmationResult::redraw;
         }
     }
     if (key->key == terminal::Key::enter)
-        return confirmed_ ? ConfirmationResult::confirmed : ConfirmationResult::cancelled;
+        return confirmed() ? ConfirmationResult::confirmed : ConfirmationResult::cancelled;
     return ConfirmationResult::unchanged;
 }
 
@@ -66,9 +71,9 @@ void ConfirmationDialog::render(terminal::ScreenBuffer& buffer, Rect bounds) con
     }
     write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, message_);
     const int midpoint = interior / 2;
-    write_padded(buffer, bounds.x + 1, bounds.y + 3, midpoint, "[ " + confirm_label_ + " ]", {.reverse = confirmed_});
+    write_padded(buffer, bounds.x + 1, bounds.y + 3, midpoint, "[ " + confirm_label_ + " ]", {.reverse = confirmed()});
     write_padded(buffer, bounds.x + 1 + midpoint, bounds.y + 3, interior - midpoint, "[ " + cancel_label_ + " ]",
-                 {.reverse = !confirmed_});
+                 {.reverse = !confirmed()});
     write_padded(buffer, bounds.x + 1, bounds.y + 4, interior, instructions_);
 
     const int bottom = bounds.y + bounds.height - 1;

@@ -12,6 +12,10 @@ TEST_CASE("confirmation dialog defaults to cancel and requires deliberate confir
 
     static_cast<void>(dialog.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right}));
     CHECK(dialog.confirmed());
+    static_cast<void>(dialog.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::tab, .shift = true}));
+    CHECK_FALSE(dialog.confirmed());
+    static_cast<void>(dialog.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::tab}));
+    CHECK(dialog.confirmed());
     CHECK(dialog.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
           vulpes::ui::ConfirmationResult::confirmed);
 

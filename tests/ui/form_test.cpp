@@ -27,8 +27,8 @@ TEST_CASE("generated form infers controls and persists keyboard edits", "[ui][fo
     CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::text);
     CHECK(form.fields()[2].kind == vulpes::ui::FormFieldKind::number);
     CHECK(form.fields()[3].kind == vulpes::ui::FormFieldKind::checkbox);
+    CHECK(form.selected_field_index() == 1);
 
-    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
     static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::backspace}));
     static_cast<void>(
         form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'e'}));
@@ -82,7 +82,6 @@ TEST_CASE("generated form selects the failing constraint field and retains its d
                      "INSERT INTO customer VALUES (2, 'Beta', 2.0, 1)");
     vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save"};
 
-    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
     for (int count = 0; count < 4; ++count)
         static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::backspace}));
     for (const auto character : std::string_view{"Beta"})

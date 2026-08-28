@@ -3,6 +3,7 @@
 #include "vulpes/core/error.hpp"
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/terminal.hpp"
+#include "vulpes/ui/focus_ring.hpp"
 #include "vulpes/ui/geometry.hpp"
 
 #include <optional>
@@ -54,6 +55,7 @@ class RecordForm {
     std::string instructions_;
     std::vector<FormField> fields_;
     std::vector<bool> changed_;
+    FocusRing field_focus_;
     std::size_t selected_field_{};
     std::optional<std::size_t> error_field_;
     std::string error_;

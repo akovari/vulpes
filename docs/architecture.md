@@ -65,6 +65,11 @@ colors inside menus, tabs, or status bars. `midnight` is the default theme and
 presentation only; they never change action IDs, document state, or the data
 model.
 
+`FocusRing` owns cyclic focus order for semantic controls and skips unavailable
+items. Forms use it to avoid read-only fields, and destructive confirmations
+use it for their buttons. The controls retain responsibility for their own key
+semantics, so the focus model remains independent of a terminal implementation.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

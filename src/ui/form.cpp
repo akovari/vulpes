@@ -63,6 +63,7 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
     else
         dataset_->begin_edit();
 
+    std::vector<bool> focusable;
     for (const auto& schema_field : dataset_->schema().fields) {
         if (schema_field.hidden)
             continue;
@@ -87,9 +88,13 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
                 }
             }
         }
+        focusable.push_back(!form_field.read_only);
         fields_.push_back(std::move(form_field));
         changed_.push_back(false);
     }
+    field_focus_.reset(std::move(focusable));
+    if (const auto focused = field_focus_.current())
+        selected_field_ = *focused;
 }
 
 auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
@@ -248,14 +253,8 @@ auto RecordForm::parse_value(const FormField& field) -> db::Value {
 }
 
 void RecordForm::move_selection(int direction) {
-    if (fields_.empty())
-        return;
-    const auto count = static_cast<int>(fields_.size());
-    auto next = static_cast<int>(selected_field_);
-    do {
-        next = (next + direction + count) % count;
-    } while (fields_[static_cast<std::size_t>(next)].read_only && next != static_cast<int>(selected_field_));
-    selected_field_ = static_cast<std::size_t>(next);
+    if (field_focus_.move(direction))
+        selected_field_ = *field_focus_.current();
 }
 
 void RecordForm::move_lookup_selection(FormField& field, int direction) {
@@ -281,7 +280,8 @@ void RecordForm::record_error(const Error& error) {
         if (message.find(name) == std::string_view::npos)
             continue;
         error_field_ = index;
-        selected_field_ = index;
+        if (field_focus_.select(index))
+            selected_field_ = index;
         fields_[index].error = error_;
         return;
     }
@@ -290,7 +290,8 @@ void RecordForm::record_error(const Error& error) {
     if (changed != changed_.end() && std::ranges::count(changed_, true) == 1) {
         const auto index = static_cast<std::size_t>(std::distance(changed_.begin(), changed));
         error_field_ = index;
-        selected_field_ = index;
+        if (field_focus_.select(index))
+            selected_field_ = index;
         fields_[index].error = error_;
     }
 }
