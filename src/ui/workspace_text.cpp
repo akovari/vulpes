@@ -19,6 +19,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .no_database_open = messages.translate("workspace.no_database_open"),
         .open_before_browse = messages.translate("workspace.open_before_browse"),
         .open_before_sql = messages.translate("workspace.open_before_sql"),
+        .recent_databases = messages.translate("workspace.recent_databases"),
         .tables_and_views = messages.translate("workspace.tables_and_views"),
         .home_shortcuts = messages.translate("workspace.home_shortcuts"),
         .help_shortcuts = messages.translate("workspace.help_shortcuts"),

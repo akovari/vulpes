@@ -52,6 +52,22 @@ TEST_CASE("workspace opens path modal and selects database tables", "[ui][worksp
           vulpes::ui::WorkspaceResult::redraw);
 }
 
+TEST_CASE("workspace opens a selected recent database from its home screen", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    workspace.set_recent_databases({"first.db", "second.db"});
+    vulpes::terminal::ScreenBuffer buffer{80, 25};
+
+    workspace.render(buffer, {0, 0, 80, 25});
+    CHECK(buffer.cell(2, 8).glyph == U'R');
+    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::open_database);
+    CHECK(workspace.requested_path() == "second.db");
+}
+
 TEST_CASE("workspace menu navigation supports arrows, mnemonics, and Escape", "[ui][workspace]") {
     auto workspace = english_workspace();
     CHECK(workspace.handle(vulpes::core::ActionId::application_menu,

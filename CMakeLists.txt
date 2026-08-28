@@ -52,6 +52,7 @@ add_library(vulpes_core
     src/core/browse_controller.cpp
     src/core/command.cpp
     src/core/localization.cpp
+    src/core/workspace_preferences.cpp
     src/db/database.cpp
     src/db/identifier.cpp
     src/db/row.cpp

@@ -97,8 +97,9 @@ on Windows, Linux, and macOS.
 - [x] Add document tabs, active-document switching, close confirmation, and a
   tab-local title/status model.
 - [x] Add a command window/palette using the existing command dispatcher.
-- [ ] Add recent databases, safe create/open mode selection, read-only indication,
-  and persistent workspace preferences.
+- [x] Persist a bounded recent-database list in versioned, user-local workspace
+  preferences and expose it on the home screen.
+- [ ] Add safe create/open mode selection and read-only indication.
 - [ ] Design an optional directory browser separately from portable path entry.
 
 ## Cross-cutting — localization

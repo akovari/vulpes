@@ -63,6 +63,7 @@
     "workspace.create_title": "Vytvořit databázi SQLite",
     "workspace.path_instructions": "Zadejte cestu k databázi SQLite   Enter Potvrdit   Esc Zrušit",
     "workspace.path_required": "Je nutné zadat cestu k databázi.",
+    "workspace.recent_databases": "Nedávné databáze:",
     "workspace.shortcut.create.key": "Ctrl+N",
     "workspace.shortcut.create.label": " Vytvořit  ",
     "workspace.shortcut.menu.key": "F10",

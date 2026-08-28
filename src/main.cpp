@@ -3,6 +3,7 @@
 #include "vulpes/core/command.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/core/localization.hpp"
+#include "vulpes/core/workspace_preferences.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
@@ -37,6 +38,11 @@ void initialize_console_encoding() {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
+}
+
+auto path_text(const std::filesystem::path& path) -> std::string {
+    const auto encoded = path.generic_u8string();
+    return {encoded.begin(), encoded.end()};
 }
 
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
@@ -75,10 +81,11 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
 }
 
 auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths,
-                   const vulpes::ui::Theme& theme) -> int {
+                   const vulpes::ui::Theme& theme, const std::filesystem::path& preferences_path) -> int {
     vulpes::core::Localizer messages{locale};
     for (const auto& catalog_path : catalog_paths)
         messages.load_catalog_file(std::filesystem::path{catalog_path});
+    auto preferences = vulpes::core::WorkspacePreferences::load(preferences_path);
     vulpes::terminal::ConsoleTerminal terminal;
     auto size = terminal.size();
     if (size.width <= 0 || size.height <= 0)
@@ -87,6 +94,14 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
     vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme};
+    const auto refresh_recent_databases = [&] {
+        std::vector<std::string> paths;
+        paths.reserve(preferences.recent_databases().size());
+        for (const auto& path : preferences.recent_databases())
+            paths.push_back(path_text(path));
+        workspace.set_recent_databases(std::move(paths));
+    };
+    refresh_recent_databases();
     std::optional<vulpes::db::Database> database;
     using WorkspaceSurface =
         std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SchemaDocument, vulpes::ui::SqlDocument>;
@@ -162,10 +177,14 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                     throw vulpes::Error{vulpes::ErrorCategory::validation,
                                         messages.translate("workspace.path_required")};
                 surfaces.clear();
-                database.emplace(std::filesystem::path{path}, outcome == vulpes::ui::WorkspaceResult::open_database
-                                                                  ? vulpes::db::OpenMode::read_write
-                                                                  : vulpes::db::OpenMode::read_write_create);
+                const std::filesystem::path database_path{path};
+                database.emplace(database_path, outcome == vulpes::ui::WorkspaceResult::open_database
+                                                    ? vulpes::db::OpenMode::read_write
+                                                    : vulpes::db::OpenMode::read_write_create);
                 workspace.set_database(path, vulpes::db::inspect_schema(*database));
+                preferences.add_recent_database(database_path);
+                preferences.save(preferences_path);
+                refresh_recent_databases();
             } catch (const vulpes::Error& error) {
                 workspace.set_status(error.what());
             }
@@ -328,6 +347,7 @@ auto main(int argc, char** argv) -> int {
         bool sql = false;
         std::string locale{"en"};
         std::string theme_name{"midnight"};
+        std::string preferences_argument;
         std::vector<std::string> catalog_paths;
         app.add_flag("--version", version, "Show Vulpes version and exit");
         app.add_option("database", database_argument, "SQLite database path");
@@ -340,6 +360,8 @@ auto main(int argc, char** argv) -> int {
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
         app.add_option("--theme", theme_name, "Workspace theme: midnight or high-contrast");
+        app.add_option("--config", preferences_argument,
+                       "Workspace preferences JSON path (defaults to the user configuration directory)");
         app.set_help_flag("-h,--help", "Show this help and exit");
         try {
             app.parse(argc, argv);
@@ -351,8 +373,13 @@ auto main(int argc, char** argv) -> int {
             std::cout << "Vulpes " << VULPES_VERSION << '\n';
             return 0;
         }
-        if (database_argument.empty())
-            return run_workspace(locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)));
+        if (database_argument.empty()) {
+            const auto preferences_path = preferences_argument.empty()
+                                              ? vulpes::core::default_workspace_preferences_path()
+                                              : std::filesystem::path{preferences_argument};
+            return run_workspace(locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)),
+                                 preferences_path);
+        }
 
         return run(std::filesystem::path{database_argument},
                    table_name.empty() ? std::nullopt : std::optional{table_name},

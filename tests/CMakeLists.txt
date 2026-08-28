@@ -6,6 +6,7 @@ add_executable(vulpes_tests
     core/browse_controller_test.cpp
     core/command_test.cpp
     core/localization_test.cpp
+    core/workspace_preferences_test.cpp
     db/database_test.cpp
     db/schema_test.cpp
     examples/inventory_test.cpp

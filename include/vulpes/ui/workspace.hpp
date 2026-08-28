@@ -23,6 +23,7 @@ class Workspace {
     explicit Workspace(WorkspaceText text, const Theme& theme = ui::theme(ThemeName::midnight));
 
     void set_database(std::string path, std::vector<db::TableSchema> tables);
+    void set_recent_databases(std::vector<std::string> paths);
     void set_tables(std::vector<db::TableSchema> tables);
     void set_status(std::string status);
     [[nodiscard]] auto requested_path() const -> std::string;
@@ -47,7 +48,9 @@ class Workspace {
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
     WorkspaceText text_;
     std::string database_path_;
+    std::vector<std::string> recent_databases_;
     std::vector<db::TableSchema> tables_;
+    std::size_t selected_recent_database_{};
     std::size_t selected_table_{};
     Menu menu_{Menu::none};
     std::size_t menu_selection_{};

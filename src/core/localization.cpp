@@ -175,6 +175,7 @@ auto english_catalog() -> MessageCatalog {
         {"workspace.create_title", "Create SQLite database"},
         {"workspace.path_instructions", "Enter a SQLite database path   Enter Apply   Esc Cancel"},
         {"workspace.path_required", "A database path is required."},
+        {"workspace.recent_databases", "Recent databases:"},
         {"workspace.shortcut.create.key", "Ctrl+N"},
         {"workspace.shortcut.create.label", " Create  "},
         {"workspace.shortcut.menu.key", "F10"},

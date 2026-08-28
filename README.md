@@ -64,6 +64,16 @@ switches tabs and `Ctrl+W` asks before closing the active non-workspace tab.
 Opening or creating another database closes its old documents, so no tab can
 retain a dataset from the previous database.
 
+The workspace keeps the ten most recently opened or created databases in a
+small, versioned user settings file. The home screen lists them; use Up/Down
+and Enter to reopen a selected entry. The default settings path is
+`%APPDATA%\Vulpes\settings.json` on Windows,
+`~/Library/Application Support/Vulpes/settings.json` on macOS, and
+`$XDG_CONFIG_HOME/vulpes/settings.json` (or `~/.config/vulpes/settings.json`)
+on Linux. Use `--config path\to\settings.json` for a portable or test-specific
+location. This file contains only local workspace state, never application or
+SQLite database metadata.
+
 Press `Ctrl+P` to open the command palette. It uses the same parser and
 runtime as `--command`: `help`, `tables`, `schema <table>`, `browse <table>`,
 `sql`, and `quit` are supported. `schema <table>` opens a read-only schema tab;
@@ -91,7 +101,7 @@ draft open for correction.
 Browse keys are mapped to stable semantic actions (for example,
 `record.edit` and `dataset.refresh`) before they reach application controllers.
 The shipped mapping can be replaced programmatically; persistent user keybinding
-configuration will arrive with the configuration layer.
+configuration remains deferred.
 
 Within a browse view, `F3` opens a text search over text columns, `F4` filters
 the selected column, `F5` refreshes, and `F6` sorts the selected column

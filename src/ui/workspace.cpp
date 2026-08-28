@@ -56,6 +56,12 @@ void Workspace::set_database(std::string path, std::vector<db::TableSchema> tabl
                                 std::to_string(tables_.size())));
 }
 
+void Workspace::set_recent_databases(std::vector<std::string> paths) {
+    recent_databases_ = std::move(paths);
+    if (selected_recent_database_ >= recent_databases_.size())
+        selected_recent_database_ = 0;
+}
+
 void Workspace::set_tables(std::vector<db::TableSchema> tables) {
     const auto selected_name = selected_table() == nullptr ? std::string{} : selected_table()->name;
     tables_ = std::move(tables);
@@ -340,6 +346,21 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     }
     if (windows_.active().kind != DocumentKind::workspace)
         return WorkspaceResult::unchanged;
+    if (database_path_.empty()) {
+        if (action == core::ActionId::dataset_next && selected_recent_database_ + 1 < recent_databases_.size()) {
+            ++selected_recent_database_;
+            return WorkspaceResult::redraw;
+        }
+        if (action == core::ActionId::dataset_previous && selected_recent_database_ > 0) {
+            --selected_recent_database_;
+            return WorkspaceResult::redraw;
+        }
+        if (key && key->key == terminal::Key::enter && selected_recent_database_ < recent_databases_.size()) {
+            submitted_value_ = recent_databases_[selected_recent_database_];
+            return WorkspaceResult::open_database;
+        }
+        return WorkspaceResult::unchanged;
+    }
     if (action == core::ActionId::dataset_next && selected_table_ + 1 < tables_.size()) {
         ++selected_table_;
         return WorkspaceResult::redraw;
@@ -384,6 +405,19 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         if (database_path_.empty()) {
             write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, text_.no_database_open);
             write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4, text_.home_shortcuts);
+            if (!recent_databases_.empty()) {
+                write(buffer, bounds.x + 2, bounds.y + 8, bounds.width - 4, text_.recent_databases, {.bold = true});
+                const int first_recent_row = bounds.y + 9;
+                const int final_content_row = bounds.y + bounds.height - 2;
+                for (std::size_t index = 0;
+                     index < recent_databases_.size() && first_recent_row + static_cast<int>(index) < final_content_row;
+                     ++index) {
+                    write(buffer, bounds.x + 4, first_recent_row + static_cast<int>(index), bounds.width - 8,
+                          recent_databases_[index],
+                          index == selected_recent_database_ ? current_theme.style(ThemeRole::selection)
+                                                             : current_theme.style(ThemeRole::text));
+                }
+            }
         } else {
             write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, database_path_);
             write(buffer, bounds.x + 2, bounds.y + 7, bounds.width - 4, text_.tables_and_views, {.bold = true});

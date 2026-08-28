@@ -26,6 +26,7 @@ struct WorkspaceText {
     std::string no_database_open;
     std::string open_before_browse;
     std::string open_before_sql;
+    std::string recent_databases;
     std::string tables_and_views;
     std::string home_shortcuts;
     std::string help_shortcuts;

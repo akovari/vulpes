@@ -79,6 +79,12 @@ continues to own document lifetime, tab selection, and modal priority.
 dedicated semantic theme roles. It owns no command mapping; action IDs remain
 the responsibility of the input layer.
 
+`WorkspacePreferences` is a versioned, user-local JSON file outside the SQLite
+application. It currently persists only a bounded recent-database list, so it
+cannot alter ordinary SQLite compatibility or become a second application
+format. It uses the platform configuration directory by default and accepts an
+explicit path for portable/test use.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface
