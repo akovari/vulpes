@@ -1,6 +1,7 @@
 #include "vulpes/ui/workspace.hpp"
 
 #include "vulpes/terminal/unicode.hpp"
+#include "vulpes/ui/status_bar.hpp"
 
 #include <algorithm>
 #include <array>
@@ -451,28 +452,8 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
                                     {bounds.x + (bounds.width - dialog_width) / 2,
                                      bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
     }
-    write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, "", current_theme.style(ThemeRole::menu));
-    if (windows_.active_status().empty()) {
-        const int status_end = bounds.x + bounds.width - 1;
-        int status_x = bounds.x + 1;
-        for (const auto& shortcut : text_.status_shortcuts) {
-            if (status_x >= status_end)
-                break;
-            const int key_width = std::min(terminal::text_width(shortcut.key), status_end - status_x);
-            write(buffer, status_x, bounds.y + bounds.height - 1, key_width, shortcut.key,
-                  current_theme.style(ThemeRole::menu_mnemonic));
-            status_x += key_width;
-            if (status_x >= status_end)
-                break;
-            const int label_width = std::min(terminal::text_width(shortcut.label), status_end - status_x);
-            write(buffer, status_x, bounds.y + bounds.height - 1, label_width, shortcut.label,
-                  current_theme.style(ThemeRole::menu));
-            status_x += label_width;
-        }
-    } else {
-        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, windows_.active_status(),
-              current_theme.style(ThemeRole::menu));
-    }
+    StatusBar::render(buffer, {bounds.x, bounds.y + bounds.height - 1, bounds.width, 1}, current_theme,
+                      windows_.active_status(), text_.status_shortcuts);
 }
 
 } // namespace vulpes::ui

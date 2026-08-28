@@ -1,16 +1,12 @@
 #pragma once
 
 #include "vulpes/core/localization.hpp"
+#include "vulpes/ui/status_bar.hpp"
 
 #include <array>
 #include <string>
 
 namespace vulpes::ui {
-
-struct ShortcutHint {
-    std::string key;
-    std::string label;
-};
 
 // All visible workspace chrome is supplied by the presentation boundary. The
 // workspace itself remains independent of catalog storage and locale policy.

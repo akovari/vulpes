@@ -60,10 +60,11 @@ on Windows, Linux, and macOS.
   keys, Alt chords, and terminal restoration on Windows Terminal and legacy hosts.
 - [ ] Complete Linux/macOS raw-input verification for Escape ambiguity, resize,
   Ctrl+C, UTF-8, and terminal restoration.
-- [ ] Implement focus traversal, measure/layout, container, label, button, and
-  reusable status-bar primitives.
+- [ ] Implement measurement/layout, container, and label primitives.
 - [x] Add tested semantic focus traversal for editable form fields and
   confirmation-dialog buttons.
+- [x] Add a reusable, theme-aware status bar for messages and localized shortcut
+  hints.
 - [x] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
   rendering without hard-coded colors in individual screens.
 - [ ] Add terminal capability/redirected-stream diagnostics and a user-facing

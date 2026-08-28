@@ -75,6 +75,10 @@ focusable action affordance. Prompts, confirmations, and record forms compose
 these primitives rather than each implementing terminal borders. `WindowManager`
 continues to own document lifetime, tab selection, and modal priority.
 
+`StatusBar` renders either a localized status message or shortcut hints using
+dedicated semantic theme roles. It owns no command mapping; action IDs remain
+the responsibility of the input layer.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

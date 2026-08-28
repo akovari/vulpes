@@ -20,6 +20,8 @@ enum class ThemeRole {
     active_menu_mnemonic,
     tab,
     active_tab,
+    status_bar,
+    status_bar_shortcut,
 };
 
 enum class ThemeName { midnight, high_contrast };
@@ -36,6 +38,8 @@ struct Theme {
     terminal::Style active_menu_mnemonic;
     terminal::Style tab;
     terminal::Style active_tab;
+    terminal::Style status_bar;
+    terminal::Style status_bar_shortcut;
 
     [[nodiscard]] constexpr auto style(ThemeRole role) const noexcept -> const terminal::Style& {
         switch (role) {
@@ -61,6 +65,10 @@ struct Theme {
             return tab;
         case ThemeRole::active_tab:
             return active_tab;
+        case ThemeRole::status_bar:
+            return status_bar;
+        case ThemeRole::status_bar_shortcut:
+            return status_bar_shortcut;
         }
         return text;
     }

@@ -19,6 +19,7 @@ add_executable(vulpes_tests
     ui/grid_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
+    ui/status_bar_test.cpp
     ui/terminal_warning_test.cpp
     ui/text_prompt_test.cpp
     ui/theme_test.cpp

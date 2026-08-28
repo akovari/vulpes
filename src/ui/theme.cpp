@@ -33,6 +33,8 @@ auto theme(ThemeName name) -> const Theme& {
                                  .underline = true},
         .tab = {.foreground = {185, 210, 240}, .background = {0, 35, 82}},
         .active_tab = {.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true},
+        .status_bar = {.foreground = {230, 242, 255}, .background = {0, 35, 82}},
+        .status_bar_shortcut = {.foreground = {255, 220, 90}, .background = {0, 35, 82}, .bold = true},
     };
     static constexpr Theme high_contrast{
         .text = {},
@@ -49,6 +51,8 @@ auto theme(ThemeName name) -> const Theme& {
                                  .underline = true},
         .tab = {.foreground = {255, 255, 255}, .underline = true},
         .active_tab = {.foreground = {0, 0, 0}, .background = {255, 255, 255}, .bold = true},
+        .status_bar = {.foreground = {255, 255, 255}},
+        .status_bar_shortcut = {.foreground = {255, 255, 0}, .bold = true, .underline = true},
     };
 
     return name == ThemeName::high_contrast ? high_contrast : midnight;
