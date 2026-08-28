@@ -9,15 +9,17 @@
 namespace vulpes::ui {
 namespace {
 
-auto display_value(const db::Value& value) -> std::string {
+auto display_value(const db::Value& value, const core::LocaleFormatter* formatter) -> std::string {
     return std::visit(
-        [](const auto& item) -> std::string {
+        [formatter](const auto& item) -> std::string {
             using T = std::decay_t<decltype(item)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return {};
             else if constexpr (std::is_same_v<T, std::int64_t>)
-                return std::to_string(item);
+                return formatter == nullptr ? std::to_string(item) : formatter->number(item);
             else if constexpr (std::is_same_v<T, double>) {
+                if (formatter != nullptr)
+                    return formatter->number(item);
                 char output[64]{};
                 const auto [end, error] = std::to_chars(std::begin(output), std::end(output), item);
                 return error == std::errc{} ? std::string{output, end} : "?";
@@ -48,13 +50,16 @@ auto GridRows::from_sql_result(db::SqlResult result) -> GridRows {
     return grid_rows;
 }
 
-Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer, const Theme& theme, GridText text)
-    : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme}, text_{std::move(text)} {
+Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer, const Theme& theme, GridText text,
+           std::optional<core::LocaleFormatter> formatter)
+    : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme},
+      formatter_{std::move(formatter)}, text_{std::move(text)} {
 }
 
-Grid::Grid(const GridRows& rows, std::string title, std::string footer, const Theme& theme, GridText text)
+Grid::Grid(const GridRows& rows, std::string title, std::string footer, const Theme& theme, GridText text,
+           std::optional<core::LocaleFormatter> formatter)
     : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme},
-      text_{std::move(text)} {
+      formatter_{std::move(formatter)}, text_{std::move(text)} {
     if (!rows.rows.empty())
         selected_result_row_ = 0;
 }
@@ -182,7 +187,9 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     for (const auto* field : fields) {
         int preferred = terminal::text_width(field->name) + 2;
         for (const auto& row : displayed_rows)
-            preferred = std::max(preferred, terminal::text_width(display_value(row.at(field->name))) + 2);
+            preferred = std::max(
+                preferred,
+                terminal::text_width(display_value(row.at(field->name), formatter_ ? &*formatter_ : nullptr)) + 2);
         const auto configured = column_width_overrides_.find(field->name);
         fixed_widths.push_back(configured != column_width_overrides_.end());
         preferred_widths.push_back(configured != column_width_overrides_.end()
@@ -272,8 +279,9 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
             const auto& style = current_theme.style(selected_cell  ? ThemeRole::grid_selected_cell
                                                     : selected_row ? ThemeRole::grid_selected_row
                                                                    : ThemeRole::grid_cell);
-            const auto text =
-                row_exists ? display_value(displayed_rows[source_index].at(fields[field_index]->name)) : std::string{};
+            const auto text = row_exists ? display_value(displayed_rows[source_index].at(fields[field_index]->name),
+                                                         formatter_ ? &*formatter_ : nullptr)
+                                         : std::string{};
             write_padded(buffer, x, y, width, text, style);
             x += width;
             buffer.put(x++, y, U'│', current_theme.style(ThemeRole::border));

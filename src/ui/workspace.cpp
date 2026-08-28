@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <span>
 
@@ -27,16 +28,6 @@ void write_menu(terminal::ScreenBuffer& buffer, int x, int y, int width, std::st
         buffer.put(x + 1 + *column, y, glyph,
                    active ? theme.style(ThemeRole::active_menu_mnemonic) : theme.style(ThemeRole::menu_mnemonic));
     }
-}
-
-auto replace_argument(std::string text, std::string_view name, std::string_view value) -> std::string {
-    const auto placeholder = "{" + std::string{name} + "}";
-    std::size_t offset = 0;
-    while ((offset = text.find(placeholder, offset)) != std::string::npos) {
-        text.replace(offset, placeholder.size(), value);
-        offset += value.size();
-    }
-    return text;
 }
 
 auto path_text(const std::filesystem::path& path) -> std::string {
@@ -61,8 +52,8 @@ void Workspace::set_database(std::string path, std::vector<db::TableSchema> tabl
     database_path_ = std::move(path);
     database_read_only_ = read_only;
     set_tables(std::move(tables));
-    auto status = replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
-                                   std::to_string(tables_.size()));
+    auto status =
+        text_.database_status.format({{"path", database_path_}, {"count", static_cast<std::int64_t>(tables_.size())}});
     if (database_read_only_)
         status += text_.read_only_suffix;
     set_status(std::move(status));
@@ -113,13 +104,13 @@ auto Workspace::close_active_document() -> bool {
 
 void Workspace::open_browse(const db::TableSchema& table) {
     windows_.open({.id = "browse:" + table.name,
-                   .title = replace_argument(text_.browse_document, "table", table.name),
+                   .title = text_.browse_document.format({{"table", table.name}}),
                    .kind = DocumentKind::browse});
 }
 
 void Workspace::open_schema(const db::TableSchema& table) {
     windows_.open({.id = "schema:" + table.name,
-                   .title = replace_argument(text_.schema_document, "table", table.name),
+                   .title = text_.schema_document.format({{"table", table.name}}),
                    .kind = DocumentKind::schema});
 }
 
@@ -159,7 +150,7 @@ void Workspace::begin_close_confirmation() {
     if (!windows_.active().closable)
         return;
     close_confirmation_.emplace(
-        text_.close_document_title, replace_argument(text_.close_document_message, "title", windows_.active().title),
+        text_.close_document_title, text_.close_document_message.format({{"title", windows_.active().title}}),
         text_.close_document_confirm, text_.close_document_cancel, text_.close_document_instructions, *theme_);
     windows_.show_modal(text_.close_document_title);
 }

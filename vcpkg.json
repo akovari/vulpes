@@ -11,6 +11,7 @@
     { "name": "utf8proc", "version>=": "2.11.3" },
     { "name": "cli11", "version>=": "2.7.2" },
     { "name": "nlohmann-json", "version>=": "3.12.0" },
-    { "name": "dacap-clip", "version>=": "1.15" }
+    { "name": "dacap-clip", "version>=": "1.15" },
+    { "name": "icu", "version>=": "78.3" }
   ]
 }

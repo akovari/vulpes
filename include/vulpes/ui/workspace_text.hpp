@@ -23,7 +23,7 @@ struct WorkspaceText {
     std::string command_title;
     std::string command_instructions;
     std::string close_document_title;
-    std::string close_document_message;
+    core::LocalizedMessage close_document_message;
     std::string close_document_confirm;
     std::string close_document_cancel;
     std::string close_document_instructions;
@@ -34,10 +34,10 @@ struct WorkspaceText {
     std::string tables_and_views;
     std::string home_shortcuts;
     std::string help_shortcuts;
-    std::string database_status;
+    core::LocalizedMessage database_status;
     std::string read_only_suffix;
-    std::string browse_document;
-    std::string schema_document;
+    core::LocalizedMessage browse_document;
+    core::LocalizedMessage schema_document;
     std::string sql_document;
     std::string view_suffix;
     std::array<std::string, 5> menu_bar;

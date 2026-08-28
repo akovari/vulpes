@@ -45,7 +45,8 @@ void SqlDocument::execute() {
                              GridText{.empty = messages_->translate("grid.empty"),
                                       .row = messages_->translate("grid.row"),
                                       .rows = messages_->translate("grid.rows"),
-                                      .column = messages_->translate("grid.column")});
+                                      .column = messages_->translate("grid.column")},
+                             core::LocaleFormatter{std::string{messages_->locale()}});
     console_.set_status(messages_->translate(
         "sql.status",
         {{"rows", std::to_string(rows)}, {"changes", std::to_string(changes)}, {"truncated", truncated}}));

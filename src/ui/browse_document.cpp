@@ -88,7 +88,8 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
             {.empty = messages.translate("grid.empty"),
              .row = messages.translate("grid.row"),
              .rows = messages.translate("grid.rows"),
-             .column = messages.translate("grid.column")}} {
+             .column = messages.translate("grid.column")},
+            core::LocaleFormatter{std::string{messages.locale()}}} {
 }
 
 auto BrowseDocument::is_dirty() const noexcept -> bool {

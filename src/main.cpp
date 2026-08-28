@@ -274,8 +274,9 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                         break;
                     case vulpes::core::CommandOutcome::tables:
                         workspace.set_tables(response.tables);
-                        workspace.set_status(messages.translate("workspace.command_tables",
-                                                                {{"count", std::to_string(response.tables.size())}}));
+                        workspace.set_status(
+                            messages.translate("workspace.command_tables",
+                                               {{"count", static_cast<std::int64_t>(response.tables.size())}}));
                         break;
                     case vulpes::core::CommandOutcome::schema:
                         workspace.open_schema(*response.table);

@@ -4,14 +4,118 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <type_traits>
+#include <unicode/fmtable.h>
+#include <unicode/locid.h>
+#include <unicode/msgfmt.h>
+#include <unicode/parseerr.h>
+#include <unicode/stringpiece.h>
+#include <unicode/unistr.h>
+#include <unicode/utypes.h>
+#include <utility>
+#include <vector>
 
 namespace vulpes::core {
+namespace {
 
-Localizer::Localizer(std::string locale) : locale_{std::move(locale)} {
+[[nodiscard]] auto unicode(std::string_view text) -> icu::UnicodeString {
+    return icu::UnicodeString::fromUTF8(icu::StringPiece{text.data(), static_cast<std::int32_t>(text.size())});
+}
+
+[[nodiscard]] auto locale_for(std::string_view name, ErrorCategory category) -> icu::Locale {
+    UErrorCode status = U_ZERO_ERROR;
+    auto locale =
+        icu::Locale::forLanguageTag(icu::StringPiece{name.data(), static_cast<std::int32_t>(name.size())}, status);
+    if (U_FAILURE(status) || locale.isBogus())
+        throw Error{category, "invalid BCP-47 locale '" + std::string{name} + "': " + u_errorName(status),
+                    static_cast<int>(status)};
+    return locale;
+}
+
+[[nodiscard]] auto canonical_locale(std::string_view name, ErrorCategory category) -> std::string {
+    UErrorCode status = U_ZERO_ERROR;
+    const auto locale = locale_for(name, category);
+    auto tag = locale.toLanguageTag<std::string>(status);
+    if (U_FAILURE(status) || tag.empty())
+        throw Error{category,
+                    "unable to canonicalize BCP-47 locale '" + std::string{name} + "': " + u_errorName(status),
+                    static_cast<int>(status)};
+    return tag;
+}
+
+[[nodiscard]] auto formattable(const MessageValue& value) -> icu::Formattable {
+    return std::visit(
+        [](const auto& item) -> icu::Formattable {
+            using Value = std::remove_cvref_t<decltype(item)>;
+            if constexpr (std::is_same_v<Value, std::string>)
+                return icu::Formattable{unicode(item)};
+            else if constexpr (std::is_same_v<Value, std::int64_t> || std::is_same_v<Value, double>)
+                return icu::Formattable{item};
+            else
+                return icu::Formattable{unicode(item ? "true" : "false")};
+        },
+        value.storage());
+}
+
+[[nodiscard]] auto format_message(std::string_view pattern, std::string_view locale_name,
+                                  const MessageArguments& arguments, ErrorCategory category) -> std::string {
+    UErrorCode status = U_ZERO_ERROR;
+    UParseError parse_error{};
+    icu::MessageFormat formatter{unicode(pattern), locale_for(locale_name, category), parse_error, status};
+    if (U_FAILURE(status)) {
+        throw Error{category,
+                    "invalid ICU message pattern at offset " + std::to_string(parse_error.offset) + ": " +
+                        u_errorName(status),
+                    static_cast<int>(status)};
+    }
+
+    std::vector<icu::UnicodeString> names;
+    std::vector<icu::Formattable> values;
+    names.reserve(arguments.size());
+    values.reserve(arguments.size());
+    for (const auto& [name, value] : arguments) {
+        names.push_back(unicode(name));
+        values.push_back(formattable(value));
+    }
+
+    icu::UnicodeString output;
+    formatter.format(names.data(), values.data(), static_cast<std::int32_t>(values.size()), output, status);
+    if (U_FAILURE(status))
+        throw Error{category, "unable to format localized message: " + std::string{u_errorName(status)},
+                    static_cast<int>(status)};
+    std::string result;
+    output.toUTF8String(result);
+    return result;
+}
+
+void validate_pattern(std::string_view pattern, std::string_view locale, std::string_view key) {
+    UErrorCode status = U_ZERO_ERROR;
+    UParseError parse_error{};
+    const icu::MessageFormat formatter{unicode(pattern), locale_for(locale, ErrorCategory::metadata), parse_error,
+                                       status};
+    if (U_FAILURE(status)) {
+        throw Error{ErrorCategory::metadata,
+                    "invalid message pattern '" + std::string{key} + "' for locale '" + std::string{locale} +
+                        "' at offset " + std::to_string(parse_error.offset) + ": " + u_errorName(status),
+                    static_cast<int>(status)};
+    }
+}
+
+void validate_catalog(std::string_view locale, const MessageCatalog& catalog) {
+    static_cast<void>(locale_for(locale, ErrorCategory::metadata));
+    for (const auto& [key, pattern] : catalog)
+        validate_pattern(pattern, locale, key);
+}
+
+} // namespace
+
+Localizer::Localizer(std::string locale) : locale_{canonical_locale(locale, ErrorCategory::validation)} {
     add_catalog("en", english_catalog());
 }
 
 void Localizer::add_catalog(std::string locale, MessageCatalog catalog) {
+    locale = canonical_locale(locale, ErrorCategory::metadata);
+    validate_catalog(locale, catalog);
     catalogs_.insert_or_assign(std::move(locale), std::move(catalog));
 }
 
@@ -51,52 +155,38 @@ void Localizer::load_catalog_file(const std::filesystem::path& path) {
     }
 }
 
-auto Localizer::find_template(std::string_view key) const -> const std::string* {
-    const auto locate = [&](std::string_view locale) -> const std::string* {
+auto Localizer::find_template(std::string_view key) const -> ResolvedMessage {
+    const auto locate = [&](std::string_view locale, std::string formatting_locale) -> ResolvedMessage {
         const auto catalog = catalogs_.find(std::string{locale});
         if (catalog == catalogs_.end())
-            return nullptr;
+            return {};
         const auto message = catalog->second.find(std::string{key});
-        return message == catalog->second.end() ? nullptr : &message->second;
+        return message == catalog->second.end() ? ResolvedMessage{}
+                                                : ResolvedMessage{&message->second, std::move(formatting_locale)};
     };
-    if (const auto result = locate(locale_))
+    if (const auto result = locate(locale_, locale_); result.pattern != nullptr)
         return result;
     if (const auto separator = locale_.find('-'); separator != std::string::npos) {
-        if (const auto result = locate(std::string_view{locale_}.substr(0, separator)))
+        if (const auto result = locate(std::string_view{locale_}.substr(0, separator), locale_);
+            result.pattern != nullptr) {
             return result;
+        }
     }
-    return locate("en");
+    return locate("en", locale_.starts_with("en") ? locale_ : "en");
 }
 
-auto Localizer::format(std::string_view text, const MessageArguments& arguments) -> std::string {
-    std::string result;
-    std::size_t position = 0;
-    while (position < text.size()) {
-        const auto open = text.find('{', position);
-        if (open == std::string_view::npos) {
-            result.append(text.substr(position));
-            break;
-        }
-        result.append(text.substr(position, open - position));
-        const auto close = text.find('}', open + 1);
-        if (close == std::string_view::npos) {
-            result.append(text.substr(open));
-            break;
-        }
-        const auto key = text.substr(open + 1, close - open - 1);
-        if (const auto argument = arguments.find(key); argument != arguments.end())
-            result += argument->second;
-        else
-            result.append(text.substr(open, close - open + 1));
-        position = close + 1;
-    }
-    return result;
+auto LocalizedMessage::format(const MessageArguments& arguments) const -> std::string {
+    return format_message(pattern_, locale_, arguments, ErrorCategory::metadata);
+}
+
+auto Localizer::bind(std::string_view key) const -> LocalizedMessage {
+    if (const auto resolved = find_template(key); resolved.pattern != nullptr)
+        return LocalizedMessage{*resolved.pattern, resolved.locale};
+    return LocalizedMessage{std::string{key}, "en"};
 }
 
 auto Localizer::translate(std::string_view key, const MessageArguments& arguments) const -> std::string {
-    if (const auto text = find_template(key))
-        return format(*text, arguments);
-    return std::string{key};
+    return bind(key).format(arguments);
 }
 
 auto english_catalog() -> MessageCatalog {
@@ -141,8 +231,8 @@ auto english_catalog() -> MessageCatalog {
         {"sql.status", "Executed: {rows} row(s), {changes} change(s){truncated}."},
         {"sql.title", "SQL console"},
         {"sql.truncated", " (result truncated)"},
-        {"error.invalid_command_arguments", "Invalid arguments for '{command}'."},
-        {"error.unknown_table", "No table or view named '{name}'."},
+        {"error.invalid_command_arguments", "Invalid arguments for ‘{command}’."},
+        {"error.unknown_table", "No table or view named ‘{name}’."},
         {"schema.generated", "generated"},
         {"schema.footer", "Up/Down Navigate   Esc Back"},
         {"schema.not_null", "not null"},
@@ -150,11 +240,13 @@ auto english_catalog() -> MessageCatalog {
         {"schema.title", "Schema: {name}"},
         {"schema.unique", "unique"},
         {"terminal.minimum_size", "Terminal is too small. Resize to at least {width} x {height}. Esc or Ctrl+C exits."},
-        {"workspace.database_status", "{path} — {count} table(s) and view(s)"},
-        {"workspace.read_only_suffix", " [read-only]"},
+        {"workspace.database_status",
+         "{count, plural, one {{path} — # table or view} other {{path} — # tables and views}}"},
+        {"workspace.access_mode", "{mode, select, read_only { [read-only]} other {}}"},
         {"workspace.command_database_required", "Open a database before running a command."},
         {"workspace.command_instructions", "Left/Right Move   Home/End   Enter Execute   Esc Cancel   Type help"},
-        {"workspace.command_tables", "Refreshed {count} table(s) and view(s)."},
+        {"workspace.command_tables",
+         "{count, plural, one {Refreshed # table or view.} other {Refreshed # tables and views.}}"},
         {"workspace.command_title", "Command"},
         {"workspace.close_document_cancel", "Cancel"},
         {"workspace.close_document_confirm", "Close"},

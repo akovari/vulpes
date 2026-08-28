@@ -244,6 +244,16 @@ normalized `KeyEvent` and `ResizeEvent` values. It provides a repeatable manual
 verification surface without leaking CPP-Terminal types outside the terminal
 boundary.
 
+### Localization and display formatting
+
+`core::Localizer` resolves external UTF-8 catalogs and formats typed named
+arguments with ICU MessageFormat. `LocalizedMessage` owns a resolved pattern and
+locale for workspace text that is bound now but formatted later; widgets never
+parse placeholders themselves. `core::LocaleFormatter` applies pinned ICU/CLDR
+number, currency, and date/time presentation while exposing no ICU types.
+Grids use it for integer and real display. Currency codes, time zones, and later
+date-field annotations remain explicit application policy. See ADR 0025.
+
 `detect_console_capabilities` runs before `ConsoleTerminal` constructs its
 CPP-Terminal session. Interactive modes require terminal-connected standard
 input and output; redirected modes fail with plain structured errors before raw

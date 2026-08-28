@@ -13,7 +13,7 @@ TEST_CASE("workspace text uses the selected Czech catalog for labels and mnemoni
     const auto text = vulpes::ui::make_workspace_text(messages);
     CHECK(text.menu_bar[0] == "Soubor");
     CHECK(text.database_menu[4] == "Procházet vybranou tabulku");
-    CHECK(text.browse_document == "Procházet {table}");
+    CHECK(text.browse_document.format({{"table", "customer"}}) == "Procházet customer");
     CHECK(text.command_title == "Příkaz");
     CHECK(text.menu_bar_mnemonics[0] == U'S');
     CHECK(text.file_menu_mnemonics[1] == U'J');

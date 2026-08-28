@@ -147,10 +147,10 @@ on Windows, Linux, and macOS.
 - [x] Define stable message keys, locale fallback, and named message arguments.
 - [x] Use CLI11 for process-level command-line parsing.
 - [x] Add external UTF-8 catalog loading and locale selection configuration.
-- [ ] Add ICU-backed plural/select message formatting with the first translated
+- [x] Add ICU-backed plural/select message formatting with the first translated
   application catalog.
 - [x] Localize all workspace/menu/status/help text and add Czech catalog coverage.
-- [ ] Add locale-aware date, time, number, and currency display policies.
+- [x] Add locale-aware date, time, number, and currency display policies.
 
 ## M5 — Edit workflow and generated forms
 

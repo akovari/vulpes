@@ -30,6 +30,7 @@ find_package(utf8proc CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(clip CONFIG REQUIRED)
+find_package(ICU 78.3 REQUIRED COMPONENTS data i18n uc)
 
 # CPP-Terminal owns host-specific raw-mode, keyboard, and resize handling.
 # Keep it behind Vulpes' Terminal interface so widgets and the runtime remain
@@ -66,6 +67,7 @@ add_library(vulpes_core
     src/core/browse_controller.cpp
     src/core/clipboard.cpp
     src/core/command.cpp
+    src/core/formatting.cpp
     src/core/localization.cpp
     src/core/workspace_preferences.cpp
     src/db/database.cpp
@@ -121,7 +123,7 @@ target_include_directories(vulpes_core
 target_link_libraries(vulpes_core
     PUBLIC vulpes_options
     PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json cpp-terminal::cpp-terminal
-            clip::clip)
+            clip::clip ICU::data ICU::i18n ICU::uc)
 target_compile_definitions(vulpes_core PRIVATE VULPES_BUILDING_LIBRARY)
 
 configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)

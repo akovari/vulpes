@@ -27,7 +27,7 @@ $env:VCPKG_ROOT = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpk
 ```
 
 Alternatively, clone and bootstrap vcpkg separately. CMake manifest mode installs
-SQLite, Catch2, utf8proc, CLI11, nlohmann/json, and dacap/clip automatically.
+SQLite, Catch2, utf8proc, CLI11, nlohmann/json, dacap/clip, and ICU automatically.
 CPP-Terminal is fetched at a reviewed, pinned
 commit by CMake because it is not present in the pinned vcpkg registry. The
 `sqlite3` CLI is optional and is used only by the example-database command below.
@@ -41,8 +41,9 @@ commit by CMake because it is not present in the pinned vcpkg registry. The
 
 The script discovers the newest Visual Studio installation, initializes its x64
 MSVC environment, and selects bundled vcpkg and LLVM tools when the corresponding
-environment variables are not already set. Its default `check` task performs an
-incremental Debug configure/build, formatting check, and test run. Use `build`
+environment variables are not already set. Its default `check` task reuses or
+creates the Debug configuration, builds incrementally, checks formatting, and
+runs tests. Use `configure` to refresh CMake explicitly, `build`
 for a compile-only iteration, `test -CTestRegex <pattern>` for focused CTest,
 `format` to apply clang-format, and `tidy` for the separate static-analysis build.
 Release compilation is intentionally explicit: run `.\scripts\dev.ps1 release`
@@ -218,6 +219,9 @@ command dispatcher used by the in-app command palette.
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
 example, use the shipped Czech translation with `--locale cs-CZ --catalog
 translations\cs.json`. See [docs/localization.md](docs/localization.md).
+ICU MessageFormat supplies translated plural/select grammar, and ICU/CLDR
+supplies locale-aware numeric display. Currency and date/time presentation stay
+explicit metadata policies rather than being guessed from SQLite declarations.
 
 The inventory example's seed data and acceptance test exercise only generic
 Vulpes capabilities: schema-driven datasets, transactional editing, stock

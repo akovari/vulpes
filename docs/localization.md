@@ -41,6 +41,31 @@ Use the shipped Czech catalog explicitly during development:
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --locale cs-CZ --catalog translations\cs.json
 ```
 
-Named placeholders such as `{name}` are substituted by the presentation caller.
-Plural/select grammar is intentionally deferred until the project adopts ICU and
-defines its user-visible formatting policy.
+Catalog values use ICU MessageFormat syntax. Named arguments are typed strings,
+integers, floating-point values, or select booleans; plural rules therefore
+receive numbers rather than preformatted strings. Keep each plural or select
+choice as a complete translatable message:
+
+```json
+{
+  "workspace.command_tables": "{count, plural, one {Refreshed # table or view.} other {Refreshed # tables and views.}}"
+}
+```
+
+The Czech catalog supplies its CLDR `one`, `few`, and `other` branches and a
+translated `select` message for database access mode. Exact and language-only
+catalog matches use the requested regional locale. If the message itself falls
+back to English, English plural grammar is used so fallback text remains
+grammatical.
+
+ICU treats ASCII apostrophes as MessageFormat quoting syntax around braces. Use
+typographic apostrophes or the quotation marks customary for the language in
+human-facing prose. Catalog patterns are parsed when loaded, and malformed
+patterns are reported as metadata errors before an affected screen is opened.
+
+`core::LocaleFormatter` centralizes CLDR number, currency, date, time, and
+date-time display. Currency always requires an explicit uppercase ISO 4217 code;
+dates and times always use an explicit IANA time zone. These policies affect
+display only. Vulpes does not parse localized text back into SQLite or infer a
+date from a declared type until application metadata explicitly annotates the
+field. See ADR 0025.

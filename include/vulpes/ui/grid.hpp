@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/core/formatting.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
@@ -32,9 +33,11 @@ struct GridText {
 class Grid {
   public:
     Grid(const model::Dataset& dataset, std::string title, std::string footer,
-         const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {});
+         const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {},
+         std::optional<core::LocaleFormatter> formatter = std::nullopt);
     Grid(const GridRows& rows, std::string title, std::string footer,
-         const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {});
+         const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {},
+         std::optional<core::LocaleFormatter> formatter = std::nullopt);
     [[nodiscard]] auto move_left() -> bool;
     [[nodiscard]] auto move_right() -> bool;
     [[nodiscard]] auto move_previous_row() -> bool;
@@ -53,6 +56,7 @@ class Grid {
     std::string title_;
     std::string footer_;
     const Theme* theme_;
+    std::optional<core::LocaleFormatter> formatter_;
     GridText text_;
     std::size_t selected_column_{};
     std::size_t first_visible_column_{};

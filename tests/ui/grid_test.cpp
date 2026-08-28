@@ -1,3 +1,4 @@
+#include "vulpes/core/formatting.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/model/dataset.hpp"
@@ -104,6 +105,20 @@ TEST_CASE("grid reuses its renderer for owned SQL results", "[ui][grid][sql]") {
     REQUIRE(grid.move_next_row());
     grid.render(buffer, {0, 0, 32, 8});
     CHECK(buffer.cell(1, 4).style == theme.style(vulpes::ui::ThemeRole::grid_selected_cell));
+}
+
+TEST_CASE("grid applies locale-aware numeric display without changing stored values", "[ui][grid][i18n]") {
+    vulpes::db::Database database{":memory:"};
+    const auto rows = vulpes::ui::GridRows::from_sql_result(database.run_sql("SELECT 12345.5 AS amount"));
+    const vulpes::core::LocaleFormatter formatter{"cs-CZ"};
+    vulpes::ui::Grid grid{rows, "Values", "", vulpes::ui::theme(vulpes::ui::ThemeName::midnight), {}, formatter};
+    vulpes::terminal::ScreenBuffer buffer{40, 8};
+
+    grid.render(buffer, {0, 0, 40, 8});
+
+    CHECK(buffer.cell(3, 3).glyph == U'\u00a0');
+    CHECK(buffer.cell(7, 3).glyph == U',');
+    CHECK(rows.rows.front().at("amount").as_double() == 12'345.5);
 }
 
 TEST_CASE("grid applies an injected palette to document cells", "[ui][grid][theme]") {
