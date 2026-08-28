@@ -5,6 +5,7 @@
 #include "vulpes/db/database.hpp"
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/ui/confirmation_dialog.hpp"
+#include "vulpes/ui/document_surface.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/ui/text_prompt.hpp"
@@ -14,16 +15,14 @@
 
 namespace vulpes::ui {
 
-enum class DocumentResult { unchanged, redraw, close };
-
 // A complete browse surface that can be hosted by the workspace or a future
 // frontend. It owns datasets and transient semantic overlays, never a terminal.
-class BrowseDocument {
+class BrowseDocument final : public DocumentSurface {
   public:
     BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages);
 
-    [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult;
-    void render(terminal::ScreenBuffer& buffer, Rect bounds);
+    [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
+    void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
 
   private:
     enum class PromptPurpose { none, search, filter };

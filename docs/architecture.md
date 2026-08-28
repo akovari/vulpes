@@ -44,6 +44,13 @@ events to the active surface. Neither layer knows terminal escape sequences;
 database operations remain inside `Dataset` or the explicit SQL-console
 boundary.
 
+`DocumentSession` is the direct-mode terminal host for a single
+`DocumentSurface`. Consequently `vulpes database.db --table customers` and the
+workspace Browse command run the same browse/form/filter implementation; the
+same is true of direct and workspace SQL consoles. It also gives reduced
+terminal sizes a deterministic warning frame and preserves Escape/Ctrl+C as
+clean exits while waiting for a resize.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

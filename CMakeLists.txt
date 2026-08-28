@@ -70,6 +70,7 @@ add_library(vulpes_core
     src/terminal/unicode.cpp
     src/ui/confirmation_dialog.cpp
     src/ui/browse_document.cpp
+    src/ui/document_session.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
     src/ui/sql_console.cpp
