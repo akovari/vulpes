@@ -20,6 +20,7 @@ struct Document {
     std::string status;
     DocumentKind kind{DocumentKind::workspace};
     bool closable{true};
+    bool dirty{false};
 };
 
 // Owns only terminal workspace chrome and document/modal state. Document
@@ -32,13 +33,16 @@ class WindowManager {
     [[nodiscard]] auto close_active() -> bool;
     [[nodiscard]] auto active() const -> const Document&;
     void set_active_status(std::string status);
+    void set_active_dirty(bool dirty) noexcept;
     [[nodiscard]] auto active_status() const -> std::string_view;
     void reset_documents();
     [[nodiscard]] auto documents() const noexcept -> const std::vector<Document>& { return documents_; }
     [[nodiscard]] auto active_index() const noexcept -> std::size_t { return active_index_; }
     void show_modal(std::string title);
     void dismiss_modal() noexcept;
-    [[nodiscard]] auto modal_title() const noexcept -> const std::optional<std::string>& { return modal_title_; }
+    void dismiss_all_modals() noexcept;
+    [[nodiscard]] auto modal_title() const noexcept -> std::optional<std::string_view>;
+    [[nodiscard]] auto modal_depth() const noexcept -> std::size_t { return modal_titles_.size(); }
     [[nodiscard]] auto handle(core::ActionId action) -> bool;
     void render_tabs(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
@@ -46,7 +50,7 @@ class WindowManager {
     const Theme* theme_;
     std::vector<Document> documents_;
     std::size_t active_index_{};
-    std::optional<std::string> modal_title_;
+    std::vector<std::string> modal_titles_;
 };
 
 } // namespace vulpes::ui

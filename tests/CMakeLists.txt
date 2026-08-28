@@ -24,6 +24,7 @@ add_executable(vulpes_tests
     ui/layout_test.cpp
     ui/line_editor_test.cpp
     ui/multiline_editor_test.cpp
+    ui/presentation_matrix_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
     ui/status_bar_test.cpp
@@ -34,6 +35,7 @@ add_executable(vulpes_tests
     ui/workspace_test.cpp
     ui/workspace_text_test.cpp
     ui/window_manager_test.cpp
+    ui/window_stack_test.cpp
     ui/window_frame_test.cpp
     terminal/frame_diff_test.cpp
     terminal/ansi_input_test.cpp

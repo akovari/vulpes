@@ -56,7 +56,7 @@ void Workspace::set_database(std::string path, std::vector<db::TableSchema> tabl
     close_confirmation_.reset();
     modal_ = Modal::none;
     submitted_value_.clear();
-    windows_.dismiss_modal();
+    windows_.dismiss_all_modals();
     windows_.reset_documents();
     database_path_ = std::move(path);
     database_read_only_ = read_only;
@@ -88,6 +88,9 @@ void Workspace::set_tables(std::vector<db::TableSchema> tables) {
 
 void Workspace::set_status(std::string status) {
     windows_.set_active_status(std::move(status));
+}
+void Workspace::set_active_document_dirty(bool dirty) noexcept {
+    windows_.set_active_dirty(dirty);
 }
 auto Workspace::requested_path() const -> std::string {
     return submitted_value_;

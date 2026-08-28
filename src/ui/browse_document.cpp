@@ -2,8 +2,10 @@
 
 #include "vulpes/core/error.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <type_traits>
 
 namespace vulpes::ui {
 namespace {
@@ -89,42 +91,57 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
              .column = messages.translate("grid.column")}} {
 }
 
+auto BrowseDocument::is_dirty() const noexcept -> bool {
+    return std::ranges::any_of(windows_.layers(), [](const auto& layer) {
+        const auto* form = std::get_if<RecordForm>(&layer.content);
+        return form != nullptr && form->is_dirty();
+    });
+}
+
 void BrowseDocument::begin_form(FormMode mode) {
     const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
-    form_.emplace(dataset_, messages_->translate(title_key, {{"table", dataset_.schema().name}}), mode,
-                  messages_->translate("form.instructions"), *theme_, clipboard_);
+    auto title = messages_->translate(title_key, {{"table", dataset_.schema().name}});
+    windows_.push({.id = "record-form", .title = title, .kind = WindowLayerKind::form},
+                  BrowseWindow{std::in_place_type<RecordForm>, dataset_, std::move(title), mode,
+                               messages_->translate("form.instructions"), *theme_, clipboard_});
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {
-    prompt_purpose_ = purpose;
-    if (purpose == PromptPurpose::search)
-        prompt_.emplace(messages_->translate("browse.search_prompt"), messages_->translate("prompt.instructions"),
-                        std::string{}, *theme_, clipboard_);
-    else {
+    if (purpose == PromptPurpose::search) {
+        auto title = messages_->translate("browse.search_prompt");
+        windows_.push({.id = "search", .title = title, .kind = WindowLayerKind::prompt},
+                      BrowseWindow{std::in_place_type<PromptWindow>, purpose,
+                                   TextPrompt{std::move(title), messages_->translate("prompt.instructions"),
+                                              std::string{}, *theme_, clipboard_}});
+    } else {
         const auto* field = grid_.selected_field();
-        if (field != nullptr)
-            prompt_.emplace(messages_->translate("browse.filter_prompt", {{"field", field->name}}),
-                            messages_->translate("prompt.instructions"), std::string{}, *theme_, clipboard_);
+        if (field != nullptr) {
+            auto title = messages_->translate("browse.filter_prompt", {{"field", field->name}});
+            windows_.push({.id = "filter", .title = title, .kind = WindowLayerKind::prompt},
+                          BrowseWindow{std::in_place_type<PromptWindow>, purpose,
+                                       TextPrompt{std::move(title), messages_->translate("prompt.instructions"),
+                                                  std::string{}, *theme_, clipboard_}});
+        }
     }
 }
 
 void BrowseDocument::begin_delete_confirmation() {
-    confirmation_.emplace(messages_->translate("browse.delete_title"),
-                          messages_->translate("browse.delete_message", {{"table", dataset_.schema().name}}),
-                          messages_->translate("dialog.delete"), messages_->translate("dialog.cancel"),
-                          messages_->translate("dialog.select"), *theme_);
+    auto title = messages_->translate("browse.delete_title");
+    windows_.push({.id = "delete-confirmation", .title = title, .kind = WindowLayerKind::dialog},
+                  BrowseWindow{std::in_place_type<ConfirmationDialog>, std::move(title),
+                               messages_->translate("browse.delete_message", {{"table", dataset_.schema().name}}),
+                               messages_->translate("dialog.delete"), messages_->translate("dialog.cancel"),
+                               messages_->translate("dialog.select"), *theme_});
 }
 
-void BrowseDocument::apply_prompt() {
-    if (!prompt_)
-        return;
-    const auto text = prompt_->value();
-    if (prompt_purpose_ == PromptPurpose::search) {
+void BrowseDocument::apply_prompt(PromptWindow& window) {
+    const auto text = window.prompt.value();
+    if (window.purpose == PromptPurpose::search) {
         if (text.empty())
             dataset_.clear_search();
         else
             dataset_.search(text);
-    } else if (prompt_purpose_ == PromptPurpose::filter) {
+    } else if (window.purpose == PromptPurpose::filter) {
         const auto* field = grid_.selected_field();
         if (field == nullptr)
             return;
@@ -133,46 +150,53 @@ void BrowseDocument::apply_prompt() {
         else
             dataset_.where(parse_filter(*field, text));
     }
-    prompt_.reset();
-    prompt_purpose_ = PromptPurpose::none;
 }
 
 auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult {
-    if (form_) {
-        const auto result = form_->handle(event);
-        if (result == FormResult::saved || result == FormResult::cancelled)
-            form_.reset();
-        return result == FormResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
-    }
-    if (prompt_) {
-        const auto result = prompt_->handle(event);
-        if (result == PromptResult::cancelled) {
-            prompt_.reset();
-            prompt_purpose_ = PromptPurpose::none;
-            return DocumentResult::redraw;
-        }
-        if (result != PromptResult::submitted)
-            return result == PromptResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
-        try {
-            apply_prompt();
-            return DocumentResult::redraw;
-        } catch (const Error& error) {
-            prompt_->set_error(error.what());
-            return DocumentResult::redraw;
-        }
-    }
-    if (confirmation_) {
-        const auto result = confirmation_->handle(event);
-        if (result == ConfirmationResult::confirmed) {
-            dataset_.erase();
-            confirmation_.reset();
-            return DocumentResult::redraw;
-        }
-        if (result == ConfirmationResult::cancelled) {
-            confirmation_.reset();
-            return DocumentResult::redraw;
-        }
-        return result == ConfirmationResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
+    if (!windows_.empty()) {
+        bool pop_window{false};
+        const auto outcome = std::visit(
+            [&](auto& window) -> DocumentResult {
+                using Window = std::remove_cvref_t<decltype(window)>;
+                if constexpr (std::is_same_v<Window, RecordForm>) {
+                    const auto result = window.handle(event);
+                    windows_.top().descriptor.dirty = window.is_dirty();
+                    if (result == FormResult::saved || result == FormResult::cancelled)
+                        pop_window = true;
+                    return result == FormResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
+                } else if constexpr (std::is_same_v<Window, PromptWindow>) {
+                    const auto result = window.prompt.handle(event);
+                    if (result == PromptResult::cancelled) {
+                        pop_window = true;
+                        return DocumentResult::redraw;
+                    }
+                    if (result != PromptResult::submitted)
+                        return result == PromptResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
+                    try {
+                        apply_prompt(window);
+                        pop_window = true;
+                    } catch (const Error& error) {
+                        window.prompt.set_error(error.what());
+                    }
+                    return DocumentResult::redraw;
+                } else {
+                    const auto result = window.handle(event);
+                    if (result == ConfirmationResult::confirmed) {
+                        dataset_.erase();
+                        pop_window = true;
+                        return DocumentResult::redraw;
+                    }
+                    if (result == ConfirmationResult::cancelled) {
+                        pop_window = true;
+                        return DocumentResult::redraw;
+                    }
+                    return result == ConfirmationResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
+                }
+            },
+            windows_.top().content);
+        if (pop_window)
+            static_cast<void>(windows_.pop());
+        return outcome;
     }
 
     switch (action) {
@@ -227,26 +251,32 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
 
 void BrowseDocument::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     grid_.render(buffer, bounds);
-    if (form_) {
-        const int dialog_width = std::min(72, bounds.width);
-        const int requested_height = static_cast<int>(form_->fields().size()) + 4;
-        const int dialog_height = std::clamp(requested_height, 6, bounds.height);
-        form_->render(buffer, {bounds.x + (bounds.width - dialog_width) / 2,
-                               bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
-        return;
-    }
-    if (prompt_) {
-        constexpr int prompt_height = 5;
-        const int prompt_width = std::min(64, bounds.width);
-        prompt_->render(buffer, {bounds.x + (bounds.width - prompt_width) / 2,
-                                 bounds.y + (bounds.height - prompt_height) / 2, prompt_width, prompt_height});
-        return;
-    }
-    if (confirmation_) {
-        constexpr int dialog_height = 6;
-        const int dialog_width = std::min(bounds.width, 60);
-        confirmation_->render(buffer, {bounds.x + (bounds.width - dialog_width) / 2,
-                                       bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+    for (auto& layer : windows_.layers()) {
+        std::visit(
+            [&](auto& window) {
+                using Window = std::remove_cvref_t<decltype(window)>;
+                if constexpr (std::is_same_v<Window, RecordForm>) {
+                    const int dialog_width = std::min(72, bounds.width);
+                    const int requested_height = static_cast<int>(window.fields().size()) + 4;
+                    const int dialog_height = std::clamp(requested_height, 6, bounds.height);
+                    window.render(buffer,
+                                  {bounds.x + (bounds.width - dialog_width) / 2,
+                                   bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+                } else if constexpr (std::is_same_v<Window, PromptWindow>) {
+                    constexpr int prompt_height = 5;
+                    const int prompt_width = std::min(64, bounds.width);
+                    window.prompt.render(buffer,
+                                         {bounds.x + (bounds.width - prompt_width) / 2,
+                                          bounds.y + (bounds.height - prompt_height) / 2, prompt_width, prompt_height});
+                } else {
+                    constexpr int dialog_height = 6;
+                    const int dialog_width = std::min(bounds.width, 60);
+                    window.render(buffer,
+                                  {bounds.x + (bounds.width - dialog_width) / 2,
+                                   bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+                }
+            },
+            layer.content);
     }
 }
 

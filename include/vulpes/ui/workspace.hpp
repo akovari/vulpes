@@ -39,6 +39,7 @@ class Workspace {
     void set_recent_databases(std::vector<std::string> paths);
     void set_tables(std::vector<db::TableSchema> tables);
     void set_status(std::string status);
+    void set_active_document_dirty(bool dirty) noexcept;
     [[nodiscard]] auto requested_path() const -> std::string;
     [[nodiscard]] auto requested_command() const -> std::string;
     [[nodiscard]] auto selected_table() const -> const db::TableSchema*;

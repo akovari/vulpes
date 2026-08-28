@@ -15,6 +15,8 @@ on Windows, Linux, and macOS.
 - [x] Add an opt-in pre-commit hook for staged C/C++ formatting.
 - [x] Add reviewed `clang-tidy` checks and a static-analysis target.
 - [x] Add release metadata generated from Git tags.
+- [x] Add a Debug-first developer script and repository agent instructions so
+  local configure/build/test/format/tidy commands remain reproducible.
 
 ## M1 — Safe SQLite foundation
 
@@ -135,9 +137,9 @@ on Windows, Linux, and macOS.
   character, including collision validation and unambiguous activation.
 - [x] Add grid row/column position indicators, scrollbar affordances, empty-state
   presentation, and user-adjustable column widths.
-- [ ] Add dirty-document markers and a general modal/window stack before forms
+- [x] Add dirty-document markers and a general modal/window stack before forms
   can host nested relationship drill-down windows.
-- [ ] Audit every interactive surface at 40x10, 80x25, and wide terminals with
+- [x] Audit every interactive surface at 40x10, 80x25, and wide terminals with
   English and Czech catalogs, both palettes, and Windows display scaling.
 
 ## Cross-cutting — localization

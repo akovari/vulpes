@@ -201,6 +201,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         const auto& active_document = workspace.active_document();
         if (active_document.kind != vulpes::ui::DocumentKind::workspace) {
             if (const auto surface = surfaces.find(active_document.id); surface != surfaces.end()) {
+                workspace.set_active_document_dirty(
+                    std::visit([](const auto& document) { return document.is_dirty(); }, surface->second));
                 std::visit([&](auto& document) { document.render(current, {0, 2, size.width, size.height - 3}); },
                            surface->second);
             }

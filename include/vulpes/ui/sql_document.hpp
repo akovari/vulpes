@@ -9,6 +9,7 @@
 #include "vulpes/ui/theme.hpp"
 
 #include <optional>
+#include <string>
 
 namespace vulpes::ui {
 
@@ -18,6 +19,7 @@ class SqlDocument final : public DocumentSurface {
     SqlDocument(db::Database& database, const core::Localizer& messages,
                 const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr);
 
+    [[nodiscard]] auto is_dirty() const noexcept -> bool override;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
 
@@ -32,6 +34,7 @@ class SqlDocument final : public DocumentSurface {
     std::optional<Grid> result_grid_;
     bool result_focused_{false};
     bool result_pane_visible_{false};
+    std::string last_executed_script_;
 };
 
 } // namespace vulpes::ui

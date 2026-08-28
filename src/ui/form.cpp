@@ -146,6 +146,10 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
     return FormResult::unchanged;
 }
 
+auto RecordForm::is_dirty() const noexcept -> bool {
+    return std::ranges::any_of(changed_, [](bool changed) { return changed; });
+}
+
 void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (!WindowFrame::fits(buffer, bounds, 20, 6))
         return;

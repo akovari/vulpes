@@ -24,12 +24,17 @@ SqlDocument::SqlDocument(db::Database& database, const core::Localizer& messages
       console_{messages.translate("sql.title"), messages.translate("sql.instructions"), theme, clipboard} {
 }
 
+auto SqlDocument::is_dirty() const noexcept -> bool {
+    return !trim_ascii(console_.script()).empty() && console_.script() != last_executed_script_;
+}
+
 void SqlDocument::execute() {
     if (trim_ascii(console_.script()).empty())
         throw Error{ErrorCategory::validation, messages_->translate("sql.empty_error")};
     result_grid_.reset();
     result_focused_ = false;
     auto result = database_->run_sql(console_.script());
+    last_executed_script_ = console_.script();
     const auto rows = result.rows.size();
     const auto changes = result.changes;
     const auto truncated = result.truncated ? messages_->translate("sql.truncated") : std::string{};

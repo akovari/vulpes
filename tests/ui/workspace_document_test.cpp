@@ -18,10 +18,16 @@ TEST_CASE("workspace browse document owns transient forms and closes semanticall
 
     document.render(buffer, {0, 0, 80, 22});
     CHECK(buffer.cell(3, 0).glyph == U'c');
+    CHECK_FALSE(document.is_dirty());
 
     CHECK(document.handle(vulpes::core::ActionId::record_new,
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::insert_key}) ==
           vulpes::ui::DocumentResult::redraw);
+    CHECK_FALSE(document.is_dirty());
+    CHECK(document.handle(vulpes::core::ActionId::none,
+                          vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'X'}) ==
+          vulpes::ui::DocumentResult::redraw);
+    CHECK(document.is_dirty());
     CHECK(document.handle(vulpes::core::ActionId::application_back,
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::DocumentResult::redraw);
@@ -34,6 +40,8 @@ TEST_CASE("workspace SQL document closes without affecting its database", "[ui][
     vulpes::db::Database database{":memory:"};
     vulpes::core::Localizer messages{"en"};
     vulpes::ui::SqlDocument document{database, messages};
+
+    CHECK_FALSE(document.is_dirty());
 
     CHECK(document.handle(vulpes::core::ActionId::application_back,
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
@@ -48,8 +56,10 @@ TEST_CASE("workspace SQL document switches keyboard focus between editor and res
         static_cast<void>(document.handle(
             vulpes::core::ActionId::none,
             vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = character}));
+    CHECK(document.is_dirty());
     CHECK(document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) ==
           vulpes::ui::DocumentResult::redraw);
+    CHECK_FALSE(document.is_dirty());
 
     vulpes::terminal::ScreenBuffer buffer{80, 22};
     document.render(buffer, {0, 0, 80, 22});

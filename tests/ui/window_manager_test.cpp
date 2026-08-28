@@ -17,14 +17,34 @@ TEST_CASE("window manager owns tabs and gives modal Escape priority", "[ui][wind
     CHECK(windows.active_status() == "SQL ready");
 
     windows.show_modal("Open database");
+    windows.show_modal("Overwrite file");
+    CHECK(windows.modal_depth() == 2);
+    REQUIRE(windows.modal_title());
+    CHECK(*windows.modal_title() == "Overwrite file");
     CHECK_FALSE(windows.handle(vulpes::core::ActionId::workspace_next_document));
     REQUIRE(windows.handle(vulpes::core::ActionId::application_back));
+    REQUIRE(windows.modal_title());
+    CHECK(*windows.modal_title() == "Open database");
+    windows.dismiss_all_modals();
     CHECK_FALSE(windows.modal_title());
 
     windows.reset_documents();
     CHECK(windows.documents().size() == 1);
     CHECK(windows.active().title == "Workspace");
     CHECK(windows.active_status() == "Workspace ready");
+}
+
+TEST_CASE("window manager marks dirty documents without changing their identity", "[ui][window][dirty]") {
+    const auto& theme = vulpes::ui::theme(vulpes::ui::ThemeName::midnight);
+    vulpes::ui::WindowManager windows{theme, "Workspace"};
+    windows.open({.id = "sql", .title = "SQL", .kind = vulpes::ui::DocumentKind::sql_console});
+    windows.set_active_dirty(true);
+    vulpes::terminal::ScreenBuffer buffer{30, 1};
+    windows.render_tabs(buffer, {0, 0, 30, 1});
+
+    CHECK(windows.active().id == "sql");
+    CHECK(windows.active().dirty);
+    CHECK(buffer.cell(18, 0).glyph == U'*');
 }
 
 TEST_CASE("window manager keeps the active Unicode tab visible in narrow layouts", "[ui][window]") {

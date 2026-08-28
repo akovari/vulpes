@@ -43,23 +43,33 @@ auto WindowManager::active() const -> const Document& {
 void WindowManager::set_active_status(std::string status) {
     documents_.at(active_index_).status = std::move(status);
 }
+void WindowManager::set_active_dirty(bool dirty) noexcept {
+    documents_[active_index_].dirty = dirty;
+}
 auto WindowManager::active_status() const -> std::string_view {
     return active().status;
 }
 void WindowManager::reset_documents() {
     documents_.erase(documents_.begin() + 1, documents_.end());
     active_index_ = 0;
-    dismiss_modal();
+    dismiss_all_modals();
 }
 void WindowManager::show_modal(std::string title) {
-    modal_title_ = std::move(title);
+    modal_titles_.push_back(std::move(title));
 }
 void WindowManager::dismiss_modal() noexcept {
-    modal_title_.reset();
+    if (!modal_titles_.empty())
+        modal_titles_.pop_back();
+}
+void WindowManager::dismiss_all_modals() noexcept {
+    modal_titles_.clear();
+}
+auto WindowManager::modal_title() const noexcept -> std::optional<std::string_view> {
+    return modal_titles_.empty() ? std::nullopt : std::optional<std::string_view>{modal_titles_.back()};
 }
 
 auto WindowManager::handle(core::ActionId action) -> bool {
-    if (modal_title_) {
+    if (!modal_titles_.empty()) {
         if (action == core::ActionId::application_back) {
             dismiss_modal();
             return true;
@@ -86,9 +96,10 @@ void WindowManager::render_tabs(terminal::ScreenBuffer& buffer, Rect bounds) con
         const auto remaining_tabs = static_cast<int>(first_visible + visible_count - index);
         const auto available = bounds.x + bounds.width - x;
         const auto fair_width = available / remaining_tabs;
-        const auto preferred = terminal::text_width(documents_[index].title) + (documents_[index].closable ? 5 : 3);
+        const auto displayed_title = documents_[index].title + (documents_[index].dirty ? " *" : "");
+        const auto preferred = terminal::text_width(displayed_title) + (documents_[index].closable ? 5 : 3);
         const int width = std::min({24, fair_width, std::max(minimum_tab_width, preferred)});
-        const auto label = " " + documents_[index].title + (documents_[index].closable ? " × " : " ");
+        const auto label = " " + displayed_title + (documents_[index].closable ? " × " : " ");
         write(buffer, x, bounds.y, width, label,
               index == active_index_ ? theme_->style(ThemeRole::active_tab) : theme_->style(ThemeRole::tab));
         x += width;

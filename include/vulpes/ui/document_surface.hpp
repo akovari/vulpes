@@ -14,6 +14,7 @@ class DocumentSurface {
   public:
     virtual ~DocumentSurface() = default;
 
+    [[nodiscard]] virtual auto is_dirty() const noexcept -> bool { return false; }
     [[nodiscard]] virtual auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult = 0;
     virtual void render(terminal::ScreenBuffer& buffer, Rect bounds) = 0;
 };

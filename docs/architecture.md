@@ -96,8 +96,12 @@ same visual language while keeping their item state in `Workspace`. Menu labels
 and explicit mnemonic code points enter together through `WorkspaceText`;
 construction validates occurrence and per-scope uniqueness, and Unicode-aware
 lookup drives both rendering and activation. See ADR 0022.
-`WindowManager` continues to own document lifetime, tab selection, and modal
-priority. See ADR 0018.
+`WindowManager` owns document lifetime, tab selection, dirty markers, and the
+workspace modal-title stack. Document surfaces use the reusable owning
+`WindowStack<Content>` for heterogeneous overlays; browse routes input only to
+the top form, prompt, or confirmation layer while rendering the full stack.
+This makes nested lookup and related-record drill-down windows possible without
+adding parallel optional-modal flags. See ADRs 0018 and 0024.
 
 `Grid` computes bounded preferred widths from field names and the current owned
 page, then distributes remaining cells without changing dataset paging. It uses

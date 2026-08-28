@@ -2,11 +2,25 @@
 
 ## Workflow
 
-1. Configure with the platform preset.
-2. Build and run all tests.
+1. On Windows, run `.\scripts\dev.ps1`; it defaults to the incremental Debug
+   configure/build, formatting check, and test loop.
+2. Use `.\scripts\dev.ps1 build` for quick compile iterations and
+   `.\scripts\dev.ps1 test -CTestRegex <pattern>` for focused CTest runs.
 3. Keep changes within one architectural boundary when practical.
 4. Add unit tests for every core behavior and regression.
 5. Update `TODO.md` when scope or sequencing changes.
+
+The wrapper discovers and initializes the newest Visual Studio x64 toolchain,
+bundled vcpkg, and LLVM formatter/analyzer when necessary. It delegates to the
+checked-in CMake presets; it is not an alternative build definition. Linux and
+macOS contributors use the corresponding presets directly.
+
+Routine local development is Debug-only. Run `.\scripts\dev.ps1 release` for a
+release or milestone gate, not after every edit. Use `-Fresh` only when CMake's
+generated graph really needs rebuilding; ordinary invocations remain
+incremental.
+
+Repository-wide contributor and agent invariants live in `AGENTS.md`.
 
 ## Formatting
 
@@ -95,6 +109,15 @@ introduce a separate release-script version. Source-archive builds without a
 Database tests use `:memory:` unless file behavior is the subject. UI rendering
 tests compare logical cells. Terminal integration tests use a fake backend and
 normalized events. End-to-end tests must use temporary database copies.
+
+`presentation_matrix_test.cpp` renders the workspace, menus, prompts, directory
+browser, browse grid and overlays, generated forms, SQL editor, schema view,
+diagnostics, and minimum-size warning at 40x10, 80x25, and 160x45 cells for both
+English/Czech and midnight/high-contrast presentation. Windows display scaling
+is intentionally represented by the terminal's reported cell dimensions:
+Vulpes owns no pixel coordinates or DPI conversion. Physical host verification
+remains required for the input/backend items explicitly left unchecked in
+`TODO.md`.
 
 CI builds Windows, Ubuntu, and macOS on every push and pull request. Sanitizer,
 coverage, fuzz, and static-analysis jobs are tracked in `TODO.md` rather than

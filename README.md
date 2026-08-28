@@ -35,11 +35,19 @@ commit by CMake because it is not present in the pinned vcpkg registry. The
 ## Build and test on Windows
 
 ```powershell
-cmake --preset windows-msvc
-cmake --build --preset windows-debug
-ctest --preset windows-debug
+.\scripts\dev.ps1
 .\build\windows-msvc\Debug\vulpes.exe --version
 ```
+
+The script discovers the newest Visual Studio installation, initializes its x64
+MSVC environment, and selects bundled vcpkg and LLVM tools when the corresponding
+environment variables are not already set. Its default `check` task performs an
+incremental Debug configure/build, formatting check, and test run. Use `build`
+for a compile-only iteration, `test -CTestRegex <pattern>` for focused CTest,
+`format` to apply clang-format, and `tidy` for the separate static-analysis build.
+Release compilation is intentionally explicit: run `.\scripts\dev.ps1 release`
+only for a milestone or release gate. All underlying CMake presets remain usable
+directly, including on Linux and macOS.
 
 Development versions are derived from Git, for example
 `0.1.0-dev+gabcdef123456` (with `.dirty` when configured from a modified tree).
@@ -115,6 +123,11 @@ sessions:
 ```powershell
 .\build\windows-msvc\Debug\vulpes.exe --theme high-contrast
 ```
+
+These surfaces have a deterministic rendering matrix at 40x10, 80x25, and
+160x45 terminal cells for English and Czech under both palettes. Vulpes uses
+terminal cells rather than pixels, so Windows display scaling changes the
+host's cell size, not application layout coordinates.
 
 To verify a terminal host after an input or rendering change, run
 `vulpes --terminal-diagnostics`. It shows Vulpes' normalized `Key` and `Resize`

@@ -40,6 +40,7 @@ class RecordForm {
     [[nodiscard]] auto fields() const noexcept -> const std::vector<FormField>& { return fields_; }
     [[nodiscard]] auto selected_field_index() const noexcept -> std::size_t { return selected_field_; }
     [[nodiscard]] auto error_field_index() const noexcept -> std::optional<std::size_t> { return error_field_; }
+    [[nodiscard]] auto is_dirty() const noexcept -> bool;
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> FormResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
