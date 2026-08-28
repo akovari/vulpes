@@ -14,11 +14,14 @@ add_executable(vulpes_tests
     ui/button_test.cpp
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp
+    ui/container_test.cpp
     ui/directory_browser_test.cpp
     ui/document_session_test.cpp
     ui/focus_ring_test.cpp
     ui/workspace_document_test.cpp
     ui/grid_test.cpp
+    ui/label_test.cpp
+    ui/layout_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
     ui/status_bar_test.cpp

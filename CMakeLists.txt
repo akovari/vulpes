@@ -72,12 +72,14 @@ add_library(vulpes_core
     src/terminal/unicode.cpp
     src/ui/button.cpp
     src/ui/confirmation_dialog.cpp
+    src/ui/container.cpp
     src/ui/directory_browser.cpp
     src/ui/browse_document.cpp
     src/ui/document_session.cpp
     src/ui/focus_ring.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
+    src/ui/label.cpp
     src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp
@@ -90,6 +92,7 @@ add_library(vulpes_core
     src/ui/workspace_text.cpp
     src/ui/window_frame.cpp
     src/ui/window_manager.cpp
+    src/ui/widget.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)
 

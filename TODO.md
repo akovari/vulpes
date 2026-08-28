@@ -60,7 +60,7 @@ on Windows, Linux, and macOS.
   keys, Alt chords, and terminal restoration on Windows Terminal and legacy hosts.
 - [ ] Complete Linux/macOS raw-input verification for Escape ambiguity, resize,
   Ctrl+C, UTF-8, and terminal restoration.
-- [ ] Implement measurement/layout, container, and label primitives.
+- [x] Implement measurement/layout, container, and label primitives.
 - [x] Add tested semantic focus traversal for editable form fields and
   confirmation-dialog buttons.
 - [x] Add a reusable, theme-aware status bar for messages and localized shortcut

@@ -79,6 +79,12 @@ continues to own document lifetime, tab selection, and modal priority.
 dedicated semantic theme roles. It owns no command mapping; action IDs remain
 the responsibility of the input layer.
 
+`Widget`, `Constraints`, `Label`, and `Container` provide the small shared
+measurement/layout vocabulary. Containers hold non-owning child references and
+arrange logical rectangles only; semantic screens retain control ownership and
+event routing. Specialized controls can adopt the contract incrementally. See
+ADR 0016.
+
 `WorkspacePreferences` is a versioned, user-local JSON file outside the SQLite
 application. It currently persists only a bounded recent-database list, so it
 cannot alter ordinary SQLite compatibility or become a second application
