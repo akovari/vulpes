@@ -62,6 +62,8 @@ else()
 endif()
 
 add_library(vulpes_core
+    src/appmeta/definition.cpp
+    src/appmeta/loader.cpp
     src/appmeta/metadata.cpp
     src/core/actions.cpp
     src/core/application.cpp

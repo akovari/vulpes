@@ -32,7 +32,7 @@ forward-declare opaque SQLite types where ownership requires it.
 - `include/vulpes/terminal`, `src/terminal`: virtual screen, normalized input,
   and platform backends.
 - `include/vulpes/appmeta`, `src/appmeta`: UI-neutral optional application
-  metadata and validation. SQLite-resident loading remains a later boundary.
+  definitions, validation, and explicit versioned SQLite-resident loading.
 - `examples/inventory`: generic framework dogfood; never a source of inventory
   special cases in the runtime.
 
@@ -230,8 +230,11 @@ field order and visibility, additional read-only policy, explicit display
 formats, and relationship lookup policy. Validation rejects unknown objects,
 unsafe lookup fields, invalid limits, incomplete currency policy, and ambiguous
 temporal annotations. Forms and grids consume this model without knowing where
-it was stored. The later SQLite `_app_*` loader targets this boundary rather than
-introducing metadata-table queries into UI code. See ADR 0026.
+it was stored. `ApplicationDefinition` owns named forms, views, commands, menus,
+reports, and settings loaded from reserved `_app_*` tables. Loading an ordinary
+database is read-only and returns an empty definition; explicit transactional
+migrations own all metadata schema changes. UI code consumes the semantic model
+and never queries metadata tables. See ADRs 0026 and 0027.
 
 ### Commands
 
@@ -310,7 +313,6 @@ focused-cell theme role.
 - Terminal library versus small native ANSI/Windows backends.
 - Unicode segmentation and display-width library.
 - Dataset public API and concurrency model.
-- Metadata table format.
 - Lua runtime and sandbox policy.
 
 Each requires a focused cross-platform spike and an ADR before adoption.

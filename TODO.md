@@ -185,8 +185,8 @@ on Windows, Linux, and macOS.
 
 ## Post-0.1 — deliberately deferred
 
-- [ ] Define and migrate SQLite-resident `_app_*` metadata tables.
-- [ ] Load metadata as enhancements to ordinary SQLite schema introspection.
+- [x] Define and migrate SQLite-resident `_app_*` metadata tables.
+- [x] Load metadata as enhancements to ordinary SQLite schema introspection.
 - [ ] Support metadata-defined form labels, field order, visibility, read-only
   state, formatting, views, commands, menus, reports, and settings.
 - [ ] Launch a metadata-defined application from a `.vulpes` SQLite file while

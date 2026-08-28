@@ -1,6 +1,7 @@
 find_package(Catch2 3 CONFIG REQUIRED)
 
 add_executable(vulpes_tests
+    appmeta/loader_test.cpp
     appmeta/metadata_test.cpp
     core/application_test.cpp
     core/actions_test.cpp
