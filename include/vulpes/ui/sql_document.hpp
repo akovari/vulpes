@@ -29,6 +29,8 @@ class SqlDocument final : public DocumentSurface {
     SqlConsole console_;
     std::optional<GridRows> result_rows_;
     std::optional<Grid> result_grid_;
+    bool result_focused_{false};
+    bool result_pane_visible_{false};
 };
 
 } // namespace vulpes::ui

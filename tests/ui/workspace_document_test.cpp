@@ -39,3 +39,29 @@ TEST_CASE("workspace SQL document closes without affecting its database", "[ui][
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::DocumentResult::close);
 }
+
+TEST_CASE("workspace SQL document switches keyboard focus between editor and results", "[ui][workspace][sql]") {
+    vulpes::db::Database database{":memory:"};
+    vulpes::core::Localizer messages{"en"};
+    vulpes::ui::SqlDocument document{database, messages};
+    for (const auto character : std::u32string{U"SELECT 1 AS id"})
+        static_cast<void>(document.handle(
+            vulpes::core::ActionId::none,
+            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = character}));
+    CHECK(document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) ==
+          vulpes::ui::DocumentResult::redraw);
+
+    vulpes::terminal::ScreenBuffer buffer{80, 22};
+    document.render(buffer, {0, 0, 80, 22});
+    const auto& theme = vulpes::ui::theme(vulpes::ui::ThemeName::midnight);
+    CHECK(buffer.cell(1, 10).style == theme.style(vulpes::ui::ThemeRole::grid_selected_row));
+
+    CHECK(document.handle(vulpes::core::ActionId::document_switch_pane,
+                          vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f7}) ==
+          vulpes::ui::DocumentResult::redraw);
+    document.render(buffer, {0, 0, 80, 22});
+    CHECK(buffer.cell(1, 10).style == theme.style(vulpes::ui::ThemeRole::grid_selected_cell));
+    CHECK(document.handle(vulpes::core::ActionId::application_back,
+                          vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::DocumentResult::redraw);
+}

@@ -34,6 +34,7 @@ class Grid {
     [[nodiscard]] auto selected_column_index() const noexcept -> std::size_t { return selected_column_; }
     [[nodiscard]] auto first_visible_column_index() const noexcept -> std::size_t { return first_visible_column_; }
     [[nodiscard]] auto selected_field() const -> const db::FieldSchema*;
+    void set_focused(bool focused) noexcept { focused_ = focused; }
     void render(terminal::ScreenBuffer& buffer, Rect bounds);
 
   private:
@@ -46,6 +47,7 @@ class Grid {
     std::size_t first_visible_column_{};
     std::optional<std::size_t> selected_result_row_;
     std::size_t first_visible_result_row_{};
+    bool focused_{true};
 };
 
 } // namespace vulpes::ui

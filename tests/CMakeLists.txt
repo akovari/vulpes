@@ -23,6 +23,7 @@ add_executable(vulpes_tests
     ui/label_test.cpp
     ui/layout_test.cpp
     ui/line_editor_test.cpp
+    ui/multiline_editor_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
     ui/status_bar_test.cpp

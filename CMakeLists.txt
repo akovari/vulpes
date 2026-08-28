@@ -94,6 +94,7 @@ add_library(vulpes_core
     src/ui/grid.cpp
     src/ui/label.cpp
     src/ui/line_editor.cpp
+    src/ui/multiline_editor.cpp
     src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp

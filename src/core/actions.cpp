@@ -24,6 +24,7 @@ auto default_bindings() -> std::vector<KeyBinding> {
         {{.key = Key::character, .character = U'n', .ctrl = true}, ActionId::database_create},
         {{.key = Key::tab, .ctrl = true}, ActionId::workspace_next_document},
         {{.key = Key::character, .character = U'w', .ctrl = true}, ActionId::workspace_close_document},
+        {{.key = Key::f7}, ActionId::document_switch_pane},
         {{.key = Key::up}, ActionId::dataset_previous},
         {{.key = Key::down}, ActionId::dataset_next},
         {{.key = Key::home}, ActionId::dataset_first},
@@ -54,9 +55,9 @@ void ActionMap::bind(KeyBinding binding) {
     const auto existing =
         std::ranges::find_if(bindings_, [&](const auto& item) { return matches(item.key, binding.key); });
     if (existing == bindings_.end())
-        bindings_.push_back(std::move(binding));
+        bindings_.push_back(binding);
     else
-        *existing = std::move(binding);
+        *existing = binding;
 }
 
 auto ActionMap::action_for(const terminal::InputEvent& event) const -> ActionId {
@@ -87,6 +88,8 @@ auto action_id(ActionId action) -> std::string_view {
         return "workspace.next_document";
     case ActionId::workspace_close_document:
         return "workspace.close_document";
+    case ActionId::document_switch_pane:
+        return "document.switch_pane";
     case ActionId::dataset_previous:
         return "dataset.previous";
     case ActionId::dataset_next:

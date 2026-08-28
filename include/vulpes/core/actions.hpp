@@ -21,6 +21,7 @@ enum class ActionId {
     database_create,
     workspace_next_document,
     workspace_close_document,
+    document_switch_pane,
     dataset_previous,
     dataset_next,
     dataset_first,

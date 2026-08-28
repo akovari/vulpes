@@ -27,6 +27,7 @@ void SqlDocument::execute() {
     if (trim_ascii(console_.script()).empty())
         throw Error{ErrorCategory::validation, messages_->translate("sql.empty_error")};
     result_grid_.reset();
+    result_focused_ = false;
     auto result = database_->run_sql(console_.script());
     const auto rows = result.rows.size();
     const auto changes = result.changes;
@@ -41,15 +42,29 @@ void SqlDocument::execute() {
 }
 
 auto SqlDocument::handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult {
-    if (result_grid_) {
-        if (action == core::ActionId::dataset_previous && result_grid_->move_previous_row())
+    if (result_grid_ && result_pane_visible_ && action == core::ActionId::document_switch_pane) {
+        result_focused_ = !result_focused_;
+        return DocumentResult::redraw;
+    }
+    if (result_grid_ && result_focused_) {
+        if (action == core::ActionId::application_back) {
+            result_focused_ = false;
             return DocumentResult::redraw;
-        if (action == core::ActionId::dataset_next && result_grid_->move_next_row())
-            return DocumentResult::redraw;
-        if (action == core::ActionId::grid_previous_column && result_grid_->move_left())
-            return DocumentResult::redraw;
-        if (action == core::ActionId::grid_next_column && result_grid_->move_right())
-            return DocumentResult::redraw;
+        }
+        const auto* key = std::get_if<terminal::KeyEvent>(&event);
+        if (key != nullptr && key->key == terminal::Key::f8)
+            result_focused_ = false;
+        else {
+            if (action == core::ActionId::dataset_previous && result_grid_->move_previous_row())
+                return DocumentResult::redraw;
+            if (action == core::ActionId::dataset_next && result_grid_->move_next_row())
+                return DocumentResult::redraw;
+            if (action == core::ActionId::grid_previous_column && result_grid_->move_left())
+                return DocumentResult::redraw;
+            if (action == core::ActionId::grid_next_column && result_grid_->move_right())
+                return DocumentResult::redraw;
+            return DocumentResult::unchanged;
+        }
     }
     const auto result = console_.handle(event);
     if (result == SqlConsoleResult::cancelled)
@@ -66,9 +81,15 @@ auto SqlDocument::handle(core::ActionId action, const terminal::InputEvent& even
 
 void SqlDocument::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     const int editor_height = result_grid_ && bounds.height >= 13 ? 7 : bounds.height;
+    result_pane_visible_ = result_grid_.has_value() && editor_height < bounds.height;
+    if (!result_pane_visible_)
+        result_focused_ = false;
+    console_.set_focused(!result_focused_);
     console_.render(buffer, {bounds.x, bounds.y, bounds.width, editor_height});
-    if (result_grid_ && editor_height < bounds.height)
+    if (result_grid_ && result_pane_visible_) {
+        result_grid_->set_focused(result_focused_);
         result_grid_->render(buffer, {bounds.x, bounds.y + editor_height, bounds.width, bounds.height - editor_height});
+    }
 }
 
 } // namespace vulpes::ui

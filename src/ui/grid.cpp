@@ -213,7 +213,7 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
         for (std::size_t field_index = 0; field_index < fields.size(); ++field_index) {
             const int width = column_widths[field_index];
             const bool selected_row = selected && *selected == source_index;
-            const bool selected_cell = selected_row && first_visible + field_index == selected_column_;
+            const bool selected_cell = focused_ && selected_row && first_visible + field_index == selected_column_;
             const auto& style = current_theme.style(selected_cell  ? ThemeRole::grid_selected_cell
                                                     : selected_row ? ThemeRole::grid_selected_row
                                                                    : ThemeRole::grid_cell);

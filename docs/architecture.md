@@ -76,9 +76,10 @@ semantics, so the focus model remains independent of a terminal implementation.
 kept on a code-point boundary. It provides semantic insert/delete/movement and a
 display-cell viewport, so prompts and generated fields share editing behavior
 without a terminal cursor or backend dependency. Rendering uses a logical caret
-cell and follows long values horizontally. The SQL console remains a separate
-multiline editor until row/column movement and paste policy are defined. See ADR
-0019.
+cell and follows long values horizontally. `MultilineEditor` applies the same
+boundary policy to SQL source while adding logical line spans, desired
+display-column preservation, line splitting/joining, indentation, page movement,
+and stable two-axis viewport state. See ADRs 0019 and 0020.
 
 `WindowFrame` renders opaque Unicode terminal windows with an optional clipped
 drop shadow; `Button` renders a focusable action affordance. Prompts,
@@ -252,7 +253,10 @@ the final statement with columns. Result rows are bounded to protect terminal
 renderers from accidental unbounded queries. `ui::SqlConsole` owns multiline
 editing only; the frontend performs execution, converts an owned `SqlResult` to
 `ui::GridRows`, and reuses `Grid` for result rendering. Neither widget performs
-SQLite work.
+SQLite work. Once a result Grid exists, the document owns semantic editor/result
+focus. `document.switch_pane` (F7 by default) changes which pane consumes
+navigation actions; an unfocused selection remains visible without using the
+focused-cell theme role.
 
 ## Deferred decisions
 

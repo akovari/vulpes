@@ -38,5 +38,6 @@ retain their own semantic key behavior.
 - The stored value never contains viewport truncation or caret markers.
 - The cursor is code-point safe, but full grapheme-cluster navigation remains
   governed by the Unicode policy in ADR 0002.
-- Selection, word movement, clipboard integration, bracketed paste, overwrite
-  mode, and multiline SQL navigation remain explicit tasks in `TODO.md`.
+- Selection, word movement, clipboard integration, bracketed paste, and
+  overwrite mode remain explicit tasks in `TODO.md`; multiline SQL editing is
+  addressed separately by ADR 0020.

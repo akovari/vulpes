@@ -16,15 +16,6 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
         buffer.put(column, y, U' ', style);
 }
 
-void erase_last_code_point(std::string& text) {
-    if (text.empty())
-        return;
-    std::size_t offset = text.size() - 1;
-    while (offset > 0 && (static_cast<unsigned char>(text[offset]) & 0xC0U) == 0x80U)
-        --offset;
-    text.erase(offset);
-}
-
 } // namespace
 
 SqlConsole::SqlConsole(std::string title, std::string instructions, const Theme& theme)
@@ -49,25 +40,16 @@ auto SqlConsole::handle(const terminal::InputEvent& event) -> SqlConsoleResult {
         return SqlConsoleResult::cancelled;
     if (key->key == terminal::Key::f8)
         return SqlConsoleResult::execute;
-    if (key->key == terminal::Key::enter) {
-        script_ += '\n';
-        error_.clear();
-        return SqlConsoleResult::redraw;
-    }
-    if (key->key == terminal::Key::backspace) {
-        erase_last_code_point(script_);
-        error_.clear();
-        return SqlConsoleResult::redraw;
-    }
-    if (key->key == terminal::Key::character && !key->ctrl && !key->alt) {
-        script_ += terminal::encode_utf8(key->character);
-        error_.clear();
+    const auto result = editor_.handle(*key);
+    if (result != MultilineEditResult::unchanged) {
+        if (result == MultilineEditResult::changed)
+            error_.clear();
         return SqlConsoleResult::redraw;
     }
     return SqlConsoleResult::unchanged;
 }
 
-void SqlConsole::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
+void SqlConsole::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     if (bounds.width < 20 || bounds.height < 6 || bounds.x < 0 || bounds.y < 0 ||
         bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
         return;
@@ -75,19 +57,41 @@ void SqlConsole::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     const int interior = bounds.width - 2;
     WindowFrame::render(buffer, bounds, title_, window_frame_appearance(*theme_));
 
-    const auto line_count = (std::max)(1, bounds.height - 4);
-    std::size_t line_start{};
-    for (int line = 0; line < line_count; ++line) {
-        const int y = bounds.y + 1 + line;
-        const auto line_end = script_.find('\n', line_start);
-        const auto source =
-            script_.substr(line_start, line_end == std::string::npos ? std::string::npos : line_end - line_start);
-        write_padded(buffer, bounds.x + 1, y, interior, (line == 0 ? "sql> " : "...> ") + source,
-                     theme_->style(line == 0 ? ThemeRole::input_focus : ThemeRole::input));
-        if (line_end == std::string::npos)
-            line_start = script_.size();
-        else
-            line_start = line_end + 1;
+    constexpr int gutter_width = 5;
+    const auto line_count = std::max(1, bounds.height - 4);
+    const auto editor_width = interior - gutter_width;
+    const auto view = editor_.viewport(editor_width, line_count);
+    for (int row = 0; row < line_count; ++row) {
+        const int y = bounds.y + 1 + row;
+        const auto line_number = view.first_line + static_cast<std::size_t>(row);
+        const auto active = focused_ && row == view.cursor_row;
+        const auto gutter = line_number == 0 ? "sql> " : "...> ";
+        write_padded(buffer, bounds.x + 1, y, gutter_width, gutter,
+                     theme_->style(active ? ThemeRole::active_tab : ThemeRole::grid_footer));
+        write_padded(buffer, bounds.x + 1 + gutter_width, y, editor_width, "", theme_->style(ThemeRole::input));
+        if (static_cast<std::size_t>(row) < view.lines.size())
+            static_cast<void>(buffer.write_utf8(bounds.x + 1 + gutter_width, y,
+                                                view.lines[static_cast<std::size_t>(row)].text,
+                                                theme_->style(ThemeRole::input)));
+    }
+
+    const auto cursor_y = bounds.y + 1 + std::clamp(view.cursor_row, 0, line_count - 1);
+    if (focused_) {
+        const auto cursor_x = bounds.x + 1 + gutter_width + std::clamp(view.cursor_column, 0, editor_width - 1);
+        auto cursor_style = buffer.cell(cursor_x, cursor_y).style;
+        cursor_style.reverse = !cursor_style.reverse;
+        buffer.put(cursor_x, cursor_y, buffer.cell(cursor_x, cursor_y).glyph, cursor_style);
+    }
+    if (view.clipped_above)
+        buffer.put(bounds.x + bounds.width - 3, bounds.y, U'▲', theme_->style(ThemeRole::border));
+    if (view.clipped_below)
+        buffer.put(bounds.x + bounds.width - 3, bounds.y + bounds.height - 1, U'▼', theme_->style(ThemeRole::border));
+    if (!view.lines.empty()) {
+        const auto& active_line = view.lines.at(static_cast<std::size_t>(view.cursor_row));
+        if (active_line.clipped_left)
+            buffer.put(bounds.x, cursor_y, U'◀', theme_->style(ThemeRole::border));
+        if (active_line.clipped_right)
+            buffer.put(bounds.x + bounds.width - 1, cursor_y, U'▶', theme_->style(ThemeRole::border));
     }
 
     const int message_y = bounds.y + bounds.height - 2;

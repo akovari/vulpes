@@ -139,8 +139,8 @@ focused cell remains distinct from the selected row.
 Single-line prompts and generated text/number fields have a logical UTF-8
 cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long
 values follow the caret horizontally without changing the stored text. Lookup
-fields retain Left/Right for relationship selection; multiline SQL cursor
-navigation and clipboard selection remain tracked follow-up work.
+fields retain Left/Right for relationship selection. Selection, clipboard, and
+word-wise movement remain tracked follow-up work.
 
 Read-only database sessions keep browse, sort, filter, search, schema, and SQL
 result viewing available, but generated form and delete actions are disabled and
@@ -172,11 +172,17 @@ first 100 related rows; Vulpes stores the underlying key. Searchable and
 metadata-configured lookups are intentionally deferred.
 
 Open the interactive SQL console with `--sql` or `--command sql`. It accepts
-multiline input (`Enter` adds a line; `F8` executes) and presents the final
-row-producing statement through the same Grid widget as `browse`. Execution is
-bounded to 1,000 result rows by default; the console reports truncation and
-affected-row counts. `Esc` returns to the shell. SQL history, parameter prompts,
-and multiple displayed result sets remain deliberately deferred.
+cursor-aware multiline input: arrows move by character or line, Home/End move
+within a line, PageUp/PageDown move by an editor page, Enter splits a line, Tab
+indents to a four-column stop, and Backspace/Delete join lines at their edges.
+The editor follows the caret vertically and horizontally; border arrows mark
+hidden content. `F8` executes and presents the final row-producing statement
+through the same Grid widget as `browse`. After results appear, `F7` switches
+keyboard focus between the editor and result Grid; `Esc` first returns focus to
+the editor and then returns to the shell. Execution is bounded to 1,000 result
+rows by default, and the console reports truncation and affected-row counts.
+SQL history, parameter prompts, and multiple displayed result sets remain
+deliberately deferred.
 
 `--command` accepts `help`, `tables`, `schema <table>`, `browse <table>`,
 `sql`, and `quit`. It is a non-interactive bridge to the same application

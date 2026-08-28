@@ -17,8 +17,8 @@ frontend calls `Database::run_sql`, which already produces bounded, owned final
 statement results. `ui::GridRows` adapts those owned columns and rows to the
 existing `Grid` renderer.
 
-The `sql` semantic command and `--sql` CLI flag open the console. Arrow keys
-navigate a displayed result grid; `Enter` adds a source line and `Esc` exits.
+The `sql` semantic command and `--sql` CLI flag open the console. The follow-up
+editor and pane-focus behavior is defined by ADR 0020.
 
 ## Consequences
 

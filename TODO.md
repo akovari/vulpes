@@ -122,10 +122,15 @@ on Windows, Linux, and macOS.
 - [x] Replace append-only prompt and generated-field entry with a shared
   cursor-aware UTF-8 line editor supporting Left/Right, Home/End, Backspace,
   Delete, a logical caret, and horizontal cursor following.
-- [ ] Extend cursor-aware editing to the multiline SQL console with logical
-  line/column navigation and a vertically scrolling editor viewport.
+- [x] Extend cursor-aware editing to the multiline SQL console with logical
+  line/column navigation, preferred display-column movement, page navigation,
+  indentation, and vertically/horizontally scrolling editor viewports.
+- [x] Add explicit F7 focus switching between SQL editor and result-grid panes,
+  including distinct focused/unfocused selection rendering.
 - [ ] Add selection, word movement, clipboard commands, bracketed-paste event
   normalization, and configurable field overwrite/insert behavior.
+- [ ] Add SQL editor undo/redo, bounded command history, and editing tests before
+  evaluating syntax highlighting or schema-aware completion.
 - [ ] Define explicit per-locale menu mnemonics instead of inferring the first
   character, including collision validation and unambiguous activation.
 - [ ] Add grid row/column position indicators, scrollbar affordances, empty-state
