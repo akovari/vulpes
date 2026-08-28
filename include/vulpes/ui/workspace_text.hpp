@@ -41,16 +41,22 @@ struct WorkspaceText {
     std::string sql_document;
     std::string view_suffix;
     std::array<std::string, 5> menu_bar;
+    std::array<char32_t, 5> menu_bar_mnemonics;
     std::array<ShortcutHint, 5> status_shortcuts;
     std::array<std::string, 5> file_menu;
+    std::array<char32_t, 5> file_menu_mnemonics;
     std::array<std::string, 5> file_menu_shortcuts;
     std::array<std::string, 6> database_menu;
+    std::array<char32_t, 6> database_menu_mnemonics;
     std::array<std::string, 6> database_menu_shortcuts;
     std::array<std::string, 2> view_menu;
+    std::array<char32_t, 2> view_menu_mnemonics;
     std::array<std::string, 2> view_menu_shortcuts;
     std::array<std::string, 2> window_menu;
+    std::array<char32_t, 2> window_menu_mnemonics;
     std::array<std::string, 2> window_menu_shortcuts;
     std::array<std::string, 1> help_menu;
+    std::array<char32_t, 1> help_menu_mnemonics;
     std::array<std::string, 1> help_menu_shortcuts;
 };
 

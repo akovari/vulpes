@@ -1,9 +1,41 @@
 #include "vulpes/ui/workspace_text.hpp"
 
+#include "vulpes/core/error.hpp"
+#include "vulpes/terminal/unicode.hpp"
+
+#include <span>
+#include <unordered_set>
+
 namespace vulpes::ui {
+namespace {
+
+[[nodiscard]] auto mnemonic(const core::Localizer& messages, std::string_view key) -> char32_t {
+    const auto source = messages.translate(key);
+    const auto code_point = terminal::first_code_point(source);
+    if (code_point == U'\0' || terminal::encode_utf8(code_point) != source)
+        throw Error{ErrorCategory::metadata, "menu mnemonic '" + std::string{key} + "' must contain one code point"};
+    return code_point;
+}
+
+void validate_mnemonics(std::string_view scope, std::span<const std::string> labels,
+                        std::span<const char32_t> mnemonics) {
+    if (labels.size() != mnemonics.size())
+        throw Error{ErrorCategory::metadata, "menu mnemonic count does not match labels in " + std::string{scope}};
+    std::unordered_set<char32_t> assigned;
+    for (std::size_t index = 0; index < labels.size(); ++index) {
+        if (!terminal::find_code_point_column(labels[index], mnemonics[index]))
+            throw Error{ErrorCategory::metadata,
+                        "menu mnemonic is not present in label '" + labels[index] + "' in " + std::string{scope}};
+        const auto normalized = terminal::lowercase_code_point(mnemonics[index]);
+        if (!assigned.insert(normalized).second)
+            throw Error{ErrorCategory::metadata, "duplicate menu mnemonic in " + std::string{scope}};
+    }
+}
+
+} // namespace
 
 auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
-    return {
+    WorkspaceText text{
         .title = messages.translate("application.title"),
         .workspace_document = messages.translate("workspace.document.workspace"),
         .open_database_title = messages.translate("workspace.open_title"),
@@ -41,6 +73,14 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu_bar.window"),
                 messages.translate("workspace.menu_bar.help"),
             },
+        .menu_bar_mnemonics =
+            {
+                mnemonic(messages, "workspace.menu_bar.file.mnemonic"),
+                mnemonic(messages, "workspace.menu_bar.database.mnemonic"),
+                mnemonic(messages, "workspace.menu_bar.view.mnemonic"),
+                mnemonic(messages, "workspace.menu_bar.window.mnemonic"),
+                mnemonic(messages, "workspace.menu_bar.help.mnemonic"),
+            },
         .status_shortcuts =
             {
                 ShortcutHint{.key = messages.translate("workspace.shortcut.menu.key"),
@@ -62,6 +102,14 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu.file.create"),
                 messages.translate("workspace.menu.file.exit"),
             },
+        .file_menu_mnemonics =
+            {
+                mnemonic(messages, "workspace.menu.file.open.mnemonic"),
+                mnemonic(messages, "workspace.menu.file.open_read_only.mnemonic"),
+                mnemonic(messages, "workspace.menu.file.browse_files.mnemonic"),
+                mnemonic(messages, "workspace.menu.file.create.mnemonic"),
+                mnemonic(messages, "workspace.menu.file.exit.mnemonic"),
+            },
         .file_menu_shortcuts = {"Ctrl+O", "Ctrl+R", "", "Ctrl+N", "Ctrl+C"},
         .database_menu =
             {
@@ -72,11 +120,25 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu.database.browse"),
                 messages.translate("workspace.menu.database.sql"),
             },
+        .database_menu_mnemonics =
+            {
+                mnemonic(messages, "workspace.menu.database.open.mnemonic"),
+                mnemonic(messages, "workspace.menu.database.open_read_only.mnemonic"),
+                mnemonic(messages, "workspace.menu.database.browse_files.mnemonic"),
+                mnemonic(messages, "workspace.menu.database.create.mnemonic"),
+                mnemonic(messages, "workspace.menu.database.browse.mnemonic"),
+                mnemonic(messages, "workspace.menu.database.sql.mnemonic"),
+            },
         .database_menu_shortcuts = {"Ctrl+O", "Ctrl+R", "", "Ctrl+N", "Enter", "F7"},
         .view_menu =
             {
                 messages.translate("workspace.menu.view.previous"),
                 messages.translate("workspace.menu.view.next"),
+            },
+        .view_menu_mnemonics =
+            {
+                mnemonic(messages, "workspace.menu.view.previous.mnemonic"),
+                mnemonic(messages, "workspace.menu.view.next.mnemonic"),
             },
         .view_menu_shortcuts = {"Up", "Down"},
         .window_menu =
@@ -84,10 +146,23 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu.window.next"),
                 messages.translate("workspace.menu.window.close"),
             },
+        .window_menu_mnemonics =
+            {
+                mnemonic(messages, "workspace.menu.window.next.mnemonic"),
+                mnemonic(messages, "workspace.menu.window.close.mnemonic"),
+            },
         .window_menu_shortcuts = {"Ctrl+Tab", "Ctrl+W"},
         .help_menu = {messages.translate("workspace.menu.help.shortcuts")},
+        .help_menu_mnemonics = {mnemonic(messages, "workspace.menu.help.shortcuts.mnemonic")},
         .help_menu_shortcuts = {""},
     };
+    validate_mnemonics("menu bar", text.menu_bar, text.menu_bar_mnemonics);
+    validate_mnemonics("File menu", text.file_menu, text.file_menu_mnemonics);
+    validate_mnemonics("Database menu", text.database_menu, text.database_menu_mnemonics);
+    validate_mnemonics("View menu", text.view_menu, text.view_menu_mnemonics);
+    validate_mnemonics("Window menu", text.window_menu, text.window_menu_mnemonics);
+    validate_mnemonics("Help menu", text.help_menu, text.help_menu_mnemonics);
+    return text;
 }
 
 } // namespace vulpes::ui

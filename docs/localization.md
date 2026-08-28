@@ -7,9 +7,12 @@ localized identifiers.
 Semantic UI widgets receive their visible instructions from their caller rather
 than hard-coding English: the browse footer, prompts, record-form instructions,
 destructive dialogs, terminal-size warning, and all workspace/menu/status text
-therefore use catalog messages. Workspace menu mnemonics are the first character
-of each translated menu-bar label, so the Czech catalog uses `Alt+S` for
-`Soubor`; `F10` remains a locale-independent way to enter the menu bar. Schema
+therefore use catalog messages. Menu mnemonics use adjacent `.mnemonic` keys
+containing exactly one Unicode code point; they are not inferred from translated
+labels. Workspace construction verifies that each mnemonic occurs in its label
+after Unicode case folding and is unique within its menu scope. The Czech
+catalog deliberately uses `Alt+S` for `Soubor`; `F10` remains a
+locale-independent way to enter the menu bar. Schema
 field names are still the default labels; metadata-provided localized labels are
 a later layer.
 

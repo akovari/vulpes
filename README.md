@@ -72,9 +72,8 @@ Opening or creating another database closes its old documents, so no tab can
 retain a dataset from the previous database.
 
 Menus use measured Unicode window chrome, a right-aligned shortcut column, and
-visually disabled actions when their prerequisites are unavailable. Type the
-underlined first letter of a unique menu item to invoke it; repeated first
-letters cycle among the matching items. Pop-up windows are opaque and clipped
+visually disabled actions when their prerequisites are unavailable. Type a
+menu item's underlined mnemonic to invoke it. Pop-up windows are opaque and clipped
 to the current terminal, so closing a menu or dialog restores the document
 beneath it on the next diffed frame.
 
@@ -99,9 +98,12 @@ runtime as `--command`: `help`, `tables`, `schema <table>`, `browse <table>`,
 `sql`, and `quit` are supported. `schema <table>` opens a read-only schema tab;
 `browse` and `sql` open their persistent workspace documents.
 
-With a translated catalog, menu Alt mnemonics follow the first character of
-each translated menu label; `F10` always opens the first menu. For example, the
-shipped Czech catalog uses `Alt+S` for `Soubor`.
+Menu Alt mnemonics are explicit catalog entries rather than inferred from label
+text; `F10` always opens the first menu. Each mnemonic must occur in its label
+and be unique within its menu scope or catalog initialization fails with a
+metadata error. The shipped Czech catalog deliberately uses `Alt+S` for
+`Soubor`, while item mnemonics may highlight a later character such as `J` in
+`Otevřít jen pro čtení`.
 
 The default palette is `midnight`. It is applied consistently to the workspace,
 grids, forms, prompts, SQL console, schema documents, and window chrome. Use

@@ -26,6 +26,29 @@ auto first_code_point(std::string_view text) noexcept -> char32_t {
     return size > 0 ? static_cast<char32_t>(code_point) : U'\0';
 }
 
+auto lowercase_code_point(char32_t code_point) noexcept -> char32_t {
+    return static_cast<char32_t>(utf8proc_tolower(static_cast<utf8proc_int32_t>(code_point)));
+}
+
+auto find_code_point_column(std::string_view text, char32_t code_point) -> std::optional<int> {
+    const auto* cursor = reinterpret_cast<const utf8proc_uint8_t*>(text.data());
+    auto remaining = static_cast<utf8proc_ssize_t>(text.size());
+    int column{};
+    const auto target = lowercase_code_point(code_point);
+    while (remaining > 0) {
+        utf8proc_int32_t current{};
+        const auto consumed = utf8proc_iterate(cursor, remaining, &current);
+        if (consumed < 0)
+            return std::nullopt;
+        if (lowercase_code_point(static_cast<char32_t>(current)) == target)
+            return column;
+        cursor += consumed;
+        remaining -= consumed;
+        column += std::max(0, cell_width(static_cast<char32_t>(current)));
+    }
+    return std::nullopt;
+}
+
 auto text_width(std::string_view text) -> int {
     const auto* cursor = reinterpret_cast<const utf8proc_uint8_t*>(text.data());
     auto remaining = static_cast<utf8proc_ssize_t>(text.size());

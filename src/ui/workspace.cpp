@@ -18,12 +18,15 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
         buffer.put(column, y, U' ', style);
 }
 
-void write_menu(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_view name, bool active,
-                const Theme& theme) {
+void write_menu(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_view name, char32_t mnemonic,
+                bool active, const Theme& theme) {
     const auto label = " " + std::string{name} + " ";
     write(buffer, x, y, width, label, active ? theme.style(ThemeRole::active_menu) : theme.style(ThemeRole::menu));
-    buffer.put(x + 1, y, terminal::first_code_point(name),
-               active ? theme.style(ThemeRole::active_menu_mnemonic) : theme.style(ThemeRole::menu_mnemonic));
+    if (const auto column = terminal::find_code_point_column(name, mnemonic); column && x + 1 + *column < x + width) {
+        const auto glyph = buffer.cell(x + 1 + *column, y).glyph;
+        buffer.put(x + 1 + *column, y, glyph,
+                   active ? theme.style(ThemeRole::active_menu_mnemonic) : theme.style(ThemeRole::menu_mnemonic));
+    }
 }
 
 auto replace_argument(std::string text, std::string_view name, std::string_view value) -> std::string {
@@ -34,10 +37,6 @@ auto replace_argument(std::string text, std::string_view name, std::string_view 
         offset += value.size();
     }
     return text;
-}
-
-[[nodiscard]] auto lowercase_ascii(char32_t character) noexcept -> char32_t {
-    return character >= U'A' && character <= U'Z' ? character - U'A' + U'a' : character;
 }
 
 auto path_text(const std::filesystem::path& path) -> std::string {
@@ -290,8 +289,8 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
             return Menu::none;
         static constexpr std::array menus{Menu::file, Menu::database, Menu::view, Menu::window, Menu::help};
         for (std::size_t index = 0; index < menus.size(); ++index) {
-            const auto mnemonic = terminal::first_code_point(text_.menu_bar[index]);
-            if (lowercase_ascii(key->character) == lowercase_ascii(mnemonic))
+            if (terminal::lowercase_code_point(key->character) ==
+                terminal::lowercase_code_point(text_.menu_bar_mnemonics[index]))
                 return menus[index];
         }
         return Menu::none;
@@ -405,41 +404,37 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         }
         if (key != nullptr && key->key == terminal::Key::character && !key->ctrl && !key->alt) {
             std::span<const std::string> items;
+            std::span<const char32_t> mnemonics;
             switch (menu_) {
             case Menu::file:
                 items = text_.file_menu;
+                mnemonics = text_.file_menu_mnemonics;
                 break;
             case Menu::database:
                 items = text_.database_menu;
+                mnemonics = text_.database_menu_mnemonics;
                 break;
             case Menu::view:
                 items = text_.view_menu;
+                mnemonics = text_.view_menu_mnemonics;
                 break;
             case Menu::window:
                 items = text_.window_menu;
+                mnemonics = text_.window_menu_mnemonics;
                 break;
             case Menu::help:
                 items = text_.help_menu;
+                mnemonics = text_.help_menu_mnemonics;
                 break;
             case Menu::none:
                 break;
             }
-            std::vector<std::size_t> matches;
             for (std::size_t index = 0; index < items.size(); ++index) {
-                if (menu_item_enabled(menu_, index) &&
-                    lowercase_ascii(terminal::first_code_point(items[index])) == lowercase_ascii(key->character)) {
-                    matches.push_back(index);
+                if (menu_item_enabled(menu_, index) && terminal::lowercase_code_point(mnemonics[index]) ==
+                                                           terminal::lowercase_code_point(key->character)) {
+                    menu_selection_ = index;
+                    return activate_menu_item();
                 }
-            }
-            if (matches.size() == 1) {
-                menu_selection_ = matches.front();
-                return activate_menu_item();
-            }
-            if (!matches.empty()) {
-                const auto next =
-                    std::ranges::find_if(matches, [&](std::size_t index) { return index > menu_selection_; });
-                menu_selection_ = next == matches.end() ? matches.front() : *next;
-                return WorkspaceResult::redraw;
             }
         }
         if (key != nullptr && key->key == terminal::Key::enter)
@@ -528,8 +523,8 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         if (available_width <= 0)
             continue;
         const int label_width = std::min(terminal::text_width(text_.menu_bar[index]) + 2, available_width);
-        write_menu(buffer, next_menu_x, bounds.y, label_width, text_.menu_bar[index], menu_ == menus[index],
-                   current_theme);
+        write_menu(buffer, next_menu_x, bounds.y, label_width, text_.menu_bar[index], text_.menu_bar_mnemonics[index],
+                   menu_ == menus[index], current_theme);
         next_menu_x += label_width + 1;
     }
     windows_.render_tabs(buffer, {bounds.x, bounds.y + 1, bounds.width, 1});
@@ -574,25 +569,31 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     }
     if (menu_ != Menu::none) {
         std::span<const std::string> items;
+        std::span<const char32_t> mnemonics;
         int menu_x = menu_positions[0];
         switch (menu_) {
         case Menu::file:
             items = text_.file_menu;
+            mnemonics = text_.file_menu_mnemonics;
             break;
         case Menu::database:
             items = text_.database_menu;
+            mnemonics = text_.database_menu_mnemonics;
             menu_x = menu_positions[1];
             break;
         case Menu::view:
             items = text_.view_menu;
+            mnemonics = text_.view_menu_mnemonics;
             menu_x = menu_positions[2];
             break;
         case Menu::window:
             items = text_.window_menu;
+            mnemonics = text_.window_menu_mnemonics;
             menu_x = menu_positions[3];
             break;
         case Menu::help:
             items = text_.help_menu;
+            mnemonics = text_.help_menu_mnemonics;
             menu_x = menu_positions[4];
             break;
         case Menu::none:
@@ -649,10 +650,12 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
                 write(buffer, menu_x + 1, row, menu_width - 2, "", style);
                 buffer.put(menu_x + 1, row, selected ? U'►' : U' ', style);
                 write(buffer, menu_x + 3, row, menu_width - 6, items[index], style);
-                if (!items[index].empty()) {
+                if (const auto column = terminal::find_code_point_column(items[index], mnemonics[index]);
+                    column && *column < menu_width - 6) {
                     auto mnemonic_style = style;
                     mnemonic_style.underline = true;
-                    buffer.put(menu_x + 3, row, terminal::first_code_point(items[index]), mnemonic_style);
+                    const auto mnemonic_x = menu_x + 3 + *column;
+                    buffer.put(mnemonic_x, row, buffer.cell(mnemonic_x, row).glyph, mnemonic_style);
                 }
                 const int shortcut_width = terminal::text_width(shortcuts[index]);
                 if (shortcut_width > 0)

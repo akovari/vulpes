@@ -85,7 +85,10 @@ and stable two-axis viewport state. See ADRs 0019 and 0020.
 drop shadow; `Button` renders a focusable action affordance. Prompts,
 confirmations, directory selection, record forms, and the SQL editor compose
 the frame instead of implementing borders independently. Pop-up menus use the
-same visual language while keeping their item state in `Workspace`.
+same visual language while keeping their item state in `Workspace`. Menu labels
+and explicit mnemonic code points enter together through `WorkspaceText`;
+construction validates occurrence and per-scope uniqueness, and Unicode-aware
+lookup drives both rendering and activation. See ADR 0022.
 `WindowManager` continues to own document lifetime, tab selection, and modal
 priority. See ADR 0018.
 

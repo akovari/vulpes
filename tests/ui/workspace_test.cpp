@@ -116,6 +116,8 @@ TEST_CASE("workspace menus render classic chrome, shortcuts, disabled states, an
     CHECK(buffer.cell(4, 2).glyph == U'O');
     CHECK(buffer.cell(4, 2).style.underline);
     CHECK(buffer.cell(28, 2).glyph == U'C');
+    CHECK(buffer.cell(18, 3).glyph == U'r');
+    CHECK(buffer.cell(18, 3).style.underline);
 
     CHECK(workspace.handle(vulpes::core::ActionId::application_back,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==

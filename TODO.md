@@ -131,7 +131,7 @@ on Windows, Linux, and macOS.
   normalization, and configurable field overwrite/insert behavior.
 - [ ] Add SQL editor undo/redo, bounded command history, and editing tests before
   evaluating syntax highlighting or schema-aware completion.
-- [ ] Define explicit per-locale menu mnemonics instead of inferring the first
+- [x] Define explicit per-locale menu mnemonics instead of inferring the first
   character, including collision validation and unambiguous activation.
 - [x] Add grid row/column position indicators, scrollbar affordances, empty-state
   presentation, and user-adjustable column widths.
