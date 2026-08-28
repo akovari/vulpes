@@ -7,6 +7,7 @@ struct Rect {
     int y{};
     int width{};
     int height{};
+    auto operator==(const Rect&) const -> bool = default;
 };
 
 } // namespace vulpes::ui

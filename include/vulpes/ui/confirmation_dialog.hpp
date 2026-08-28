@@ -1,8 +1,10 @@
 #pragma once
 
 #include "vulpes/terminal/terminal.hpp"
+#include "vulpes/ui/button.hpp"
 #include "vulpes/ui/focus_ring.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/window_frame.hpp"
 
 #include <string>
 
@@ -24,9 +26,9 @@ class ConfirmationDialog {
   private:
     std::string title_;
     std::string message_;
-    std::string confirm_label_;
-    std::string cancel_label_;
     std::string instructions_;
+    Button confirm_button_;
+    Button cancel_button_;
     FocusRing button_focus_;
 };
 

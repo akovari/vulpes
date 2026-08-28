@@ -68,6 +68,7 @@ add_library(vulpes_core
     src/terminal/screen_buffer.cpp
     src/terminal/test_terminal.cpp
     src/terminal/unicode.cpp
+    src/ui/button.cpp
     src/ui/confirmation_dialog.cpp
     src/ui/browse_document.cpp
     src/ui/document_session.cpp
@@ -82,6 +83,7 @@ add_library(vulpes_core
     src/ui/theme.cpp
     src/ui/workspace.cpp
     src/ui/workspace_text.cpp
+    src/ui/window_frame.cpp
     src/ui/window_manager.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)

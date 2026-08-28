@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/window_frame.hpp"
 
 #include <string>
 #include <string_view>

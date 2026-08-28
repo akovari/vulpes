@@ -10,6 +10,7 @@ add_executable(vulpes_tests
     db/schema_test.cpp
     examples/inventory_test.cpp
     model/dataset_test.cpp
+    ui/button_test.cpp
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp
     ui/document_session_test.cpp
@@ -24,6 +25,7 @@ add_executable(vulpes_tests
     ui/workspace_test.cpp
     ui/workspace_text_test.cpp
     ui/window_manager_test.cpp
+    ui/window_frame_test.cpp
     terminal/frame_diff_test.cpp
     terminal/ansi_input_test.cpp
     terminal/cpp_terminal_adapter_test.cpp

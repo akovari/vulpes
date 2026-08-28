@@ -70,6 +70,11 @@ items. Forms use it to avoid read-only fields, and destructive confirmations
 use it for their buttons. The controls retain responsibility for their own key
 semantics, so the focus model remains independent of a terminal implementation.
 
+`WindowFrame` renders opaque, logical terminal windows; `Button` renders a
+focusable action affordance. Prompts, confirmations, and record forms compose
+these primitives rather than each implementing terminal borders. `WindowManager`
+continues to own document lifetime, tab selection, and modal priority.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

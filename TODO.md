@@ -114,7 +114,8 @@ on Windows, Linux, and macOS.
 
 - [x] Implement a schema-generated text, number, checkbox, and read-only record
   form with keyboard save/cancel.
-- [ ] Add button and dialog widgets, including destructive-action confirmation.
+- [x] Add reusable button and opaque dialog-window primitives, including
+  destructive-action confirmation.
 - [x] Add transactional insert/edit/delete handling and destructive delete
   confirmation.
 - [x] Map constraint/validation failures to fields without losing edits.

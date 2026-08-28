@@ -5,6 +5,7 @@
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/focus_ring.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/window_frame.hpp"
 
 #include <optional>
 #include <string>

@@ -154,18 +154,10 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
 }
 
 void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
-    if (bounds.width < 20 || bounds.height < 6 || bounds.x < 0 || bounds.y < 0 ||
-        bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
+    if (!WindowFrame::fits(buffer, bounds, 20, 6))
         return;
     const int interior = bounds.width - 2;
-    auto border = [&](int y) {
-        buffer.put(bounds.x, y, U'+');
-        for (int column = 0; column < interior; ++column)
-            buffer.put(bounds.x + 1 + column, y, U'-');
-        buffer.put(bounds.x + bounds.width - 1, y, U'+');
-    };
-    border(bounds.y);
-    write_padded(buffer, bounds.x + 2, bounds.y, interior - 2, title_);
+    WindowFrame::render(buffer, bounds, title_);
 
     const int label_width = std::min(18, interior / 2);
     const int value_width = interior - label_width;
@@ -189,7 +181,6 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     buffer.put(bounds.x, footer_y, U'|');
     write_padded(buffer, bounds.x + 2, footer_y, interior - 2, error_.empty() ? instructions_ : error_);
     buffer.put(bounds.x + bounds.width - 1, footer_y, U'|');
-    border(bounds.y + bounds.height - 1);
 }
 
 auto RecordForm::field_kind(const db::FieldSchema& field, FormMode mode, bool is_foreign_key) -> FormFieldKind {
