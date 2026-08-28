@@ -4,6 +4,7 @@
 #include "vulpes/db/schema.hpp"
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/confirmation_dialog.hpp"
+#include "vulpes/ui/directory_browser.hpp"
 #include "vulpes/ui/geometry.hpp"
 #include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/ui/theme.hpp"
@@ -53,6 +54,7 @@ class Workspace {
     enum class Menu { none, file, database, view, window, help };
 
     void begin_path_prompt(Modal modal);
+    void begin_directory_browser();
     void begin_command_prompt();
     void begin_close_confirmation();
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
@@ -67,6 +69,7 @@ class Workspace {
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;
+    std::optional<DirectoryBrowser> directory_browser_;
     std::optional<ConfirmationDialog> close_confirmation_;
     std::string submitted_value_;
     const Theme* theme_;

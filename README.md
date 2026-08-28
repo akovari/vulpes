@@ -65,6 +65,12 @@ switches tabs and `Ctrl+W` asks before closing the active non-workspace tab.
 Opening or creating another database closes its old documents, so no tab can
 retain a dataset from the previous database.
 
+Choose **Browse files...** from the File or Database menu to navigate the
+current directory without leaving Vulpes. Enter opens a directory or selects a
+file, Backspace goes to its parent, Home/End move within the listing, and Esc
+cancels. The browser is optional: manual path entry remains available for local,
+network, and known paths.
+
 The workspace keeps the ten most recently opened or created databases in a
 small, versioned user settings file. The home screen lists them; use Up/Down
 and Enter to reopen a selected entry. The default settings path is

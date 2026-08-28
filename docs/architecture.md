@@ -91,6 +91,11 @@ confirmation; the browse surface changes its footer accordingly. Workspace
 Open, Open read-only, and Create map explicitly to SQLite read/write,
 read-only, and read/write-create modes.
 
+The optional `DirectoryBrowser` is a semantic, read-only filesystem navigator.
+It returns a selected path to the workspace but never opens SQLite or changes a
+file itself. This preserves manual path entry for known, UNC, and otherwise
+non-browsable locations; see [ADR 0012](adr/0012-directory-browser.md).
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

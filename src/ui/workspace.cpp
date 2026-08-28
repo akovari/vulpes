@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <span>
 
 namespace vulpes::ui {
@@ -37,6 +38,11 @@ auto replace_argument(std::string text, std::string_view name, std::string_view 
     return character >= U'A' && character <= U'Z' ? character - U'A' + U'a' : character;
 }
 
+auto path_text(const std::filesystem::path& path) -> std::string {
+    const auto encoded = path.generic_u8string();
+    return {encoded.begin(), encoded.end()};
+}
+
 } // namespace
 
 Workspace::Workspace(WorkspaceText text, const Theme& theme)
@@ -45,6 +51,7 @@ Workspace::Workspace(WorkspaceText text, const Theme& theme)
 
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables, bool read_only) {
     prompt_.reset();
+    directory_browser_.reset();
     close_confirmation_.reset();
     modal_ = Modal::none;
     submitted_value_.clear();
@@ -126,6 +133,17 @@ void Workspace::begin_path_prompt(Modal modal) {
     windows_.show_modal(title);
 }
 
+void Workspace::begin_directory_browser() {
+    submitted_value_.clear();
+    std::error_code error;
+    auto directory = std::filesystem::current_path(error);
+    if (error)
+        directory.clear();
+    directory_browser_.emplace(std::move(directory), text_.directory_browser_title,
+                               text_.directory_browser_instructions, text_.directory_browser_parent);
+    windows_.show_modal(text_.directory_browser_title);
+}
+
 void Workspace::begin_command_prompt() {
     modal_ = Modal::command;
     submitted_value_.clear();
@@ -159,6 +177,10 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
             return WorkspaceResult::redraw;
         }
         if (selected == 2) {
+            begin_directory_browser();
+            return WorkspaceResult::redraw;
+        }
+        if (selected == 3) {
             begin_path_prompt(Modal::create);
             return WorkspaceResult::redraw;
         }
@@ -173,10 +195,14 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
             return WorkspaceResult::redraw;
         }
         if (selected == 2) {
-            begin_path_prompt(Modal::create);
+            begin_directory_browser();
             return WorkspaceResult::redraw;
         }
         if (selected == 3) {
+            begin_path_prompt(Modal::create);
+            return WorkspaceResult::redraw;
+        }
+        if (selected == 4) {
             const auto* table = selected_table();
             if (table == nullptr) {
                 set_status(text_.open_before_browse);
@@ -230,6 +256,21 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         }
         return result == ConfirmationResult::unchanged ? WorkspaceResult::unchanged : WorkspaceResult::redraw;
     }
+    if (directory_browser_) {
+        const auto result = directory_browser_->handle(event);
+        if (result == DirectoryBrowserResult::selected) {
+            submitted_value_ = path_text(*directory_browser_->selected_path());
+            directory_browser_.reset();
+            windows_.dismiss_modal();
+            return WorkspaceResult::open_database;
+        }
+        if (result == DirectoryBrowserResult::cancelled) {
+            directory_browser_.reset();
+            windows_.dismiss_modal();
+            return WorkspaceResult::redraw;
+        }
+        return result == DirectoryBrowserResult::unchanged ? WorkspaceResult::unchanged : WorkspaceResult::redraw;
+    }
     const auto menu_from_mnemonic = [this, key] {
         if (key == nullptr || !key->alt)
             return Menu::none;
@@ -244,9 +285,9 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     const auto menu_item_count = [this] {
         switch (menu_) {
         case Menu::file:
-            return std::size_t{4};
-        case Menu::database:
             return std::size_t{5};
+        case Menu::database:
+            return std::size_t{6};
         case Menu::view:
         case Menu::window:
             return std::size_t{2};
@@ -498,6 +539,13 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (prompt_)
         prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,
                                  std::min(60, bounds.width), 5});
+    if (directory_browser_) {
+        const int dialog_height = std::min(20, bounds.height - 2);
+        const int dialog_width = std::min(60, bounds.width);
+        directory_browser_->render(buffer,
+                                   {bounds.x + (bounds.width - dialog_width) / 2,
+                                    bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+    }
     if (close_confirmation_) {
         constexpr int dialog_height = 6;
         const int dialog_width = std::min(60, bounds.width);

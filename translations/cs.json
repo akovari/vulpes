@@ -2,6 +2,9 @@
   "locale": "cs",
   "messages": {
     "application.title": "Vulpes",
+    "workspace.directory_browser_instructions": "Enter Otevřít/složka   Backspace Nadřazená   Esc Zrušit",
+    "workspace.directory_browser_parent": "[..]",
+    "workspace.directory_browser_title": "Procházet soubory",
     "browse.read_only_footer": "F3 Hledat  F4 Filtr  F5 Obnovit  F6 Řazení  Esc Zpět  [pouze pro čtení]",
     "application.unknown_command": "Neznámý příkaz. Pro nápovědu zadejte help.",
     "browse.filter_prompt": "Filtr {field} (například: >= 10; prázdné zruší filtry)",
@@ -49,6 +52,8 @@
     "workspace.menu.database.open": "Otevřít databázi",
     "workspace.menu.database.open_read_only": "Otevřít jen pro čtení",
     "workspace.menu.database.sql": "Konzola SQL",
+    "workspace.menu.file.browse_files": "Procházet soubory...",
+    "workspace.menu.database.browse_files": "Procházet soubory...",
     "workspace.menu.help.shortcuts": "Klávesové zkratky",
     "workspace.menu.view.next": "Další tabulka",
     "workspace.menu.view.previous": "Předchozí tabulka",

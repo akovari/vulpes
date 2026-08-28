@@ -88,7 +88,7 @@ on Windows, Linux, and macOS.
 - [x] Start without arguments in a keyboard-first workspace shell.
 - [x] Add keyboard-navigable File, Database, View, Window, and Help menus.
 - [x] Open or create SQLite databases through a portable path-entry dialog.
-- [ ] Manage active document tabs, modal input, focus, and a status bar.
+- [x] Manage active document tabs, modal input, focus, and a status bar.
 - [x] Host browse and SQL-console surfaces as persistent workspace documents.
 - [ ] Make File-menu Escape/Left/Right/Alt mnemonic behavior reliable on all
   supported Windows terminal hosts.
@@ -101,7 +101,8 @@ on Windows, Linux, and macOS.
   preferences and expose it on the home screen.
 - [x] Add explicit read/write, read-only, and create workspace open modes with
   read-only dataset guards, visual indication, and a CLI non-creation test.
-- [ ] Design an optional directory browser separately from portable path entry.
+- [x] Design and implement an optional directory browser separately from
+  portable path entry.
 
 ## Cross-cutting — localization
 

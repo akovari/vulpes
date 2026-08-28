@@ -103,6 +103,24 @@ TEST_CASE("workspace menu navigation supports arrows, mnemonics, and Escape", "[
           vulpes::ui::WorkspaceResult::redraw);
 }
 
+TEST_CASE("workspace launches and dismisses the optional directory browser", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    CHECK(workspace.handle(vulpes::core::ActionId::application_menu,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f10}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    for (int count = 0; count < 2; ++count) {
+        CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+              vulpes::ui::WorkspaceResult::redraw);
+    }
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+}
+
 TEST_CASE("workspace command prompt submits semantic command text and preserves Escape cancellation",
           "[ui][workspace]") {
     auto workspace = english_workspace();
@@ -174,7 +192,7 @@ TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspa
               vulpes::core::ActionId::none,
               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
           vulpes::ui::WorkspaceResult::redraw);
-    for (int count = 0; count < 3; ++count) {
+    for (int count = 0; count < 4; ++count) {
         CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
                                vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
               vulpes::ui::WorkspaceResult::redraw);
@@ -187,7 +205,7 @@ TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspa
               vulpes::core::ActionId::none,
               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
           vulpes::ui::WorkspaceResult::redraw);
-    for (int count = 0; count < 4; ++count) {
+    for (int count = 0; count < 5; ++count) {
         CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
                                vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
               vulpes::ui::WorkspaceResult::redraw);

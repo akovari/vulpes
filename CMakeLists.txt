@@ -71,6 +71,7 @@ add_library(vulpes_core
     src/terminal/unicode.cpp
     src/ui/button.cpp
     src/ui/confirmation_dialog.cpp
+    src/ui/directory_browser.cpp
     src/ui/browse_document.cpp
     src/ui/document_session.cpp
     src/ui/focus_ring.cpp

@@ -9,6 +9,9 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .open_database_title = messages.translate("workspace.open_title"),
         .open_read_only_database_title = messages.translate("workspace.open_read_only_title"),
         .create_database_title = messages.translate("workspace.create_title"),
+        .directory_browser_title = messages.translate("workspace.directory_browser_title"),
+        .directory_browser_instructions = messages.translate("workspace.directory_browser_instructions"),
+        .directory_browser_parent = messages.translate("workspace.directory_browser_parent"),
         .path_instructions = messages.translate("workspace.path_instructions"),
         .command_title = messages.translate("workspace.command_title"),
         .command_instructions = messages.translate("workspace.command_instructions"),
@@ -55,6 +58,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
             {
                 messages.translate("workspace.menu.file.open"),
                 messages.translate("workspace.menu.file.open_read_only"),
+                messages.translate("workspace.menu.file.browse_files"),
                 messages.translate("workspace.menu.file.create"),
                 messages.translate("workspace.menu.file.exit"),
             },
@@ -62,6 +66,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
             {
                 messages.translate("workspace.menu.database.open"),
                 messages.translate("workspace.menu.database.open_read_only"),
+                messages.translate("workspace.menu.database.browse_files"),
                 messages.translate("workspace.menu.database.create"),
                 messages.translate("workspace.menu.database.browse"),
                 messages.translate("workspace.menu.database.sql"),
