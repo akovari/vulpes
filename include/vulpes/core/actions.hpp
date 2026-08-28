@@ -28,6 +28,8 @@ enum class ActionId {
     dataset_last,
     grid_previous_column,
     grid_next_column,
+    grid_narrow_column,
+    grid_widen_column,
     record_new,
     record_edit,
     record_delete,

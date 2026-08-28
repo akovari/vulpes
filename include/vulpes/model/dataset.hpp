@@ -44,7 +44,7 @@ class Dataset {
 
     [[nodiscard]] auto schema() const noexcept -> const db::TableSchema& { return schema_; }
     [[nodiscard]] auto rows() const noexcept -> const std::vector<db::Row>& { return rows_; }
-    [[nodiscard]] auto total_count() -> std::size_t;
+    [[nodiscard]] auto total_count() const -> std::size_t;
     [[nodiscard]] auto current() const -> std::optional<db::Row>;
     [[nodiscard]] auto current_row_index() const -> std::optional<std::size_t>;
     [[nodiscard]] auto current_identity() const -> std::optional<RowIdentity>;
@@ -101,6 +101,7 @@ class Dataset {
     std::vector<Filter> filters_;
     std::optional<std::string> search_;
     std::vector<db::Row> rows_;
+    mutable std::optional<std::size_t> total_count_cache_;
     DatasetMode mode_{DatasetMode::browse};
     std::vector<std::optional<db::Value>> draft_;
     std::vector<std::size_t> modified_fields_;

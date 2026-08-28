@@ -78,8 +78,14 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
                                const Theme& theme)
     : messages_{&messages}, theme_{&theme}, dataset_{database, std::move(table)}, controller_{dataset_},
-      grid_{dataset_, dataset_.schema().name,
-            messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"), theme} {
+      grid_{dataset_,
+            dataset_.schema().name,
+            messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"),
+            theme,
+            {.empty = messages.translate("grid.empty"),
+             .row = messages.translate("grid.row"),
+             .rows = messages.translate("grid.rows"),
+             .column = messages.translate("grid.column")}} {
 }
 
 void BrowseDocument::begin_form(FormMode mode) {
@@ -205,6 +211,10 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
         return grid_.move_left() ? DocumentResult::redraw : DocumentResult::unchanged;
     case core::ActionId::grid_next_column:
         return grid_.move_right() ? DocumentResult::redraw : DocumentResult::unchanged;
+    case core::ActionId::grid_narrow_column:
+        return grid_.resize_selected_column(-1) ? DocumentResult::redraw : DocumentResult::unchanged;
+    case core::ActionId::grid_widen_column:
+        return grid_.resize_selected_column(1) ? DocumentResult::redraw : DocumentResult::unchanged;
     default:
         break;
     }

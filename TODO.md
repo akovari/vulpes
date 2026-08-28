@@ -133,7 +133,7 @@ on Windows, Linux, and macOS.
   evaluating syntax highlighting or schema-aware completion.
 - [ ] Define explicit per-locale menu mnemonics instead of inferring the first
   character, including collision validation and unambiguous activation.
-- [ ] Add grid row/column position indicators, scrollbar affordances, empty-state
+- [x] Add grid row/column position indicators, scrollbar affordances, empty-state
   presentation, and user-adjustable column widths.
 - [ ] Add dirty-document markers and a general modal/window stack before forms
   can host nested relationship drill-down windows.

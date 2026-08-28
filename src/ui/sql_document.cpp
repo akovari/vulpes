@@ -35,7 +35,11 @@ void SqlDocument::execute() {
     result_rows_ = GridRows::from_sql_result(std::move(result));
     if (!result_rows_->fields.empty())
         result_grid_.emplace(*result_rows_, messages_->translate("sql.results"),
-                             messages_->translate("sql.result_footer"), *theme_);
+                             messages_->translate("sql.result_footer"), *theme_,
+                             GridText{.empty = messages_->translate("grid.empty"),
+                                      .row = messages_->translate("grid.row"),
+                                      .rows = messages_->translate("grid.rows"),
+                                      .column = messages_->translate("grid.column")});
     console_.set_status(messages_->translate(
         "sql.status",
         {{"rows", std::to_string(rows)}, {"changes", std::to_string(changes)}, {"truncated", truncated}}));
@@ -62,6 +66,10 @@ auto SqlDocument::handle(core::ActionId action, const terminal::InputEvent& even
             if (action == core::ActionId::grid_previous_column && result_grid_->move_left())
                 return DocumentResult::redraw;
             if (action == core::ActionId::grid_next_column && result_grid_->move_right())
+                return DocumentResult::redraw;
+            if (action == core::ActionId::grid_narrow_column && result_grid_->resize_selected_column(-1))
+                return DocumentResult::redraw;
+            if (action == core::ActionId::grid_widen_column && result_grid_->resize_selected_column(1))
                 return DocumentResult::redraw;
             return DocumentResult::unchanged;
         }

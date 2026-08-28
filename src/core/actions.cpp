@@ -33,6 +33,8 @@ auto default_bindings() -> std::vector<KeyBinding> {
         {{.key = Key::page_down}, ActionId::dataset_last},
         {{.key = Key::left}, ActionId::grid_previous_column},
         {{.key = Key::right}, ActionId::grid_next_column},
+        {{.key = Key::left, .ctrl = true}, ActionId::grid_narrow_column},
+        {{.key = Key::right, .ctrl = true}, ActionId::grid_widen_column},
         {{.key = Key::insert_key}, ActionId::record_new},
         {{.key = Key::f2}, ActionId::record_edit},
         {{.key = Key::delete_key}, ActionId::record_delete},
@@ -102,6 +104,10 @@ auto action_id(ActionId action) -> std::string_view {
         return "grid.previous_column";
     case ActionId::grid_next_column:
         return "grid.next_column";
+    case ActionId::grid_narrow_column:
+        return "grid.narrow_column";
+    case ActionId::grid_widen_column:
+        return "grid.widen_column";
     case ActionId::record_new:
         return "record.new";
     case ActionId::record_edit:

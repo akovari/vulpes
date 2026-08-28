@@ -92,6 +92,12 @@ priority. See ADR 0018.
 `Grid` computes bounded preferred widths from field names and the current owned
 page, then distributes remaining cells without changing dataset paging. It uses
 separate header, ordinary-row, selected-row, focused-cell, and footer roles.
+Per-field width overrides remain presentation state inside the Grid and are
+adjusted through semantic actions. The renderer keeps the selected row within a
+viewport smaller than the dataset page, reports absolute row/column position,
+and derives border overflow/thumb markers without exposing terminal behavior to
+the dataset. Localized `GridText` supplies empty-state and position labels. See
+ADR 0021.
 Record forms derive a viewport from the focused field when a schema contains
 more fields than the current window can show. These are rendering policies;
 they do not leak into the dataset model.

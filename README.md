@@ -134,7 +134,11 @@ read-only until a binary editor exists. Compact form windows keep the focused
 field visible and show scroll indicators when more fields exist. Failed database
 validation leaves the draft open for correction. Grids size columns from their
 headers and current page rather than assigning every column the same width; the
-focused cell remains distinct from the selected row.
+focused cell remains distinct from the selected row. The footer reports the
+absolute row and selected-column position, border markers expose horizontal and
+vertical overflow, and empty datasets have an explicit empty state. Use
+`Ctrl+Left` and `Ctrl+Right` to narrow or widen the selected column for the
+current document.
 
 Single-line prompts and generated text/number fields have a logical UTF-8
 cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long

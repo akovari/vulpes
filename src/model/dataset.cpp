@@ -59,9 +59,7 @@ namespace {
             using T = std::decay_t<decltype(item)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return {};
-            else if constexpr (std::is_same_v<T, std::int64_t>)
-                return std::to_string(item);
-            else if constexpr (std::is_same_v<T, double>)
+            else if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, double>)
                 return std::to_string(item);
             else if constexpr (std::is_same_v<T, std::string>)
                 return item;
@@ -82,15 +80,20 @@ Dataset::Dataset(db::Database& database, db::TableSchema schema, std::size_t pag
     refresh();
 }
 
-auto Dataset::total_count() -> std::size_t {
+auto Dataset::total_count() const -> std::size_t {
+    if (total_count_cache_)
+        return *total_count_cache_;
     std::vector<db::Value> values;
     auto query = database_->prepare("SELECT count(*) FROM " + db::detail::quote_identifier(schema_.name) +
                                     query_where_clause(values));
     for (std::size_t index = 0; index < values.size(); ++index)
         query.bind(static_cast<int>(index + 1), values[index]);
-    if (!query.step())
+    if (!query.step()) {
+        total_count_cache_ = 0;
         return 0;
-    return static_cast<std::size_t>(query.column(0).as_int());
+    }
+    total_count_cache_ = static_cast<std::size_t>(query.column(0).as_int());
+    return *total_count_cache_;
 }
 
 auto Dataset::current() const -> std::optional<db::Row> {
@@ -364,6 +367,7 @@ void Dataset::erase() {
 }
 
 void Dataset::refresh() {
+    total_count_cache_.reset();
     // A keyset page is defined by the previous page's anchor, which is not a
     // durable bookmark across a refresh or a write. Refresh therefore starts
     // from the first matching row rather than claiming to preserve an offset.
