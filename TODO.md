@@ -91,7 +91,7 @@ on Windows, Linux, and macOS.
   File-menu prototype, with deterministic keyboard tests.
 - [ ] Add document tabs, active-document switching, close confirmation, and a
   tab-local title/status model.
-- [ ] Add a command window/palette using the existing command dispatcher.
+- [x] Add a command window/palette using the existing command dispatcher.
 - [ ] Add recent databases, safe create/open mode selection, read-only indication,
   and persistent workspace preferences.
 - [ ] Design an optional directory browser separately from portable path entry.

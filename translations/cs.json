@@ -37,8 +37,8 @@
     "workspace.document.browse": "Procházet {table}",
     "workspace.document.sql": "SQL",
     "workspace.document.workspace": "Pracovní plocha",
-    "workspace.home_shortcuts": "Ctrl+O Otevřít databázi   Ctrl+N Vytvořit databázi   F10 Nabídka",
-    "workspace.help_shortcuts": "F10 nabídka  Alt+S Soubor  Ctrl+O otevřít  Ctrl+N vytvořit  Ctrl+Tab další karta  Ctrl+W zavřít kartu",
+    "workspace.home_shortcuts": "Ctrl+O Otevřít databázi   Ctrl+N Vytvořit databázi   Ctrl+P Příkaz   F10 Nabídka",
+    "workspace.help_shortcuts": "F10 nabídka  Alt+S Soubor  Ctrl+O otevřít  Ctrl+N vytvořit  Ctrl+P příkaz  Ctrl+Tab další karta  Ctrl+W zavřít kartu",
     "workspace.menu.file.create": "Vytvořit databázi",
     "workspace.menu.file.exit": "Ukončit",
     "workspace.menu.file.open": "Otevřít databázi",
@@ -72,6 +72,14 @@
     "workspace.shortcut.quit.key": "Ctrl+C",
     "workspace.shortcut.quit.label": " Ukončit",
     "workspace.tables_and_views": "Tabulky a pohledy:",
-    "workspace.view_suffix": " [pohled]"
+    "workspace.view_suffix": " [pohled]",
+    "schema.footer": "Nahoru/Dolů Navigace   Esc Zpět",
+    "workspace.command_database_required": "Před spuštěním příkazu otevřete databázi.",
+    "workspace.command_instructions": "Enter Spustit   Esc Zrušit   Pro příkazy napište help",
+    "workspace.command_tables": "Obnoveno: {count} tabulek a pohledů.",
+    "workspace.command_title": "Příkaz",
+    "workspace.document.schema": "Schéma: {table}",
+    "workspace.shortcut.command.key": "Ctrl+P",
+    "workspace.shortcut.command.label": " Příkaz  "
   }
 }

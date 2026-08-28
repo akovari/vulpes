@@ -73,6 +73,7 @@ add_library(vulpes_core
     src/ui/document_session.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
+    src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp
     src/ui/text_prompt.cpp

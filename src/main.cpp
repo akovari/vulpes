@@ -9,6 +9,7 @@
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/browse_document.hpp"
 #include "vulpes/ui/document_session.hpp"
+#include "vulpes/ui/schema_document.hpp"
 #include "vulpes/ui/sql_document.hpp"
 #include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/workspace.hpp"
@@ -86,8 +87,34 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::core::ActionMap actions;
     vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme};
     std::optional<vulpes::db::Database> database;
-    using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SqlDocument>;
+    using WorkspaceSurface =
+        std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SchemaDocument, vulpes::ui::SqlDocument>;
     std::unordered_map<std::string, WorkspaceSurface> surfaces;
+    const auto host_active_surface = [&](const vulpes::db::TableSchema* table = nullptr) {
+        if (!database)
+            return;
+        const auto& document = workspace.active_document();
+        switch (document.kind) {
+        case vulpes::ui::DocumentKind::browse:
+            if (table == nullptr)
+                table = workspace.selected_table();
+            if (table != nullptr) {
+                surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database, *table,
+                                     messages);
+            }
+            return;
+        case vulpes::ui::DocumentKind::schema:
+            if (table != nullptr) {
+                surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SchemaDocument>, *table, messages);
+            }
+            return;
+        case vulpes::ui::DocumentKind::sql_console:
+            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages);
+            return;
+        case vulpes::ui::DocumentKind::workspace:
+            return;
+        }
+    };
     for (;;) {
         const auto updated = terminal.size();
         if (updated.width != size.width || updated.height != size.height) {
@@ -129,13 +156,76 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             } catch (const vulpes::Error& error) {
                 workspace.set_status(error.what());
             }
+        } else if (outcome == vulpes::ui::WorkspaceResult::command) {
+            try {
+                const auto command = vulpes::core::parse_command(workspace.requested_command());
+                const auto show_invalid_arguments = [&] {
+                    workspace.set_status(
+                        messages.translate("error.invalid_command_arguments",
+                                           {{"command", std::string{vulpes::core::action_id(command.id)}}}));
+                };
+                if (command.id == vulpes::core::CommandId::none) {
+                    workspace.set_status(messages.translate("command.help"));
+                } else if (!database) {
+                    if (command.id == vulpes::core::CommandId::help) {
+                        if (command.arguments.empty())
+                            workspace.set_status(messages.translate("command.help"));
+                        else
+                            show_invalid_arguments();
+                    } else if (command.id == vulpes::core::CommandId::quit) {
+                        if (command.arguments.empty())
+                            return 0;
+                        show_invalid_arguments();
+                    } else if (command.id == vulpes::core::CommandId::unknown) {
+                        workspace.set_status(messages.translate("application.unknown_command"));
+                    } else {
+                        workspace.set_status(messages.translate("workspace.command_database_required"));
+                    }
+                } else {
+                    vulpes::core::ApplicationRuntime application{*database};
+                    const auto response = application.execute(command);
+                    switch (response.outcome) {
+                    case vulpes::core::CommandOutcome::help:
+                        workspace.set_status(messages.translate("command.help"));
+                        break;
+                    case vulpes::core::CommandOutcome::tables:
+                        workspace.set_tables(response.tables);
+                        workspace.set_status(messages.translate("workspace.command_tables",
+                                                                {{"count", std::to_string(response.tables.size())}}));
+                        break;
+                    case vulpes::core::CommandOutcome::schema:
+                        workspace.open_schema(*response.table);
+                        host_active_surface(&*response.table);
+                        break;
+                    case vulpes::core::CommandOutcome::browse:
+                        workspace.open_browse(*response.table);
+                        host_active_surface(&*response.table);
+                        break;
+                    case vulpes::core::CommandOutcome::sql:
+                        workspace.open_sql_console();
+                        host_active_surface();
+                        break;
+                    case vulpes::core::CommandOutcome::quit:
+                        return 0;
+                    case vulpes::core::CommandOutcome::unknown_command:
+                        workspace.set_status(messages.translate("application.unknown_command"));
+                        break;
+                    case vulpes::core::CommandOutcome::invalid_arguments:
+                        show_invalid_arguments();
+                        break;
+                    case vulpes::core::CommandOutcome::table_not_found:
+                        workspace.set_status(
+                            messages.translate("error.unknown_table", {{"name", command.arguments.front()}}));
+                        break;
+                    }
+                }
+            } catch (const vulpes::Error& error) {
+                workspace.set_status(error.what());
+            }
         } else if (outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) {
-            const auto& document = workspace.active_document();
-            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database,
-                                 *workspace.selected_table(), messages);
+            host_active_surface();
         } else if (outcome == vulpes::ui::WorkspaceResult::run_sql && database) {
-            const auto& document = workspace.active_document();
-            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages);
+            host_active_surface();
         } else if (outcome == vulpes::ui::WorkspaceResult::unchanged) {
             const auto& document = workspace.active_document();
             if (document.kind != vulpes::ui::DocumentKind::workspace) {

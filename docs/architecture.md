@@ -134,8 +134,9 @@ searchable and metadata-defined lookups remain a later model feature. See ADR
 The command parser produces stable `CommandId` values. `ApplicationRuntime`
 validates command arity and resolves schema objects, then returns a semantic
 `CommandResponse` for the caller to localize and render. The executable's
-`--command` option is a non-interactive adapter; a later command-line widget
-will use the same runtime rather than execute SQLite directly.
+`--command` option is a non-interactive adapter. The workspace `Ctrl+P`
+command palette uses the same parser/runtime, then opens semantic schema,
+browse, or SQL documents rather than executing SQLite through a widget.
 
 ### Terminal rendering
 

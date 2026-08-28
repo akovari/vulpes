@@ -45,19 +45,34 @@ Workspace::Workspace(WorkspaceText text, const Theme& theme)
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables) {
     prompt_.reset();
     modal_ = Modal::none;
+    submitted_value_.clear();
     windows_.dismiss_modal();
     database_path_ = std::move(path);
-    tables_ = std::move(tables);
-    selected_table_ = 0;
+    set_tables(std::move(tables));
     status_ = replace_argument(replace_argument(text_.database_status, "path", database_path_), "count",
                                std::to_string(tables_.size()));
+}
+
+void Workspace::set_tables(std::vector<db::TableSchema> tables) {
+    const auto selected_name = selected_table() == nullptr ? std::string{} : selected_table()->name;
+    tables_ = std::move(tables);
+    selected_table_ = 0;
+    if (!selected_name.empty()) {
+        if (const auto selected = std::ranges::find(tables_, selected_name, &db::TableSchema::name);
+            selected != tables_.end()) {
+            selected_table_ = static_cast<std::size_t>(std::distance(tables_.begin(), selected));
+        }
+    }
 }
 
 void Workspace::set_status(std::string status) {
     status_ = std::move(status);
 }
 auto Workspace::requested_path() const -> std::string {
-    return prompt_ ? std::string{prompt_->value()} : std::string{};
+    return submitted_value_;
+}
+auto Workspace::requested_command() const -> std::string {
+    return submitted_value_;
 }
 auto Workspace::selected_table() const -> const db::TableSchema* {
     return selected_table_ < tables_.size() ? &tables_[selected_table_] : nullptr;
@@ -72,11 +87,35 @@ auto Workspace::close_active_document() -> bool {
     return windows_.close_active();
 }
 
+void Workspace::open_browse(const db::TableSchema& table) {
+    windows_.open({.id = "browse:" + table.name,
+                   .title = replace_argument(text_.browse_document, "table", table.name),
+                   .kind = DocumentKind::browse});
+}
+
+void Workspace::open_schema(const db::TableSchema& table) {
+    windows_.open({.id = "schema:" + table.name,
+                   .title = replace_argument(text_.schema_document, "table", table.name),
+                   .kind = DocumentKind::schema});
+}
+
+void Workspace::open_sql_console() {
+    windows_.open({.id = "sql", .title = text_.sql_document, .kind = DocumentKind::sql_console});
+}
+
 void Workspace::begin_path_prompt(Modal modal) {
     modal_ = modal;
+    submitted_value_.clear();
     prompt_.emplace(modal == Modal::open ? text_.open_database_title : text_.create_database_title,
                     text_.path_instructions);
     windows_.show_modal(modal == Modal::open ? text_.open_database_title : text_.create_database_title);
+}
+
+void Workspace::begin_command_prompt() {
+    modal_ = Modal::command;
+    submitted_value_.clear();
+    prompt_.emplace(text_.command_title, text_.command_instructions);
+    windows_.show_modal(text_.command_title);
 }
 
 auto Workspace::activate_menu_item() -> WorkspaceResult {
@@ -111,16 +150,14 @@ auto Workspace::activate_menu_item() -> WorkspaceResult {
                 status_ = text_.open_before_browse;
                 return WorkspaceResult::redraw;
             }
-            windows_.open({.id = "browse:" + table->name,
-                           .title = replace_argument(text_.browse_document, "table", table->name),
-                           .kind = DocumentKind::browse});
+            open_browse(*table);
             return WorkspaceResult::browse_table;
         }
         if (database_path_.empty()) {
             status_ = text_.open_before_sql;
             return WorkspaceResult::redraw;
         }
-        windows_.open({.id = "sql", .title = text_.sql_document, .kind = DocumentKind::sql_console});
+        open_sql_console();
         return WorkspaceResult::run_sql;
     case Menu::view:
         if (selected == 0 && selected_table_ > 0)
@@ -185,6 +222,7 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         if (key != nullptr && key->key == terminal::Key::escape) {
             prompt_.reset();
             modal_ = Modal::none;
+            submitted_value_.clear();
             windows_.dismiss_modal();
             return WorkspaceResult::redraw;
         }
@@ -192,17 +230,27 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         if (outcome == PromptResult::cancelled) {
             prompt_.reset();
             modal_ = Modal::none;
+            submitted_value_.clear();
             windows_.dismiss_modal();
             return WorkspaceResult::redraw;
         }
         if (outcome != PromptResult::submitted)
             return outcome == PromptResult::unchanged ? WorkspaceResult::unchanged : WorkspaceResult::redraw;
-        const auto result = modal_ == Modal::open ? WorkspaceResult::open_database : WorkspaceResult::create_database;
+        submitted_value_ = prompt_->value();
+        prompt_.reset();
+        const auto result = modal_ == Modal::open     ? WorkspaceResult::open_database
+                            : modal_ == Modal::create ? WorkspaceResult::create_database
+                                                      : WorkspaceResult::command;
         modal_ = Modal::none;
+        windows_.dismiss_modal();
         return result;
     }
     if (action == core::ActionId::application_quit)
         return WorkspaceResult::quit;
+    if (action == core::ActionId::application_command_palette) {
+        begin_command_prompt();
+        return WorkspaceResult::redraw;
+    }
 
     const auto mnemonic_menu = menu_from_mnemonic();
     if (menu_ != Menu::none) {
@@ -274,13 +322,11 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     }
     if (key && key->key == terminal::Key::enter && selected_table()) {
         const auto& table = *selected_table();
-        windows_.open({.id = "browse:" + table.name,
-                       .title = replace_argument(text_.browse_document, "table", table.name),
-                       .kind = DocumentKind::browse});
+        open_browse(table);
         return WorkspaceResult::browse_table;
     }
     if (key && key->key == terminal::Key::f7 && !database_path_.empty()) {
-        windows_.open({.id = "sql", .title = text_.sql_document, .kind = DocumentKind::sql_console});
+        open_sql_console();
         return WorkspaceResult::run_sql;
     }
     return WorkspaceResult::unchanged;

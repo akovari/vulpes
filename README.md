@@ -62,6 +62,11 @@ for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
 groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
 switches tabs and `Ctrl+W` closes the active non-workspace tab.
 
+Press `Ctrl+P` to open the command palette. It uses the same parser and
+runtime as `--command`: `help`, `tables`, `schema <table>`, `browse <table>`,
+`sql`, and `quit` are supported. `schema <table>` opens a read-only schema tab;
+`browse` and `sql` open their persistent workspace documents.
+
 With a translated catalog, menu Alt mnemonics follow the first character of
 each translated menu label; `F10` always opens the first menu. For example, the
 shipped Czech catalog uses `Alt+S` for `Soubor`.
@@ -111,9 +116,9 @@ bounded to 1,000 result rows by default; the console reports truncation and
 affected-row counts. `Esc` returns to the shell. SQL history, parameter prompts,
 and multiple displayed result sets remain deliberately deferred.
 
-`--command` currently accepts `help`, `tables`, `schema <table>`, `browse
-<table>`, `sql`, and `quit`. It is a non-interactive bridge to the same application
-command dispatcher that will power the in-app command window.
+`--command` accepts `help`, `tables`, `schema <table>`, `browse <table>`,
+`sql`, and `quit`. It is a non-interactive bridge to the same application
+command dispatcher used by the in-app command palette.
 
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
 example, use the shipped Czech translation with `--locale cs-CZ --catalog

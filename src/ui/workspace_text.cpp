@@ -9,6 +9,8 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .open_database_title = messages.translate("workspace.open_title"),
         .create_database_title = messages.translate("workspace.create_title"),
         .path_instructions = messages.translate("workspace.path_instructions"),
+        .command_title = messages.translate("workspace.command_title"),
+        .command_instructions = messages.translate("workspace.command_instructions"),
         .no_database_open = messages.translate("workspace.no_database_open"),
         .open_before_browse = messages.translate("workspace.open_before_browse"),
         .open_before_sql = messages.translate("workspace.open_before_sql"),
@@ -17,6 +19,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
         .help_shortcuts = messages.translate("workspace.help_shortcuts"),
         .database_status = messages.translate("workspace.database_status"),
         .browse_document = messages.translate("workspace.document.browse"),
+        .schema_document = messages.translate("workspace.document.schema"),
         .sql_document = messages.translate("workspace.document.sql"),
         .view_suffix = messages.translate("workspace.view_suffix"),
         .menu_bar =
@@ -37,6 +40,8 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                              .label = messages.translate("workspace.shortcut.create.label")},
                 ShortcutHint{.key = messages.translate("workspace.shortcut.quit.key"),
                              .label = messages.translate("workspace.shortcut.quit.label")},
+                ShortcutHint{.key = messages.translate("workspace.shortcut.command.key"),
+                             .label = messages.translate("workspace.shortcut.command.label")},
             },
         .file_menu =
             {

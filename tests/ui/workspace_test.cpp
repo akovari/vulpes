@@ -6,6 +6,7 @@
 #include "vulpes/ui/workspace.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <string_view>
 
 namespace {
 
@@ -69,6 +70,34 @@ TEST_CASE("workspace menu navigation supports arrows, mnemonics, and Escape", "[
     CHECK(workspace.handle(vulpes::core::ActionId::application_back,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::WorkspaceResult::redraw);
+}
+
+TEST_CASE("workspace command prompt submits semantic command text and preserves Escape cancellation",
+          "[ui][workspace]") {
+    auto workspace = english_workspace();
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::application_command_palette,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'p', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    for (const auto character : std::string_view{"browse customers"}) {
+        static_cast<void>(workspace.handle(
+            vulpes::core::ActionId::none,
+            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character,
+                                       .character = static_cast<char32_t>(static_cast<unsigned char>(character))}));
+    }
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::command);
+    CHECK(workspace.requested_command() == "browse customers");
+
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::application_command_palette,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'p', .ctrl = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.requested_command().empty());
 }
 
 TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspace]") {

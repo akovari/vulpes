@@ -15,27 +15,33 @@
 
 namespace vulpes::ui {
 
-enum class WorkspaceResult { unchanged, redraw, open_database, create_database, browse_table, run_sql, quit };
+enum class WorkspaceResult { unchanged, redraw, open_database, create_database, command, browse_table, run_sql, quit };
 
 class Workspace {
   public:
     explicit Workspace(WorkspaceText text, const Theme& theme = ui::theme(ThemeName::midnight));
 
     void set_database(std::string path, std::vector<db::TableSchema> tables);
+    void set_tables(std::vector<db::TableSchema> tables);
     void set_status(std::string status);
     [[nodiscard]] auto requested_path() const -> std::string;
+    [[nodiscard]] auto requested_command() const -> std::string;
     [[nodiscard]] auto selected_table() const -> const db::TableSchema*;
     [[nodiscard]] auto active_document() const -> const Document&;
     [[nodiscard]] auto has_document(std::string_view id) const -> bool;
     [[nodiscard]] auto close_active_document() -> bool;
+    void open_browse(const db::TableSchema& table);
+    void open_schema(const db::TableSchema& table);
+    void open_sql_console();
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
   private:
-    enum class Modal { none, open, create };
+    enum class Modal { none, open, create, command };
     enum class Menu { none, file, database, view, window, help };
 
     void begin_path_prompt(Modal modal);
+    void begin_command_prompt();
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
     WorkspaceText text_;
     std::string database_path_;
@@ -46,6 +52,7 @@ class Workspace {
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;
+    std::string submitted_value_;
     const Theme* theme_;
     WindowManager windows_;
 };

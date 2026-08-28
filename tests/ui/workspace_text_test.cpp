@@ -12,6 +12,7 @@ TEST_CASE("workspace text uses the selected Czech catalog for labels and mnemoni
     CHECK(text.menu_bar[0] == "Soubor");
     CHECK(text.database_menu[2] == "Procházet vybranou tabulku");
     CHECK(text.browse_document == "Procházet {table}");
+    CHECK(text.command_title == "Příkaz");
 
     vulpes::ui::Workspace workspace{text};
     vulpes::terminal::ScreenBuffer buffer{80, 25};
