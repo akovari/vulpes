@@ -15,9 +15,10 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 
 } // namespace
 
-TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value, const Theme& theme)
+TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value, const Theme& theme,
+                       core::Clipboard* clipboard)
     : label_{std::move(label)}, instructions_{std::move(instructions)}, editor_{std::move(initial_value)},
-      theme_{&theme} {
+      theme_{&theme}, clipboard_{clipboard} {
 }
 
 void TextPrompt::set_error(std::string message) {
@@ -26,13 +27,13 @@ void TextPrompt::set_error(std::string message) {
 
 auto TextPrompt::handle(const terminal::InputEvent& event) -> PromptResult {
     const auto* key = std::get_if<terminal::KeyEvent>(&event);
-    if (key == nullptr)
+    if (std::holds_alternative<terminal::ResizeEvent>(event))
         return PromptResult::redraw;
-    if (key->key == terminal::Key::escape)
+    if (key != nullptr && key->key == terminal::Key::escape)
         return PromptResult::cancelled;
-    if (key->key == terminal::Key::enter)
+    if (key != nullptr && key->key == terminal::Key::enter)
         return PromptResult::submitted;
-    const auto result = editor_.handle(*key);
+    const auto result = editor_.handle(event, clipboard_);
     if (result != LineEditResult::unchanged) {
         if (result == LineEditResult::changed)
             error_.clear();

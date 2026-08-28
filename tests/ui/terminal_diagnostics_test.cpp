@@ -14,11 +14,14 @@ TEST_CASE("terminal diagnostics renders normalized key and resize events", "[ui]
           vulpes::ui::DocumentResult::redraw);
     CHECK(diagnostics.handle(vulpes::core::ActionId::none, vulpes::terminal::ResizeEvent{.width = 100, .height = 30}) ==
           vulpes::ui::DocumentResult::redraw);
+    CHECK(diagnostics.handle(vulpes::core::ActionId::none, vulpes::terminal::PasteEvent{.text = "hello"}) ==
+          vulpes::ui::DocumentResult::redraw);
     diagnostics.render(buffer, {0, 0, 80, 20});
 
     CHECK(buffer.cell(3, 0).glyph == U'T');
     CHECK(buffer.cell(1, 1).glyph == U'K');
     CHECK(buffer.cell(1, 2).glyph == U'R');
+    CHECK(buffer.cell(1, 3).glyph == U'P');
     CHECK(diagnostics.handle(vulpes::core::ActionId::application_back,
                              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::DocumentResult::close);

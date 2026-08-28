@@ -76,8 +76,9 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
 } // namespace
 
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
-                               const Theme& theme)
-    : messages_{&messages}, theme_{&theme}, dataset_{database, std::move(table)}, controller_{dataset_},
+                               const Theme& theme, core::Clipboard* clipboard)
+    : messages_{&messages}, theme_{&theme}, clipboard_{clipboard}, dataset_{database, std::move(table)},
+      controller_{dataset_},
       grid_{dataset_,
             dataset_.schema().name,
             messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"),
@@ -91,19 +92,19 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
 void BrowseDocument::begin_form(FormMode mode) {
     const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
     form_.emplace(dataset_, messages_->translate(title_key, {{"table", dataset_.schema().name}}), mode,
-                  messages_->translate("form.instructions"), *theme_);
+                  messages_->translate("form.instructions"), *theme_, clipboard_);
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {
     prompt_purpose_ = purpose;
     if (purpose == PromptPurpose::search)
         prompt_.emplace(messages_->translate("browse.search_prompt"), messages_->translate("prompt.instructions"),
-                        std::string{}, *theme_);
+                        std::string{}, *theme_, clipboard_);
     else {
         const auto* field = grid_.selected_field();
         if (field != nullptr)
             prompt_.emplace(messages_->translate("browse.filter_prompt", {{"field", field->name}}),
-                            messages_->translate("prompt.instructions"), std::string{}, *theme_);
+                            messages_->translate("prompt.instructions"), std::string{}, *theme_, clipboard_);
     }
 }
 

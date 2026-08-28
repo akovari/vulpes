@@ -27,7 +27,8 @@ $env:VCPKG_ROOT = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpk
 ```
 
 Alternatively, clone and bootstrap vcpkg separately. CMake manifest mode installs
-SQLite and Catch2 automatically. CPP-Terminal is fetched at a reviewed, pinned
+SQLite, Catch2, utf8proc, CLI11, nlohmann/json, and dacap/clip automatically.
+CPP-Terminal is fetched at a reviewed, pinned
 commit by CMake because it is not present in the pinned vcpkg registry. The
 `sqlite3` CLI is optional and is used only by the example-database command below.
 
@@ -145,8 +146,12 @@ current document.
 Single-line prompts and generated text/number fields have a logical UTF-8
 cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long
 values follow the caret horizontally without changing the stored text. Lookup
-fields retain Left/Right for relationship selection. Selection, clipboard, and
-word-wise movement remain tracked follow-up work.
+fields retain Left/Right for relationship selection. Hold Shift while moving to
+select, use Ctrl+Left/Right for Unicode-aware word movement, and press Insert to
+toggle insert/overwrite mode. The classic cross-platform clipboard bindings are
+Ctrl+Insert to copy, Shift+Delete to cut, and Shift+Insert to paste; Ctrl+A
+selects all. Incoming terminal paste is delivered as one payload and control
+characters are normalized before insertion.
 
 Read-only database sessions keep browse, sort, filter, search, schema, and SQL
 result viewing available, but generated form and delete actions are disabled and
@@ -181,14 +186,17 @@ Open the interactive SQL console with `--sql` or `--command sql`. It accepts
 cursor-aware multiline input: arrows move by character or line, Home/End move
 within a line, PageUp/PageDown move by an editor page, Enter splits a line, Tab
 indents to a four-column stop, and Backspace/Delete join lines at their edges.
+Selection, Unicode word movement, clipboard commands, insert/overwrite mode,
+Ctrl+Z undo, Ctrl+Y redo, and Ctrl+Shift+Z redo use the same editor semantics as
+single-line fields. Ctrl+Up/Down walks a bounded 100-entry command history while
+preserving the current draft.
 The editor follows the caret vertically and horizontally; border arrows mark
 hidden content. `F8` executes and presents the final row-producing statement
 through the same Grid widget as `browse`. After results appear, `F7` switches
 keyboard focus between the editor and result Grid; `Esc` first returns focus to
 the editor and then returns to the shell. Execution is bounded to 1,000 result
 rows by default, and the console reports truncation and affected-row counts.
-SQL history, parameter prompts, and multiple displayed result sets remain
-deliberately deferred.
+Parameter prompts and multiple displayed result sets remain deliberately deferred.
 
 `--command` accepts `help`, `tables`, `schema <table>`, `browse <table>`,
 `sql`, and `quit`. It is a non-interactive bridge to the same application

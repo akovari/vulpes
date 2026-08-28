@@ -67,6 +67,8 @@ auto ConsoleTerminal::read_event() -> InputEvent {
                 return normalize_cpp_terminal_key(static_cast<std::int32_t>(*key));
             if (const auto* screen = event.get_if_screen())
                 return ResizeEvent{static_cast<int>(screen->columns()), static_cast<int>(screen->rows())};
+            if (const auto* paste = event.get_if_copy_paste())
+                return PasteEvent{*paste};
         }
     } catch (const std::exception& exception) {
         throw Error{ErrorCategory::terminal, "unable to read terminal input: " + std::string{exception.what()}};

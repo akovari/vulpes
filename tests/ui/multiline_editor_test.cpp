@@ -2,6 +2,21 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+namespace {
+
+class MemoryClipboard final : public vulpes::core::Clipboard {
+  public:
+    auto read_text() -> std::optional<std::string> override { return text; }
+    auto write_text(std::string_view value) -> bool override {
+        text = value;
+        return true;
+    }
+
+    std::optional<std::string> text;
+};
+
+} // namespace
+
 TEST_CASE("multiline editor inserts splits and joins UTF-8 lines at the cursor", "[ui][editor][sql]") {
     vulpes::ui::MultilineEditor editor{"AžB"};
     static_cast<void>(editor.handle({.key = vulpes::terminal::Key::left}));
@@ -59,4 +74,49 @@ TEST_CASE("multiline editor supports page movement and tab stops", "[ui][editor]
     CHECK(editor.handle({.key = vulpes::terminal::Key::home}) == vulpes::ui::MultilineEditResult::cursor_moved);
     CHECK(editor.handle({.key = vulpes::terminal::Key::tab}) == vulpes::ui::MultilineEditResult::changed);
     CHECK(editor.text() == "0\n1\n    2\n3\n4");
+}
+
+TEST_CASE("multiline editor selects words and exchanges multiline clipboard text", "[ui][editor][clipboard]") {
+    vulpes::ui::MultilineEditor editor{"select name\nfrom people"};
+    MemoryClipboard clipboard;
+    CHECK(editor.handle({.key = vulpes::terminal::Key::left, .ctrl = true, .shift = true}, &clipboard) ==
+          vulpes::ui::MultilineEditResult::cursor_moved);
+    CHECK(editor.selected_text() == "people");
+    static_cast<void>(editor.handle({.key = vulpes::terminal::Key::insert_key, .ctrl = true}, &clipboard));
+    REQUIRE(clipboard.text);
+    CHECK(*clipboard.text == "people");
+    static_cast<void>(editor.handle({.key = vulpes::terminal::Key::delete_key, .shift = true}, &clipboard));
+    CHECK(editor.text() == "select name\nfrom ");
+    clipboard.text = "orders\r\nwhere active";
+    static_cast<void>(editor.handle({.key = vulpes::terminal::Key::insert_key, .shift = true}, &clipboard));
+    CHECK(editor.text() == "select name\nfrom orders\nwhere active");
+}
+
+TEST_CASE("multiline editor provides bounded undo redo and invalidates redo on edits", "[ui][editor][undo]") {
+    vulpes::ui::MultilineEditor editor;
+    for (int index = 0; index < 120; ++index)
+        static_cast<void>(editor.handle({.key = vulpes::terminal::Key::character, .character = U'x'}));
+    CHECK(editor.can_undo());
+    for (int index = 0; index < 100; ++index)
+        CHECK(editor.handle({.key = vulpes::terminal::Key::character, .character = U'z', .ctrl = true}) ==
+              vulpes::ui::MultilineEditResult::changed);
+    CHECK(editor.text().size() == 20);
+    CHECK_FALSE(editor.can_undo());
+    CHECK(editor.can_redo());
+    CHECK(editor.handle({.key = vulpes::terminal::Key::character, .character = U'y', .ctrl = true}) ==
+          vulpes::ui::MultilineEditResult::changed);
+    CHECK(editor.text().size() == 21);
+    static_cast<void>(editor.handle({.key = vulpes::terminal::Key::character, .character = U'!'}));
+    CHECK_FALSE(editor.can_redo());
+}
+
+TEST_CASE("multiline viewport reports visible selection columns", "[ui][editor][selection]") {
+    vulpes::ui::MultilineEditor editor{"one\ntwo"};
+    static_cast<void>(editor.handle({.key = vulpes::terminal::Key::home, .ctrl = true, .shift = true}));
+    const auto view = editor.viewport(8, 2);
+    REQUIRE(view.lines.size() == 2);
+    REQUIRE(view.lines[0].selection_columns);
+    REQUIRE(view.lines[1].selection_columns);
+    CHECK(*view.lines[0].selection_columns == std::pair{0, 3});
+    CHECK(*view.lines[1].selection_columns == std::pair{0, 3});
 }

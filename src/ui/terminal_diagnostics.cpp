@@ -106,11 +106,12 @@ auto TerminalDiagnostics::handle(core::ActionId action, const terminal::InputEve
     if (action == core::ActionId::application_back || action == core::ActionId::application_quit)
         return DocumentResult::close;
 
-    if (const auto* key = std::get_if<terminal::KeyEvent>(&event))
+    if (const auto* key = std::get_if<terminal::KeyEvent>(&event)) {
         append(describe_key(*key));
-    else {
-        const auto& resize = std::get<terminal::ResizeEvent>(event);
-        append("Resize: " + std::to_string(resize.width) + " x " + std::to_string(resize.height));
+    } else if (const auto* resize = std::get_if<terminal::ResizeEvent>(&event)) {
+        append("Resize: " + std::to_string(resize->width) + " x " + std::to_string(resize->height));
+    } else if (const auto* paste = std::get_if<terminal::PasteEvent>(&event)) {
+        append("Paste: " + std::to_string(paste->text.size()) + " UTF-8 bytes");
     }
     return DocumentResult::redraw;
 }

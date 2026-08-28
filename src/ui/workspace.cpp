@@ -46,8 +46,8 @@ auto path_text(const std::filesystem::path& path) -> std::string {
 
 } // namespace
 
-Workspace::Workspace(WorkspaceText text, const Theme& theme)
-    : text_{std::move(text)}, theme_{&theme}, windows_{theme, text_.workspace_document} {
+Workspace::Workspace(WorkspaceText text, const Theme& theme, core::Clipboard* clipboard)
+    : text_{std::move(text)}, theme_{&theme}, clipboard_{clipboard}, windows_{theme, text_.workspace_document} {
 }
 
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables, bool read_only) {
@@ -130,7 +130,7 @@ void Workspace::begin_path_prompt(Modal modal) {
     const auto& title = modal == Modal::open             ? text_.open_database_title
                         : modal == Modal::open_read_only ? text_.open_read_only_database_title
                                                          : text_.create_database_title;
-    prompt_.emplace(title, text_.path_instructions, std::string{}, *theme_);
+    prompt_.emplace(title, text_.path_instructions, std::string{}, *theme_, clipboard_);
     windows_.show_modal(title);
 }
 
@@ -148,7 +148,7 @@ void Workspace::begin_directory_browser() {
 void Workspace::begin_command_prompt() {
     modal_ = Modal::command;
     submitted_value_.clear();
-    prompt_.emplace(text_.command_title, text_.command_instructions, std::string{}, *theme_);
+    prompt_.emplace(text_.command_title, text_.command_instructions, std::string{}, *theme_, clipboard_);
     windows_.show_modal(text_.command_title);
 }
 

@@ -37,8 +37,10 @@ TEST_CASE("test terminal queues normalized input and captures frames", "[termina
     TestTerminal terminal{{80, 25}};
     terminal.enqueue(KeyEvent{.key = Key::f2});
     terminal.enqueue(ResizeEvent{.width = 100, .height = 40});
+    terminal.enqueue(PasteEvent{.text = "select 1"});
     CHECK(std::get<KeyEvent>(terminal.read_event()).key == Key::f2);
     CHECK(std::get<ResizeEvent>(terminal.read_event()).width == 100);
+    CHECK(std::get<PasteEvent>(terminal.read_event()).text == "select 1");
     CHECK_THROWS_AS(terminal.read_event(), vulpes::Error);
 
     ScreenBuffer before{80, 25};

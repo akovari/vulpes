@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/core/clipboard.hpp"
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/ui/document_surface.hpp"
@@ -15,7 +16,7 @@ namespace vulpes::ui {
 class SqlDocument final : public DocumentSurface {
   public:
     SqlDocument(db::Database& database, const core::Localizer& messages,
-                const Theme& theme = ui::theme(ThemeName::midnight));
+                const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr);
 
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;

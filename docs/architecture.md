@@ -76,10 +76,17 @@ semantics, so the focus model remains independent of a terminal implementation.
 kept on a code-point boundary. It provides semantic insert/delete/movement and a
 display-cell viewport, so prompts and generated fields share editing behavior
 without a terminal cursor or backend dependency. Rendering uses a logical caret
-cell and follows long values horizontally. `MultilineEditor` applies the same
+cell and follows long values horizontally. Both editors own normalized selection
+ranges, Unicode-aware word movement, and configurable insert/overwrite state.
+Clipboard access is injected through `core::Clipboard`; the production adapter
+uses dacap/clip while tests use memory implementations. CPP-Terminal bulk-paste
+events become a distinct `PasteEvent`, preventing pasted text from being routed
+as keyboard commands. `MultilineEditor` applies the same
 boundary policy to SQL source while adding logical line spans, desired
 display-column preservation, line splitting/joining, indentation, page movement,
-and stable two-axis viewport state. See ADRs 0019 and 0020.
+stable two-axis viewport state, and a bounded 100-state/4 MiB undo journal.
+`SqlConsole` separately owns a bounded 100-entry executed-command history. See
+ADRs 0019, 0020, and 0023.
 
 `WindowFrame` renders opaque Unicode terminal windows with an optional clipped
 drop shadow; `Button` renders a focusable action affordance. Prompts,
@@ -148,9 +155,10 @@ explicit packaging override. See ADR 0017.
 ### vcpkg manifest dependencies
 
 The checked-in registry baseline makes dependency resolution reproducible.
-SQLite, Catch2, utf8proc, CLI11, and nlohmann/json each have a narrow boundary:
+SQLite, Catch2, utf8proc, CLI11, nlohmann/json, and dacap/clip each have a narrow boundary:
 database access, tests, Unicode cell handling, process argument parsing, and
-external message-catalog parsing respectively. CPP-Terminal is fetched at a
+external message-catalog parsing, and cross-platform UTF-8 clipboard access.
+CPP-Terminal is fetched at a
 pinned commit because it is unavailable in the pinned vcpkg registry; it owns
 host-terminal raw mode and event transport behind `terminal::ConsoleTerminal`.
 Terminal rendering remains behind Vulpes abstractions rather than a

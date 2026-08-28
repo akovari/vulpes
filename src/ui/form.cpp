@@ -48,8 +48,9 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 } // namespace
 
 RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions,
-                       const Theme& theme)
-    : dataset_{&dataset}, title_{std::move(title)}, instructions_{std::move(instructions)}, theme_{&theme} {
+                       const Theme& theme, core::Clipboard* clipboard)
+    : dataset_{&dataset}, title_{std::move(title)}, instructions_{std::move(instructions)}, theme_{&theme},
+      clipboard_{clipboard} {
     if (mode == FormMode::insert)
         dataset_->begin_insert();
     else
@@ -91,13 +92,13 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
 
 auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
     const auto* key = std::get_if<terminal::KeyEvent>(&event);
-    if (key == nullptr)
+    if (std::holds_alternative<terminal::ResizeEvent>(event))
         return FormResult::redraw;
-    if (key->key == terminal::Key::escape) {
+    if (key != nullptr && key->key == terminal::Key::escape) {
         dataset_->cancel();
         return FormResult::cancelled;
     }
-    if (key->key == terminal::Key::f8) {
+    if (key != nullptr && key->key == terminal::Key::f8) {
         try {
             save();
             return FormResult::saved;
@@ -106,11 +107,12 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
             return FormResult::redraw;
         }
     }
-    if (key->key == terminal::Key::up || (key->key == terminal::Key::tab && key->shift)) {
+    if (key != nullptr && (key->key == terminal::Key::up || (key->key == terminal::Key::tab && key->shift))) {
         move_selection(-1);
         return FormResult::redraw;
     }
-    if (key->key == terminal::Key::down || key->key == terminal::Key::enter || key->key == terminal::Key::tab) {
+    if (key != nullptr &&
+        (key->key == terminal::Key::down || key->key == terminal::Key::enter || key->key == terminal::Key::tab)) {
         move_selection(1);
         return FormResult::redraw;
     }
@@ -118,20 +120,22 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
         return FormResult::unchanged;
 
     auto& field = fields_[selected_field_];
-    if (field.kind == FormFieldKind::lookup && (key->key == terminal::Key::left || key->key == terminal::Key::right)) {
+    if (key != nullptr && field.kind == FormFieldKind::lookup &&
+        (key->key == terminal::Key::left || key->key == terminal::Key::right)) {
         move_lookup_selection(field, key->key == terminal::Key::left ? -1 : 1);
         changed_[selected_field_] = true;
         clear_error(selected_field_);
         return FormResult::redraw;
     }
-    if (field.kind == FormFieldKind::checkbox && key->key == terminal::Key::character && key->character == U' ') {
+    if (key != nullptr && field.kind == FormFieldKind::checkbox && key->key == terminal::Key::character &&
+        key->character == U' ') {
         field.editor.set_text(field.editor.text() == "1" ? "0" : "1");
         changed_[selected_field_] = true;
         clear_error(selected_field_);
         return FormResult::redraw;
     }
     if (field.kind == FormFieldKind::text || field.kind == FormFieldKind::number) {
-        const auto edit_result = field.editor.handle(*key);
+        const auto edit_result = field.editor.handle(event, clipboard_);
         if (edit_result == LineEditResult::changed) {
             changed_[selected_field_] = true;
             clear_error(selected_field_);

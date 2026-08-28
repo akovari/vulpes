@@ -11,7 +11,7 @@ struct Size {
     int width{};
     int height{};
 };
-using InputEvent = std::variant<KeyEvent, ResizeEvent>;
+using InputEvent = std::variant<KeyEvent, ResizeEvent, PasteEvent>;
 
 class Terminal {
   public:

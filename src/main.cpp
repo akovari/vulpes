@@ -1,5 +1,6 @@
 #include "vulpes/core/actions.hpp"
 #include "vulpes/core/application.hpp"
+#include "vulpes/core/clipboard.hpp"
 #include "vulpes/core/command.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/core/localization.hpp"
@@ -58,7 +59,8 @@ auto load_messages(const std::string& locale, const std::vector<std::string>& ca
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
             const vulpes::core::Localizer& messages, const vulpes::ui::Theme& theme) {
     vulpes::terminal::ConsoleTerminal terminal;
-    vulpes::ui::BrowseDocument document{database, table, messages, theme};
+    vulpes::core::SystemClipboard clipboard;
+    vulpes::ui::BrowseDocument document{database, table, messages, theme, &clipboard};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 6}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "6"}})}
         .run();
@@ -67,7 +69,8 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
 void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& messages,
                  const vulpes::ui::Theme& theme) {
     vulpes::terminal::ConsoleTerminal terminal;
-    vulpes::ui::SqlDocument document{database, messages, theme};
+    vulpes::core::SystemClipboard clipboard;
+    vulpes::ui::SqlDocument document{database, messages, theme, &clipboard};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 8}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "8"}})}
         .run();
@@ -132,7 +135,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::terminal::ScreenBuffer previous{size.width, size.height};
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
-    vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme};
+    vulpes::core::SystemClipboard clipboard;
+    vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme, &clipboard};
     const auto refresh_recent_databases = [&] {
         std::vector<std::string> paths;
         paths.reserve(preferences.recent_databases().size());
@@ -155,7 +159,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 table = workspace.selected_table();
             if (table != nullptr) {
                 surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database, *table,
-                                     messages, theme);
+                                     messages, theme, &clipboard);
             }
             return;
         case vulpes::ui::DocumentKind::schema:
@@ -165,7 +169,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             }
             return;
         case vulpes::ui::DocumentKind::sql_console:
-            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages, theme);
+            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages, theme,
+                                 &clipboard);
             return;
         case vulpes::ui::DocumentKind::workspace:
             return;

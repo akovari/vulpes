@@ -18,9 +18,10 @@ auto trim_ascii(std::string_view text) -> std::string_view {
 
 } // namespace
 
-SqlDocument::SqlDocument(db::Database& database, const core::Localizer& messages, const Theme& theme)
+SqlDocument::SqlDocument(db::Database& database, const core::Localizer& messages, const Theme& theme,
+                         core::Clipboard* clipboard)
     : database_{&database}, messages_{&messages}, theme_{&theme},
-      console_{messages.translate("sql.title"), messages.translate("sql.instructions"), theme} {
+      console_{messages.translate("sql.title"), messages.translate("sql.instructions"), theme, clipboard} {
 }
 
 void SqlDocument::execute() {

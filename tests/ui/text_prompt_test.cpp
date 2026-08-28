@@ -38,3 +38,9 @@ TEST_CASE("text prompt edits at the logical cursor instead of appending", "[ui][
           vulpes::ui::PromptResult::redraw);
     CHECK(prompt.value() == "bc");
 }
+
+TEST_CASE("text prompt consumes an atomic paste event", "[ui][prompt][paste]") {
+    vulpes::ui::TextPrompt prompt{"Path", "Enter Apply"};
+    CHECK(prompt.handle(vulpes::terminal::PasteEvent{.text = "folder\r\nfile.db"}) == vulpes::ui::PromptResult::redraw);
+    CHECK(prompt.value() == "folder file.db");
+}

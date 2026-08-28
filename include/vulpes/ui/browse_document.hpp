@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/core/browse_controller.hpp"
+#include "vulpes/core/clipboard.hpp"
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/model/dataset.hpp"
@@ -21,7 +22,7 @@ namespace vulpes::ui {
 class BrowseDocument final : public DocumentSurface {
   public:
     BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
-                   const Theme& theme = ui::theme(ThemeName::midnight));
+                   const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr);
 
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
@@ -36,6 +37,7 @@ class BrowseDocument final : public DocumentSurface {
 
     const core::Localizer* messages_;
     const Theme* theme_;
+    core::Clipboard* clipboard_;
     model::Dataset dataset_;
     core::BrowseController controller_;
     Grid grid_;

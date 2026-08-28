@@ -30,6 +30,15 @@ auto lowercase_code_point(char32_t code_point) noexcept -> char32_t {
     return static_cast<char32_t>(utf8proc_tolower(static_cast<utf8proc_int32_t>(code_point)));
 }
 
+auto is_word_code_point(char32_t code_point) noexcept -> bool {
+    if (code_point == U'_')
+        return true;
+    const auto category = utf8proc_category(static_cast<utf8proc_int32_t>(code_point));
+    return (category >= UTF8PROC_CATEGORY_LU && category <= UTF8PROC_CATEGORY_LO) ||
+           (category >= UTF8PROC_CATEGORY_ND && category <= UTF8PROC_CATEGORY_NO) || category == UTF8PROC_CATEGORY_MN ||
+           category == UTF8PROC_CATEGORY_MC;
+}
+
 auto find_code_point_column(std::string_view text, char32_t code_point) -> std::optional<int> {
     const auto* cursor = reinterpret_cast<const utf8proc_uint8_t*>(text.data());
     auto remaining = static_cast<utf8proc_ssize_t>(text.size());

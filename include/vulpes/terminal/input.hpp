@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace vulpes::terminal {
 
 enum class Key {
@@ -51,6 +53,13 @@ struct KeyEvent {
 struct ResizeEvent {
     int width{};
     int height{};
+};
+
+// A complete UTF-8 paste payload. Backends normalize bracketed paste or their
+// native equivalent into one event so editors never interpret pasted escape
+// sequences as commands.
+struct PasteEvent {
+    std::string text;
 };
 
 } // namespace vulpes::terminal

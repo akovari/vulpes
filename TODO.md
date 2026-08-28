@@ -127,9 +127,9 @@ on Windows, Linux, and macOS.
   indentation, and vertically/horizontally scrolling editor viewports.
 - [x] Add explicit F7 focus switching between SQL editor and result-grid panes,
   including distinct focused/unfocused selection rendering.
-- [ ] Add selection, word movement, clipboard commands, bracketed-paste event
+- [x] Add selection, word movement, clipboard commands, bracketed-paste event
   normalization, and configurable field overwrite/insert behavior.
-- [ ] Add SQL editor undo/redo, bounded command history, and editing tests before
+- [x] Add SQL editor undo/redo, bounded command history, and editing tests before
   evaluating syntax highlighting or schema-aware completion.
 - [x] Define explicit per-locale menu mnemonics instead of inferring the first
   character, including collision validation and unambiguous activation.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/core/actions.hpp"
+#include "vulpes/core/clipboard.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/confirmation_dialog.hpp"
@@ -31,7 +32,8 @@ enum class WorkspaceResult {
 
 class Workspace {
   public:
-    explicit Workspace(WorkspaceText text, const Theme& theme = ui::theme(ThemeName::midnight));
+    explicit Workspace(WorkspaceText text, const Theme& theme = ui::theme(ThemeName::midnight),
+                       core::Clipboard* clipboard = nullptr);
 
     void set_database(std::string path, std::vector<db::TableSchema> tables, bool read_only = false);
     void set_recent_databases(std::vector<std::string> paths);
@@ -74,6 +76,7 @@ class Workspace {
     std::optional<ConfirmationDialog> close_confirmation_;
     std::string submitted_value_;
     const Theme* theme_;
+    core::Clipboard* clipboard_;
     WindowManager windows_;
 };
 

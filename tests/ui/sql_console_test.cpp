@@ -48,3 +48,43 @@ TEST_CASE("SQL console provides cursor navigation and a scrolling editor viewpor
     CHECK(buffer.cell(6, 1).glyph == U'X');
     CHECK(buffer.cell(7, 1).style.reverse);
 }
+
+TEST_CASE("SQL console renders a selected source range and consumes paste atomically", "[ui][sql][selection][paste]") {
+    vulpes::ui::SqlConsole console{"SQL", "F8 Execute"};
+    CHECK(console.handle(vulpes::terminal::PasteEvent{.text = "select\r\n1"}) == vulpes::ui::SqlConsoleResult::redraw);
+    static_cast<void>(
+        console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::home, .ctrl = true, .shift = true}));
+    vulpes::terminal::ScreenBuffer buffer{40, 8};
+    console.render(buffer, {0, 0, 40, 8});
+    CHECK(buffer.cell(6, 1).style.reverse);
+    CHECK(buffer.cell(6, 2).style.reverse);
+}
+
+TEST_CASE("SQL console keeps bounded nonduplicate command history with a draft", "[ui][sql][history]") {
+    vulpes::ui::SqlConsole console{"SQL", "F8 Execute"};
+    for (char32_t character : std::u32string_view{U"select 1"})
+        static_cast<void>(console.handle(
+            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = character}));
+    CHECK(console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) ==
+          vulpes::ui::SqlConsoleResult::execute);
+    CHECK(console.history_size() == 1);
+    CHECK(console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) ==
+          vulpes::ui::SqlConsoleResult::execute);
+    CHECK(console.history_size() == 1);
+
+    static_cast<void>(
+        console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U';'}));
+    CHECK(console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::up, .ctrl = true}) ==
+          vulpes::ui::SqlConsoleResult::redraw);
+    CHECK(console.script() == "select 1");
+    CHECK(console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down, .ctrl = true}) ==
+          vulpes::ui::SqlConsoleResult::redraw);
+    CHECK(console.script() == "select 1;");
+
+    for (int index = 0; index < 105; ++index) {
+        static_cast<void>(
+            console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U' '}));
+        static_cast<void>(console.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}));
+    }
+    CHECK(console.history_size() == 100);
+}
