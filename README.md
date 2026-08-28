@@ -103,6 +103,12 @@ events; test arrow keys, Escape (exits), Ctrl+C (exits), function keys, and Alt
 chords. It deliberately exposes Vulpes events rather than CPP-Terminal details,
 so a report is useful across Windows, Linux, and macOS hosts.
 
+Run `vulpes --terminal-capabilities` to inspect standard-input and
+standard-output availability without entering raw mode. Interactive commands
+reject redirected streams before initializing the full-screen backend and emit
+a plain error with no terminal control sequences. Non-interactive commands such
+as `--version` and schema listing remain safe to redirect.
+
 The browse view is keyboard driven: arrow keys move through the grid, `F2`
 opens the selected record, `Insert` creates a record, `F8` saves a record form,
 and `Esc` cancels it. Form controls are inferred from SQLite schema information:

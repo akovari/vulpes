@@ -63,6 +63,7 @@ add_library(vulpes_core
     src/model/dataset.cpp
     src/terminal/ansi_input.cpp
     src/terminal/ansi_encoder.cpp
+    src/terminal/capabilities.cpp
     src/terminal/cpp_terminal_adapter.cpp
     src/terminal/console_terminal.cpp
     src/terminal/frame_diff.cpp
@@ -110,6 +111,14 @@ target_link_libraries(vulpes PRIVATE Vulpes::core CLI11::CLI11)
 
 if(BUILD_TESTING)
     add_test(NAME vulpes_version COMMAND vulpes --version)
+    add_test(NAME vulpes_terminal_capabilities COMMAND vulpes --terminal-capabilities)
+    set_tests_properties(vulpes_terminal_capabilities PROPERTIES PASS_REGULAR_EXPRESSION "Interactive TUI available")
+    add_test(
+        NAME vulpes_redirected_terminal_rejected
+        COMMAND ${CMAKE_COMMAND}
+            -DVULPES_EXE=$<TARGET_FILE:vulpes>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_redirected_terminal_rejected.cmake
+    )
     add_test(
         NAME vulpes_missing_database_does_not_create
         COMMAND ${CMAKE_COMMAND}

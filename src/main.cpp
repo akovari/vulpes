@@ -6,6 +6,7 @@
 #include "vulpes/core/workspace_preferences.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/terminal/capabilities.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/browse_document.hpp"
@@ -46,6 +47,14 @@ auto path_text(const std::filesystem::path& path) -> std::string {
     return {encoded.begin(), encoded.end()};
 }
 
+auto load_messages(const std::string& locale, const std::vector<std::string>& catalog_paths)
+    -> vulpes::core::Localizer {
+    vulpes::core::Localizer messages{locale};
+    for (const auto& catalog_path : catalog_paths)
+        messages.load_catalog_file(std::filesystem::path{catalog_path});
+    return messages;
+}
+
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
             const vulpes::core::Localizer& messages) {
     vulpes::terminal::ConsoleTerminal terminal;
@@ -64,15 +73,32 @@ void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& 
 }
 
 auto run_terminal_diagnostics(const std::string& locale, const std::vector<std::string>& catalog_paths) -> int {
-    vulpes::core::Localizer messages{locale};
-    for (const auto& catalog_path : catalog_paths)
-        messages.load_catalog_file(std::filesystem::path{catalog_path});
+    auto messages = load_messages(locale, catalog_paths);
 
     vulpes::terminal::ConsoleTerminal terminal;
     vulpes::ui::TerminalDiagnostics document{messages};
     vulpes::ui::DocumentSession{
         terminal, document, {40, 10}, messages.translate("terminal.minimum_size", {{"width", "40"}, {"height", "10"}})}
         .run();
+    return 0;
+}
+
+auto print_terminal_capabilities(const std::string& locale, const std::vector<std::string>& catalog_paths) -> int {
+    const auto messages = load_messages(locale, catalog_paths);
+    const auto capabilities = vulpes::terminal::detect_console_capabilities();
+    const auto state = [&](bool connected) {
+        return messages.translate(connected ? "terminal.capabilities.connected" : "terminal.capabilities.redirected");
+    };
+
+    std::cout << messages.translate("terminal.capabilities.title") << '\n'
+              << messages.translate("terminal.capabilities.input") << ": "
+              << state(capabilities.standard_input_is_terminal) << '\n'
+              << messages.translate("terminal.capabilities.output") << ": "
+              << state(capabilities.standard_output_is_terminal) << '\n'
+              << messages.translate("terminal.capabilities.available") << ": "
+              << messages.translate(capabilities.supports_interactive_terminal() ? "terminal.capabilities.yes"
+                                                                                 : "terminal.capabilities.no")
+              << '\n';
     return 0;
 }
 
@@ -96,9 +122,7 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
 
 auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths,
                    const vulpes::ui::Theme& theme, const std::filesystem::path& preferences_path) -> int {
-    vulpes::core::Localizer messages{locale};
-    for (const auto& catalog_path : catalog_paths)
-        messages.load_catalog_file(std::filesystem::path{catalog_path});
+    auto messages = load_messages(locale, catalog_paths);
     auto preferences = vulpes::core::WorkspacePreferences::load(preferences_path);
     vulpes::terminal::ConsoleTerminal terminal;
     auto size = terminal.size();
@@ -273,9 +297,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             } catch (const vulpes::Error& error) {
                 workspace.set_status(error.what());
             }
-        } else if (outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) {
-            host_active_surface();
-        } else if (outcome == vulpes::ui::WorkspaceResult::run_sql && database) {
+        } else if ((outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) ||
+                   (outcome == vulpes::ui::WorkspaceResult::run_sql && database)) {
             host_active_surface();
         } else if (outcome == vulpes::ui::WorkspaceResult::unchanged) {
             const auto& document = workspace.active_document();
@@ -300,9 +323,7 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
          const std::optional<std::string>& command_source, const std::string& locale,
          const std::vector<std::string>& catalog_paths) -> int {
     vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
-    vulpes::core::Localizer messages{locale};
-    for (const auto& catalog_path : catalog_paths)
-        messages.load_catalog_file(std::filesystem::path{catalog_path});
+    auto messages = load_messages(locale, catalog_paths);
     vulpes::core::ApplicationRuntime application{database};
     std::cout << messages.translate("application.title") << " " << VULPES_VERSION << "\n\n";
 
@@ -365,6 +386,7 @@ auto main(int argc, char** argv) -> int {
         std::string command_source;
         bool sql = false;
         bool terminal_diagnostics = false;
+        bool terminal_capabilities = false;
         std::string locale{"en"};
         std::string theme_name{"midnight"};
         std::string preferences_argument;
@@ -377,12 +399,18 @@ auto main(int argc, char** argv) -> int {
         const auto terminal_diagnostics_option =
             app.add_flag("--terminal-diagnostics", terminal_diagnostics,
                          "Open interactive normalized terminal-input and resize diagnostics");
+        const auto terminal_capabilities_option = app.add_flag("--terminal-capabilities", terminal_capabilities,
+                                                               "Print terminal stream capabilities and exit");
         table_option->excludes(command_option);
         table_option->excludes(sql_option);
         command_option->excludes(sql_option);
         terminal_diagnostics_option->excludes(table_option);
         terminal_diagnostics_option->excludes(command_option);
         terminal_diagnostics_option->excludes(sql_option);
+        terminal_diagnostics_option->excludes(terminal_capabilities_option);
+        terminal_capabilities_option->excludes(table_option);
+        terminal_capabilities_option->excludes(command_option);
+        terminal_capabilities_option->excludes(sql_option);
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
         app.add_option("--theme", theme_name, "Workspace theme: midnight or high-contrast");
@@ -398,6 +426,12 @@ auto main(int argc, char** argv) -> int {
         if (version) {
             std::cout << "Vulpes " << VULPES_VERSION << '\n';
             return 0;
+        }
+        if (terminal_capabilities) {
+            if (!database_argument.empty())
+                throw vulpes::Error{vulpes::ErrorCategory::validation,
+                                    "--terminal-capabilities does not accept a database path"};
+            return print_terminal_capabilities(locale, catalog_paths);
         }
         if (terminal_diagnostics) {
             if (!database_argument.empty())

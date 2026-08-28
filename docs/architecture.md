@@ -188,6 +188,12 @@ normalized `KeyEvent` and `ResizeEvent` values. It provides a repeatable manual
 verification surface without leaking CPP-Terminal types outside the terminal
 boundary.
 
+`detect_console_capabilities` runs before `ConsoleTerminal` constructs its
+CPP-Terminal session. Interactive modes require terminal-connected standard
+input and output; redirected modes fail with plain structured errors before raw
+mode or ANSI output. The non-interactive `--terminal-capabilities` command
+reports the same decision. See ADR 0015.
+
 ### Browse query controls
 
 The browse frontend uses a semantic `TextPrompt` widget for text search and

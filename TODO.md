@@ -52,8 +52,8 @@ on Windows, Linux, and macOS.
   normalization tests for keyboard chords and resize events.
 - [ ] Verify CPP-Terminal keyboard input, resize notifications, and cleanup on
   supported Windows, Linux, and macOS hosts.
-- [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
-  standard streams on all platforms.
+- [ ] Verify raw-mode restoration, Ctrl+C, resize, and initialized-terminal
+  failure handling on all supported platforms.
 - [x] Render a recoverable terminal-too-small warning after a resize rather than
   spinning without a frame or input handling.
 - [ ] Complete Windows raw-input verification for Escape, arrows, Ctrl+C, function
@@ -69,8 +69,8 @@ on Windows, Linux, and macOS.
   rendering without hard-coded colors in individual screens.
 - [x] Add interactive normalized-input and resize diagnostics for manual host
   verification.
-- [ ] Add terminal capability/redirected-stream diagnostics and a user-facing
-  terminal failure screen.
+- [x] Add terminal capability/redirected-stream diagnostics and a plain
+  user-facing failure path before raw-mode initialization.
 - [x] Map configurable keys to semantic action IDs.
 
 ## M4 — First vertical slice: browse

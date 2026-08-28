@@ -32,6 +32,7 @@ add_executable(vulpes_tests
     ui/window_frame_test.cpp
     terminal/frame_diff_test.cpp
     terminal/ansi_input_test.cpp
+    terminal/capabilities_test.cpp
     terminal/cpp_terminal_adapter_test.cpp
     terminal/screen_buffer_test.cpp
     terminal/test_terminal_test.cpp
