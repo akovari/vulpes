@@ -55,7 +55,9 @@ prevents stale datasets from crossing connection boundaries.
 workspace Browse command run the same browse/form/filter implementation; the
 same is true of direct and workspace SQL consoles. It also gives reduced
 terminal sizes a deterministic warning frame and preserves Escape/Ctrl+C as
-clean exits while waiting for a resize.
+clean exits while waiting for a resize. Workspace and direct modes continue to
+present that frame and consume input after a resize, so a temporary small
+terminal cannot produce a busy loop or a stale screen.
 
 Workspace chrome selects semantic `ThemeRole` values rather than defining RGB
 colors inside menus, tabs, or status bars. `midnight` is the default theme and

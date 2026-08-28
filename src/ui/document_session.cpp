@@ -2,16 +2,10 @@
 
 #include "vulpes/core/actions.hpp"
 #include "vulpes/core/error.hpp"
-
-#include <string_view>
+#include "vulpes/ui/terminal_warning.hpp"
 
 namespace vulpes::ui {
 namespace {
-
-void render_size_warning(terminal::ScreenBuffer& buffer, terminal::Size current, std::string_view message) {
-    const int row = current.height / 2;
-    static_cast<void>(buffer.write_utf8(0, row, message, {.bold = true}));
-}
 
 [[nodiscard]] auto below_minimum(terminal::Size size, terminal::Size minimum) -> bool {
     return size.width < minimum.width || size.height < minimum.height;
@@ -40,7 +34,7 @@ void DocumentSession::run() {
 
         current.clear();
         if (below_minimum(size, minimum_size_))
-            render_size_warning(current, size, too_small_message_);
+            render_terminal_warning(current, size, too_small_message_);
         else
             surface_->render(current, {0, 0, size.width, size.height});
         terminal_->present(previous, current);

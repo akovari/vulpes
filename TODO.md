@@ -54,6 +54,8 @@ on Windows, Linux, and macOS.
   supported Windows, Linux, and macOS hosts.
 - [ ] Handle resize, raw-mode restoration, Ctrl+C, terminal failure, and redirected
   standard streams on all platforms.
+- [x] Render a recoverable terminal-too-small warning after a resize rather than
+  spinning without a frame or input handling.
 - [ ] Complete Windows raw-input verification for Escape, arrows, Ctrl+C, function
   keys, Alt chords, and terminal restoration on Windows Terminal and legacy hosts.
 - [ ] Complete Linux/macOS raw-input verification for Escape ambiguity, resize,

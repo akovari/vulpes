@@ -11,6 +11,7 @@
 #include "vulpes/ui/document_session.hpp"
 #include "vulpes/ui/schema_document.hpp"
 #include "vulpes/ui/sql_document.hpp"
+#include "vulpes/ui/terminal_warning.hpp"
 #include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/workspace.hpp"
 #include "vulpes/version.hpp"
@@ -80,8 +81,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         messages.load_catalog_file(std::filesystem::path{catalog_path});
     vulpes::terminal::ConsoleTerminal terminal;
     auto size = terminal.size();
-    if (size.width < 40 || size.height < 10)
-        throw vulpes::Error{vulpes::ErrorCategory::terminal, "workspace requires at least 40 columns by 10 rows"};
+    if (size.width <= 0 || size.height <= 0)
+        throw vulpes::Error{vulpes::ErrorCategory::terminal, "terminal reported an invalid size"};
     vulpes::terminal::ScreenBuffer previous{size.width, size.height};
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
@@ -117,13 +118,25 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     };
     for (;;) {
         const auto updated = terminal.size();
+        if (updated.width <= 0 || updated.height <= 0)
+            throw vulpes::Error{vulpes::ErrorCategory::terminal, "terminal reported an invalid size"};
         if (updated.width != size.width || updated.height != size.height) {
             size = updated;
             previous = vulpes::terminal::ScreenBuffer{size.width, size.height};
             current = vulpes::terminal::ScreenBuffer{size.width, size.height};
         }
-        if (size.width < 40 || size.height < 10)
+        if (size.width < 40 || size.height < 10) {
+            current.clear();
+            vulpes::ui::render_terminal_warning(
+                current, size, messages.translate("terminal.minimum_size", {{"width", "40"}, {"height", "10"}}));
+            terminal.present(previous, current);
+            previous = current;
+            const auto action = actions.action_for(terminal.read_event());
+            if (action == vulpes::core::ActionId::application_back ||
+                action == vulpes::core::ActionId::application_quit)
+                return 0;
             continue;
+        }
         current.clear();
         const auto& active_document = workspace.active_document();
         if (active_document.kind != vulpes::ui::DocumentKind::workspace) {

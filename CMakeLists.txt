@@ -76,6 +76,7 @@ add_library(vulpes_core
     src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp
+    src/ui/terminal_warning.cpp
     src/ui/text_prompt.cpp
     src/ui/theme.cpp
     src/ui/workspace.cpp
