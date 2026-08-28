@@ -16,7 +16,7 @@ TEST_CASE("document session hosts a browse document through the terminal abstrac
     vulpes::terminal::TestTerminal terminal{{80, 22}};
     terminal.enqueue(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape});
 
-    vulpes::ui::DocumentSession session{terminal, document, {20, 6}};
+    vulpes::ui::DocumentSession session{terminal, document, {20, 6}, "Terminal is too small."};
     session.run();
 
     REQUIRE(terminal.frames().size() == 1);
@@ -31,7 +31,7 @@ TEST_CASE("document session shows a resize warning and still permits a clean exi
     vulpes::terminal::TestTerminal terminal{{18, 5}};
     terminal.enqueue(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape});
 
-    vulpes::ui::DocumentSession session{terminal, document, {20, 6}};
+    vulpes::ui::DocumentSession session{terminal, document, {20, 6}, "Terminal is too small."};
     session.run();
 
     REQUIRE(terminal.frames().size() == 1);

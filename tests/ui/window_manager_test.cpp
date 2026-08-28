@@ -3,7 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("window manager owns tabs and gives modal Escape priority", "[ui][window]") {
-    vulpes::ui::WindowManager windows;
+    vulpes::ui::WindowManager windows{vulpes::ui::theme(vulpes::ui::ThemeName::midnight), "Workspace"};
     windows.open({.id = "browse:customer", .title = "Customers", .kind = vulpes::ui::DocumentKind::browse});
     windows.open({.id = "sql", .title = "SQL", .kind = vulpes::ui::DocumentKind::sql_console});
     REQUIRE(windows.documents().size() == 3);

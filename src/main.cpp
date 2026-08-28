@@ -41,13 +41,17 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
             const vulpes::core::Localizer& messages) {
     vulpes::terminal::ConsoleTerminal terminal;
     vulpes::ui::BrowseDocument document{database, table, messages};
-    vulpes::ui::DocumentSession{terminal, document, {20, 6}}.run();
+    vulpes::ui::DocumentSession{
+        terminal, document, {20, 6}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "6"}})}
+        .run();
 }
 
 void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& messages) {
     vulpes::terminal::ConsoleTerminal terminal;
     vulpes::ui::SqlDocument document{database, messages};
-    vulpes::ui::DocumentSession{terminal, document, {20, 8}}.run();
+    vulpes::ui::DocumentSession{
+        terminal, document, {20, 8}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "8"}})}
+        .run();
 }
 
 void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Localizer& messages) {
@@ -80,9 +84,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::terminal::ScreenBuffer previous{size.width, size.height};
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
-    vulpes::ui::Workspace workspace{messages.translate("application.title"), "Open SQLite database",
-                                    "Create SQLite database", "Enter a SQLite database path   Enter Apply   Esc Cancel",
-                                    theme};
+    vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme};
     std::optional<vulpes::db::Database> database;
     using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SqlDocument>;
     std::unordered_map<std::string, WorkspaceSurface> surfaces;
@@ -117,7 +119,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             try {
                 const auto path = workspace.requested_path();
                 if (path.empty())
-                    throw vulpes::Error{vulpes::ErrorCategory::validation, "a database path is required"};
+                    throw vulpes::Error{vulpes::ErrorCategory::validation,
+                                        messages.translate("workspace.path_required")};
                 surfaces.clear();
                 database.emplace(std::filesystem::path{path}, outcome == vulpes::ui::WorkspaceResult::open_database
                                                                   ? vulpes::db::OpenMode::read_write
@@ -176,7 +179,8 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::tables:
         std::cout << messages.translate("database.tables") << ":\n";
         for (const auto& table : response.tables)
-            std::cout << "  " << table.name << (table.is_view ? " [view]" : "") << '\n';
+            std::cout << "  " << table.name << (table.is_view ? messages.translate("database.view_suffix") : "")
+                      << '\n';
         break;
     case vulpes::core::CommandOutcome::schema:
         print_schema(*response.table, messages);

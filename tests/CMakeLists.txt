@@ -19,6 +19,7 @@ add_executable(vulpes_tests
     ui/text_prompt_test.cpp
     ui/theme_test.cpp
     ui/workspace_test.cpp
+    ui/workspace_text_test.cpp
     ui/window_manager_test.cpp
     terminal/frame_diff_test.cpp
     terminal/ansi_input_test.cpp

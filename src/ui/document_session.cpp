@@ -3,14 +3,12 @@
 #include "vulpes/core/actions.hpp"
 #include "vulpes/core/error.hpp"
 
-#include <string>
+#include <string_view>
 
 namespace vulpes::ui {
 namespace {
 
-void render_size_warning(terminal::ScreenBuffer& buffer, terminal::Size current, terminal::Size minimum) {
-    const auto message = "Terminal is too small. Resize to at least " + std::to_string(minimum.width) + " x " +
-                         std::to_string(minimum.height) + ". Esc or Ctrl+C exits.";
+void render_size_warning(terminal::ScreenBuffer& buffer, terminal::Size current, std::string_view message) {
     const int row = current.height / 2;
     static_cast<void>(buffer.write_utf8(0, row, message, {.bold = true}));
 }
@@ -42,7 +40,7 @@ void DocumentSession::run() {
 
         current.clear();
         if (below_minimum(size, minimum_size_))
-            render_size_warning(current, size, minimum_size_);
+            render_size_warning(current, size, too_small_message_);
         else
             surface_->render(current, {0, 0, size.width, size.height});
         terminal_->present(previous, current);

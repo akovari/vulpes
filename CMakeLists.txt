@@ -78,6 +78,7 @@ add_library(vulpes_core
     src/ui/text_prompt.cpp
     src/ui/theme.cpp
     src/ui/workspace.cpp
+    src/ui/workspace_text.cpp
     src/ui/window_manager.cpp
 )
 add_library(Vulpes::core ALIAS vulpes_core)

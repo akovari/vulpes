@@ -1,4 +1,5 @@
 #include "vulpes/core/error.hpp"
+#include "vulpes/core/localization.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/workspace.hpp"
@@ -27,7 +28,8 @@ TEST_CASE("high contrast palette keeps all workspace roles distinguishable", "[u
 
 TEST_CASE("workspace renders its chrome through injected theme roles", "[ui][theme]") {
     const auto& high_contrast = vulpes::ui::theme(vulpes::ui::ThemeName::high_contrast);
-    vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path", high_contrast};
+    vulpes::core::Localizer messages{"en"};
+    vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), high_contrast};
     vulpes::terminal::ScreenBuffer buffer{80, 25};
 
     workspace.render(buffer, {0, 0, 80, 25});

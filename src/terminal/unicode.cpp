@@ -17,6 +17,15 @@ auto encode_utf8(char32_t code_point) -> std::string {
     return {reinterpret_cast<const char*>(encoded), static_cast<std::size_t>(size)};
 }
 
+auto first_code_point(std::string_view text) noexcept -> char32_t {
+    if (text.empty())
+        return U'\0';
+    utf8proc_int32_t code_point{};
+    const auto size = utf8proc_iterate(reinterpret_cast<const utf8proc_uint8_t*>(text.data()),
+                                       static_cast<utf8proc_ssize_t>(text.size()), &code_point);
+    return size > 0 ? static_cast<char32_t>(code_point) : U'\0';
+}
+
 auto text_width(std::string_view text) -> int {
     const auto* cursor = reinterpret_cast<const utf8proc_uint8_t*>(text.data());
     auto remaining = static_cast<utf8proc_ssize_t>(text.size());

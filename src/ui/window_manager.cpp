@@ -14,8 +14,9 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
 
 } // namespace
 
-WindowManager::WindowManager(const Theme& theme) : theme_{&theme} {
-    documents_.push_back({.id = "workspace", .title = "Workspace", .kind = DocumentKind::workspace, .closable = false});
+WindowManager::WindowManager(const Theme& theme, std::string workspace_title) : theme_{&theme} {
+    documents_.push_back(
+        {.id = "workspace", .title = std::move(workspace_title), .kind = DocumentKind::workspace, .closable = false});
 }
 
 void WindowManager::open(Document document) {

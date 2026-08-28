@@ -81,8 +81,9 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
 }
 
 void BrowseDocument::begin_form(FormMode mode) {
-    form_.emplace(dataset_, mode == FormMode::edit ? "Edit " + dataset_.schema().name : "New " + dataset_.schema().name,
-                  mode, messages_->translate("form.instructions"));
+    const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
+    form_.emplace(dataset_, messages_->translate(title_key, {{"table", dataset_.schema().name}}), mode,
+                  messages_->translate("form.instructions"));
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {

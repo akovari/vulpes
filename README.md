@@ -62,6 +62,10 @@ for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
 groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
 switches tabs and `Ctrl+W` closes the active non-workspace tab.
 
+With a translated catalog, menu Alt mnemonics follow the first character of
+each translated menu label; `F10` always opens the first menu. For example, the
+shipped Czech catalog uses `Alt+S` for `Soubor`.
+
 The default workspace palette is `midnight`. Use `--theme high-contrast` for a
 black-and-white high-contrast workspace chrome with underlined mnemonics:
 

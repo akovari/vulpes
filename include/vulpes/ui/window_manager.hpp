@@ -25,7 +25,7 @@ struct Document {
 // content remains semantic UI supplied by the application shell.
 class WindowManager {
   public:
-    explicit WindowManager(const Theme& theme = ui::theme(ThemeName::midnight));
+    WindowManager(const Theme& theme, std::string workspace_title);
 
     void open(Document document);
     [[nodiscard]] auto close_active() -> bool;

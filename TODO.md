@@ -103,7 +103,7 @@ on Windows, Linux, and macOS.
 - [x] Add external UTF-8 catalog loading and locale selection configuration.
 - [ ] Add ICU-backed plural/select message formatting with the first translated
   application catalog.
-- [ ] Localize all workspace/menu/status/help text and add Czech catalog coverage.
+- [x] Localize all workspace/menu/status/help text and add Czech catalog coverage.
 - [ ] Add locale-aware date, time, number, and currency display policies.
 
 ## M5 — Edit workflow and generated forms
