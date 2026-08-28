@@ -28,8 +28,10 @@ class Workspace {
 
   private:
     enum class Modal { none, open, create };
+    enum class Menu { none, file, database, view, window, help };
 
     void begin_path_prompt(Modal modal);
+    [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
     std::string title_;
     std::string open_label_;
     std::string create_label_;
@@ -38,7 +40,7 @@ class Workspace {
     std::string status_;
     std::vector<db::TableSchema> tables_;
     std::size_t selected_table_{};
-    bool menu_open_{false};
+    Menu menu_{Menu::none};
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;

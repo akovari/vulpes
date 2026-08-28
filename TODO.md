@@ -80,15 +80,15 @@ on Windows, Linux, and macOS.
 
 ## M4.5 — Workspace shell
 
-- [ ] Start without arguments in a keyboard-first workspace shell.
-- [ ] Add File, Database, View, Window, and Help menus with stable actions.
-- [ ] Open or create SQLite databases through a portable path-entry dialog.
+- [x] Start without arguments in a keyboard-first workspace shell.
+- [x] Add keyboard-navigable File, Database, View, Window, and Help menus.
+- [x] Open or create SQLite databases through a portable path-entry dialog.
 - [ ] Manage active document tabs, modal input, focus, and a status bar.
 - [ ] Host browse and SQL-console surfaces as workspace documents.
 - [ ] Make File-menu Escape/Left/Right/Alt mnemonic behavior reliable on all
   supported Windows terminal hosts.
-- [ ] Implement the Database, View, Window, and Help menus rather than only the
-  File-menu prototype.
+- [x] Implement the Database, View, Window, and Help menus rather than only the
+  File-menu prototype, with deterministic keyboard tests.
 - [ ] Add document tabs, active-document switching, close confirmation, and a
   tab-local title/status model.
 - [ ] Add a command window/palette using the existing command dispatcher.

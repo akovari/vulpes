@@ -41,13 +41,16 @@ TEST_CASE("workspace opens path modal and selects database tables", "[ui][worksp
           vulpes::ui::WorkspaceResult::redraw);
 }
 
-TEST_CASE("workspace closes File menu with Escape or Left and accepts Alt+F", "[ui][workspace]") {
+TEST_CASE("workspace menu navigation supports arrows, mnemonics, and Escape", "[ui][workspace]") {
     vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path"};
     CHECK(workspace.handle(vulpes::core::ActionId::application_menu,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f10}) ==
           vulpes::ui::WorkspaceResult::redraw);
     CHECK(workspace.handle(vulpes::core::ActionId::grid_previous_column,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::left}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::grid_next_column,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right}) ==
           vulpes::ui::WorkspaceResult::redraw);
     CHECK(workspace.handle(
               vulpes::core::ActionId::application_menu,
@@ -56,6 +59,38 @@ TEST_CASE("workspace closes File menu with Escape or Left and accepts Alt+F", "[
     CHECK(workspace.handle(vulpes::core::ActionId::application_back,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::WorkspaceResult::redraw);
+}
+
+TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspace]") {
+    vulpes::ui::Workspace workspace{"Vulpes", "Open", "Create", "Enter path"};
+    workspace.set_database("workshop.db", {{.name = "customers"}});
+
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::none,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::browse_table);
+
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::none,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    for (int count = 0; count < 3; ++count) {
+        CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+              vulpes::ui::WorkspaceResult::redraw);
+    }
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::run_sql);
 }
 
 TEST_CASE("workspace clears a dismissed modal from the next frame", "[ui][workspace]") {
