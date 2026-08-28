@@ -59,13 +59,19 @@ function Find-VisualStudioInstallation {
 }
 
 function Initialize-WindowsToolchain {
-    if (Get-Command cl.exe -ErrorAction SilentlyContinue) {
-        if ($env:VSINSTALLDIR) {
-            $script:visualStudioInstallation = $env:VSINSTALLDIR.TrimEnd('\')
-        }
+    $hasX64Toolchain =
+        (Get-Command cl.exe -ErrorAction SilentlyContinue) -and
+        $env:VSCMD_ARG_TGT_ARCH -eq 'x64' -and
+        $env:VSCMD_ARG_HOST_ARCH -eq 'x64'
+
+    if ($env:VSINSTALLDIR) {
+        $script:visualStudioInstallation = $env:VSINSTALLDIR.TrimEnd('\')
     }
-    else {
-        $script:visualStudioInstallation = Find-VisualStudioInstallation
+
+    if (-not $hasX64Toolchain) {
+        if (-not $script:visualStudioInstallation) {
+            $script:visualStudioInstallation = Find-VisualStudioInstallation
+        }
         $devShellModule = Join-Path $script:visualStudioInstallation `
             'Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
         if (-not (Test-Path -LiteralPath $devShellModule -PathType Leaf)) {
@@ -109,6 +115,17 @@ function Invoke-Configure {
         $arguments += '--fresh'
     }
     Invoke-NativeCommand cmake $arguments
+}
+
+function Ensure-Configure {
+    param(
+        [string] $Preset,
+        [string] $CachePath
+    )
+
+    if ($Fresh -or -not (Test-Path -LiteralPath $CachePath -PathType Leaf)) {
+        Invoke-Configure $Preset
+    }
 }
 
 function Invoke-BuildPreset {
@@ -160,35 +177,35 @@ try {
             Invoke-Configure $windowsConfigurePreset
         }
         'build' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildPreset $debugBuildPreset
         }
         'test' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildPreset $debugBuildPreset
             Invoke-Tests 'Debug'
         }
         'check' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildPreset $debugBuildPreset
             Invoke-BuildTarget 'build/windows-msvc' 'format-check' 'Debug'
             Invoke-Tests 'Debug'
         }
         'format' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildTarget 'build/windows-msvc' 'format' 'Debug'
         }
         'format-check' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildTarget 'build/windows-msvc' 'format-check' 'Debug'
         }
         'tidy' {
-            Invoke-Configure $tidyConfigurePreset
+            Ensure-Configure $tidyConfigurePreset 'build/windows-tidy/CMakeCache.txt'
             Invoke-BuildPreset $tidyBuildPreset
             Invoke-BuildTarget 'build/windows-tidy' 'tidy'
         }
         'release' {
-            Invoke-Configure $windowsConfigurePreset
+            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildPreset $releaseBuildPreset
             Invoke-Tests 'Release'
         }

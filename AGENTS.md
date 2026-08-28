@@ -15,7 +15,9 @@ These instructions apply to the whole repository.
 ## Development loop
 
 - On Windows, use `./scripts/dev.ps1` for the routine incremental Debug loop.
-  Its default `check` task configures, builds, checks formatting, and runs tests.
+  Its default `check` task reuses or creates the configuration, builds, checks
+  formatting, and runs tests. It normalizes an inherited developer shell to the
+  x64 host and target toolchain.
 - Use `./scripts/dev.ps1 build` while iterating and
   `./scripts/dev.ps1 test -CTestRegex <pattern>` for a focused CTest run.
 - Do not run a Release build during ordinary local iteration. Use

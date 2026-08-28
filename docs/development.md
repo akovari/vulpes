@@ -3,7 +3,7 @@
 ## Workflow
 
 1. On Windows, run `.\scripts\dev.ps1`; it defaults to the incremental Debug
-   configure/build, formatting check, and test loop.
+   build, formatting check, and test loop, configuring only when no cache exists.
 2. Use `.\scripts\dev.ps1 build` for quick compile iterations and
    `.\scripts\dev.ps1 test -CTestRegex <pattern>` for focused CTest runs.
 3. Keep changes within one architectural boundary when practical.
@@ -11,14 +11,18 @@
 5. Update `TODO.md` when scope or sequencing changes.
 
 The wrapper discovers and initializes the newest Visual Studio x64 toolchain,
-bundled vcpkg, and LLVM formatter/analyzer when necessary. It delegates to the
-checked-in CMake presets; it is not an alternative build definition. Linux and
-macOS contributors use the corresponding presets directly.
+bundled vcpkg, and LLVM formatter/analyzer when necessary. It also replaces an
+inherited x86 developer-shell environment, preventing x86 system libraries from
+leaking into an x64 link. It delegates to the checked-in CMake presets; it is not
+an alternative build definition. Linux and macOS contributors use the
+corresponding presets directly.
 
-Routine local development is Debug-only. Run `.\scripts\dev.ps1 release` for a
-release or milestone gate, not after every edit. Use `-Fresh` only when CMake's
-generated graph really needs rebuilding; ordinary invocations remain
-incremental.
+Ninja tracks CMake and manifest inputs and regenerates an existing build tree
+when they change. Use the explicit `configure` task when changing preset-only
+settings. Routine local development is Debug-only. Run
+`.\scripts\dev.ps1 release` for a release or milestone gate, not after every
+edit. Use `-Fresh` only when CMake's generated graph really needs rebuilding;
+ordinary invocations remain incremental.
 
 Repository-wide contributor and agent invariants live in `AGENTS.md`.
 
