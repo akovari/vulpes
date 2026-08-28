@@ -136,6 +136,12 @@ validation leaves the draft open for correction. Grids size columns from their
 headers and current page rather than assigning every column the same width; the
 focused cell remains distinct from the selected row.
 
+Single-line prompts and generated text/number fields have a logical UTF-8
+cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long
+values follow the caret horizontally without changing the stored text. Lookup
+fields retain Left/Right for relationship selection; multiline SQL cursor
+navigation and clipboard selection remain tracked follow-up work.
+
 Read-only database sessions keep browse, sort, filter, search, schema, and SQL
 result viewing available, but generated form and delete actions are disabled and
 the browse footer is labeled **read-only**. An explicit database path supplied

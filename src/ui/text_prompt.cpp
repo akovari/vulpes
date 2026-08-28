@@ -13,19 +13,10 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
         buffer.put(column, y, U' ', style);
 }
 
-void erase_last_code_point(std::string& text) {
-    if (text.empty())
-        return;
-    std::size_t offset = text.size() - 1;
-    while (offset > 0 && (static_cast<unsigned char>(text[offset]) & 0xC0U) == 0x80U)
-        --offset;
-    text.erase(offset);
-}
-
 } // namespace
 
 TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value, const Theme& theme)
-    : label_{std::move(label)}, instructions_{std::move(instructions)}, value_{std::move(initial_value)},
+    : label_{std::move(label)}, instructions_{std::move(instructions)}, editor_{std::move(initial_value)},
       theme_{&theme} {
 }
 
@@ -41,14 +32,10 @@ auto TextPrompt::handle(const terminal::InputEvent& event) -> PromptResult {
         return PromptResult::cancelled;
     if (key->key == terminal::Key::enter)
         return PromptResult::submitted;
-    if (key->key == terminal::Key::backspace) {
-        erase_last_code_point(value_);
-        error_.clear();
-        return PromptResult::redraw;
-    }
-    if (key->key == terminal::Key::character && !key->ctrl && !key->alt) {
-        value_ += terminal::encode_utf8(key->character);
-        error_.clear();
+    const auto result = editor_.handle(*key);
+    if (result != LineEditResult::unchanged) {
+        if (result == LineEditResult::changed)
+            error_.clear();
         return PromptResult::redraw;
     }
     return PromptResult::unchanged;
@@ -59,7 +46,9 @@ void TextPrompt::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         return;
     const int interior = bounds.width - 2;
     WindowFrame::render(buffer, bounds, label_, window_frame_appearance(*theme_, true));
-    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, "> " + value_, theme_->style(ThemeRole::input_focus));
+    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, "", theme_->style(ThemeRole::input_focus));
+    static_cast<void>(buffer.write_utf8(bounds.x + 1, bounds.y + 1, "> ", theme_->style(ThemeRole::input_focus)));
+    editor_.render(buffer, {bounds.x + 3, bounds.y + 1, interior - 2, 1}, theme_->style(ThemeRole::input_focus), true);
     write_padded(buffer, bounds.x + 1, bounds.y + 2, interior, error_.empty() ? instructions_ : error_,
                  theme_->style(error_.empty() ? ThemeRole::muted_text : ThemeRole::error));
 }

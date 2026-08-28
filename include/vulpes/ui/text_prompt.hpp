@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/line_editor.hpp"
 #include "vulpes/ui/window_frame.hpp"
 
 #include <string>
@@ -18,7 +19,8 @@ class TextPrompt {
     TextPrompt(std::string label, std::string instructions, std::string initial_value = {},
                const Theme& theme = ui::theme(ThemeName::midnight));
 
-    [[nodiscard]] auto value() const noexcept -> std::string_view { return value_; }
+    [[nodiscard]] auto value() const noexcept -> std::string_view { return editor_.text(); }
+    [[nodiscard]] auto cursor_offset() const noexcept -> std::size_t { return editor_.cursor_offset(); }
     void set_error(std::string message);
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> PromptResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
@@ -26,7 +28,7 @@ class TextPrompt {
   private:
     std::string label_;
     std::string instructions_;
-    std::string value_;
+    LineEditor editor_;
     std::string error_;
     const Theme* theme_;
 };

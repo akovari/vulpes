@@ -45,15 +45,6 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
         buffer.put(column, y, U' ', style);
 }
 
-void erase_last_code_point(std::string& text) {
-    if (text.empty())
-        return;
-    std::size_t offset = text.size() - 1;
-    while (offset > 0 && (static_cast<unsigned char>(text[offset]) & 0xC0U) == 0x80U)
-        --offset;
-    text.erase(offset);
-}
-
 } // namespace
 
 RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions,
@@ -77,7 +68,7 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
                              .label = schema_field.name,
                              .kind = kind,
                              .read_only = kind == FormFieldKind::read_only,
-                             .text = value ? format_value(*value, kind) : std::string{}};
+                             .editor = LineEditor{value ? format_value(*value, kind) : std::string{}}};
         if (kind == FormFieldKind::lookup) {
             form_field.lookup_options = dataset_->lookup_options(schema_field.name);
             if (value) {
@@ -85,7 +76,7 @@ RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode
                 if (selected != form_field.lookup_options.end()) {
                     form_field.selected_lookup_option =
                         static_cast<std::size_t>(std::distance(form_field.lookup_options.begin(), selected));
-                    form_field.text = selected->label;
+                    form_field.editor.set_text(selected->label);
                 }
             }
         }
@@ -133,23 +124,20 @@ auto RecordForm::handle(const terminal::InputEvent& event) -> FormResult {
         clear_error(selected_field_);
         return FormResult::redraw;
     }
-    if (key->key == terminal::Key::backspace) {
-        erase_last_code_point(field.text);
-        changed_[selected_field_] = true;
-        clear_error(selected_field_);
-        return FormResult::redraw;
-    }
     if (field.kind == FormFieldKind::checkbox && key->key == terminal::Key::character && key->character == U' ') {
-        field.text = field.text == "1" ? "0" : "1";
+        field.editor.set_text(field.editor.text() == "1" ? "0" : "1");
         changed_[selected_field_] = true;
         clear_error(selected_field_);
         return FormResult::redraw;
     }
-    if (key->key == terminal::Key::character && !key->ctrl && !key->alt) {
-        field.text += terminal::encode_utf8(key->character);
-        changed_[selected_field_] = true;
-        clear_error(selected_field_);
-        return FormResult::redraw;
+    if (field.kind == FormFieldKind::text || field.kind == FormFieldKind::number) {
+        const auto edit_result = field.editor.handle(*key);
+        if (edit_result == LineEditResult::changed) {
+            changed_[selected_field_] = true;
+            clear_error(selected_field_);
+        }
+        if (edit_result != LineEditResult::unchanged)
+            return FormResult::redraw;
     }
     return FormResult::unchanged;
 }
@@ -174,13 +162,18 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
             const bool selected = field_index == selected_field_;
             write_padded(buffer, bounds.x + 1, y, label_width, field.label + ':',
                          theme_->style(field.error.empty() ? ThemeRole::text : ThemeRole::error));
-            std::string value = field.text;
+            std::string value{field.editor.text()};
             if (field.kind == FormFieldKind::checkbox)
-                value = field.text == "1" ? "✓" : " ";
+                value = field.editor.text() == "1" ? "✓" : " ";
             const auto role = field.read_only ? ThemeRole::muted_text
                               : selected      ? ThemeRole::input_focus
                                               : ThemeRole::input;
-            write_padded(buffer, bounds.x + 1 + label_width, y, value_width, " " + value, theme_->style(role));
+            if (field.kind == FormFieldKind::text || field.kind == FormFieldKind::number) {
+                field.editor.render(buffer, {bounds.x + 1 + label_width, y, value_width, 1}, theme_->style(role),
+                                    selected);
+            } else {
+                write_padded(buffer, bounds.x + 1 + label_width, y, value_width, " " + value, theme_->style(role));
+            }
         }
     }
     if (first_visible_field > 0)
@@ -232,21 +225,22 @@ auto RecordForm::parse_value(const FormField& field) -> db::Value {
         return field.lookup_options.at(*field.selected_lookup_option).value;
     }
     if (field.kind == FormFieldKind::checkbox)
-        return db::Value{field.text == "1"};
+        return db::Value{field.editor.text() == "1"};
     if (field.kind != FormFieldKind::number)
-        return db::Value{field.text};
-    if (field.text.empty())
+        return db::Value{std::string{field.editor.text()}};
+    const auto text = field.editor.text();
+    if (text.empty())
         return db::Value{nullptr};
 
-    if (field.text.find_first_of(".eE") == std::string::npos) {
+    if (text.find_first_of(".eE") == std::string_view::npos) {
         std::int64_t value{};
-        const auto [end, error] = std::from_chars(field.text.data(), field.text.data() + field.text.size(), value);
-        if (error == std::errc{} && end == field.text.data() + field.text.size())
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (error == std::errc{} && end == text.data() + text.size())
             return db::Value{value};
     } else {
         double value{};
-        const auto [end, error] = std::from_chars(field.text.data(), field.text.data() + field.text.size(), value);
-        if (error == std::errc{} && end == field.text.data() + field.text.size())
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (error == std::errc{} && end == text.data() + text.size())
             return db::Value{value};
     }
     throw Error{ErrorCategory::validation, "invalid number for field: " + field.name};
@@ -265,7 +259,7 @@ void RecordForm::move_lookup_selection(FormField& field, int direction) {
                           ? (static_cast<int>(*field.selected_lookup_option) + direction + count) % count
                           : (direction < 0 ? count - 1 : 0);
     field.selected_lookup_option = static_cast<std::size_t>(next);
-    field.text = field.lookup_options.at(*field.selected_lookup_option).label;
+    field.editor.set_text(field.lookup_options.at(*field.selected_lookup_option).label);
 }
 
 void RecordForm::record_error(const Error& error) {

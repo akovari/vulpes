@@ -23,3 +23,18 @@ TEST_CASE("text prompt edits Unicode text and exposes its terminal-independent s
     CHECK(buffer.cell(3, 2).style ==
           vulpes::ui::theme(vulpes::ui::ThemeName::midnight).style(vulpes::ui::ThemeRole::input_focus));
 }
+
+TEST_CASE("text prompt edits at the logical cursor instead of appending", "[ui][prompt][editor]") {
+    vulpes::ui::TextPrompt prompt{"Path", "Enter Apply", "ac"};
+    CHECK(prompt.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::left}) ==
+          vulpes::ui::PromptResult::redraw);
+    CHECK(prompt.cursor_offset() == 1);
+    CHECK(prompt.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'b'}) ==
+          vulpes::ui::PromptResult::redraw);
+    CHECK(prompt.value() == "abc");
+    CHECK(prompt.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::home}) ==
+          vulpes::ui::PromptResult::redraw);
+    CHECK(prompt.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::delete_key}) ==
+          vulpes::ui::PromptResult::redraw);
+    CHECK(prompt.value() == "bc");
+}

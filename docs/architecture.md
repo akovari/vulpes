@@ -72,6 +72,14 @@ items. Forms use it to avoid read-only fields, and destructive confirmations
 use it for their buttons. The controls retain responsibility for their own key
 semantics, so the focus model remains independent of a terminal implementation.
 
+`LineEditor` owns one UTF-8 line and a byte-offset cursor that is always
+kept on a code-point boundary. It provides semantic insert/delete/movement and a
+display-cell viewport, so prompts and generated fields share editing behavior
+without a terminal cursor or backend dependency. Rendering uses a logical caret
+cell and follows long values horizontally. The SQL console remains a separate
+multiline editor until row/column movement and paste policy are defined. See ADR
+0019.
+
 `WindowFrame` renders opaque Unicode terminal windows with an optional clipped
 drop shadow; `Button` renders a focusable action affordance. Prompts,
 confirmations, directory selection, record forms, and the SQL editor compose

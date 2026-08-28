@@ -119,9 +119,13 @@ on Windows, Linux, and macOS.
   focused cell from the selected row.
 - [x] Keep the focused generated-form field visible in compact windows and show
   overflow indicators.
-- [ ] Replace append-only text entry with a shared cursor-aware line editor
-  supporting Left/Right, Home/End, Delete, selection-safe UTF-8 edits, horizontal
-  scrolling, and paste normalization.
+- [x] Replace append-only prompt and generated-field entry with a shared
+  cursor-aware UTF-8 line editor supporting Left/Right, Home/End, Backspace,
+  Delete, a logical caret, and horizontal cursor following.
+- [ ] Extend cursor-aware editing to the multiline SQL console with logical
+  line/column navigation and a vertically scrolling editor viewport.
+- [ ] Add selection, word movement, clipboard commands, bracketed-paste event
+  normalization, and configurable field overwrite/insert behavior.
 - [ ] Define explicit per-locale menu mnemonics instead of inferring the first
   character, including collision validation and unambiguous activation.
 - [ ] Add grid row/column position indicators, scrollbar affordances, empty-state

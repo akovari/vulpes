@@ -39,6 +39,23 @@ TEST_CASE("generated form infers controls and persists keyboard edits", "[ui][fo
     CHECK(query.column(0).as_string() == "Acme");
 }
 
+TEST_CASE("generated form edits text at a UTF-8 cursor", "[ui][form][editor]") {
+    vulpes::db::Database database{":memory:"};
+    auto dataset = form_dataset(database);
+    vulpes::ui::RecordForm form{dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save"};
+
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::home}));
+    static_cast<void>(
+        form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'Ž'}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right}));
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::delete_key}));
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) == vulpes::ui::FormResult::saved);
+
+    auto query = database.prepare("SELECT name FROM customer WHERE id = 1");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_string() == "ŽAme");
+}
+
 TEST_CASE("generated form cancels drafts and renders logical cells", "[ui][form]") {
     vulpes::db::Database database{":memory:"};
     auto dataset = form_dataset(database);

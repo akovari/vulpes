@@ -5,6 +5,7 @@
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/focus_ring.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/line_editor.hpp"
 #include "vulpes/ui/window_frame.hpp"
 
 #include <optional>
@@ -22,7 +23,7 @@ struct FormField {
     std::string label;
     FormFieldKind kind{FormFieldKind::text};
     bool read_only{false};
-    std::string text;
+    LineEditor editor;
     std::vector<model::LookupOption> lookup_options;
     std::optional<std::size_t> selected_lookup_option;
     std::string error;
