@@ -31,7 +31,8 @@ forward-declare opaque SQLite types where ownership requires it.
 - `include/vulpes/ui`, `src/ui`: semantic widgets (Phase 3).
 - `include/vulpes/terminal`, `src/terminal`: virtual screen, normalized input,
   and platform backends.
-- `include/vulpes/appmeta`, `src/appmeta`: optional metadata (post-0.1).
+- `include/vulpes/appmeta`, `src/appmeta`: UI-neutral optional application
+  metadata and validation. SQLite-resident loading remains a later boundary.
 - `examples/inventory`: generic framework dogfood; never a source of inventory
   special cases in the runtime.
 
@@ -215,11 +216,22 @@ and stable primary-key identity. See ADR 0008.
 ### Relationship lookups
 
 `Dataset::lookup_options` discovers a field's foreign-key schema, resolves a
-small, schema-derived display-field heuristic, and returns bound key/label
-pairs. `RecordForm` renders the label but saves the key. The option list is
-bounded to 100 rows and does not expose database handles or SQL to the widget;
-searchable and metadata-defined lookups remain a later model feature. See ADR
-0009.
+display field with conservative name heuristics or validated metadata, and
+returns a bounded owned key/label list. Search predicates cover only validated
+referenced fields and bind all user text. `RecordForm` renders the label but
+persists the key. Enter opens `RelationshipLookup`; F2 composes a read-only
+`RelatedRecordView` above it on the document's semantic window stack. Widgets do
+not query SQLite. See ADR 0009 and ADR 0026.
+
+### Application presentation metadata
+
+`appmeta::ApplicationMetadata` enhances inspected schema with table/field labels,
+field order and visibility, additional read-only policy, explicit display
+formats, and relationship lookup policy. Validation rejects unknown objects,
+unsafe lookup fields, invalid limits, incomplete currency policy, and ambiguous
+temporal annotations. Forms and grids consume this model without knowing where
+it was stored. The later SQLite `_app_*` loader targets this boundary rather than
+introducing metadata-table queries into UI code. See ADR 0026.
 
 ### Commands
 
@@ -251,8 +263,9 @@ arguments with ICU MessageFormat. `LocalizedMessage` owns a resolved pattern and
 locale for workspace text that is bound now but formatted later; widgets never
 parse placeholders themselves. `core::LocaleFormatter` applies pinned ICU/CLDR
 number, currency, and date/time presentation while exposing no ICU types.
-Grids use it for integer and real display. Currency codes, time zones, and later
-date-field annotations remain explicit application policy. See ADR 0025.
+Grids use it for integer and real display plus metadata-annotated currency and
+temporal fields. Temporal TEXT values use the strict date/time/RFC 3339 storage
+contract in ADR 0026; formatting never mutates stored values. See ADR 0025.
 
 `detect_console_capabilities` runs before `ConsoleTerminal` constructs its
 CPP-Terminal session. Interactive modes require terminal-connected standard

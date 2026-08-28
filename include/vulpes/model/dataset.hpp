@@ -36,6 +36,18 @@ struct LookupOption {
     std::string label;
 };
 
+struct LookupQuery {
+    std::optional<std::string> display_field;
+    std::vector<std::string> search_fields;
+    std::string search;
+    std::size_t limit{100};
+};
+
+struct RelatedRecord {
+    db::TableSchema schema;
+    db::Row row;
+};
+
 // A table-backed cursor model. It owns query and editing state, so UI code never
 // depends on SQLite statement lifetime or assembles raw SQL.
 class Dataset {
@@ -66,6 +78,10 @@ class Dataset {
     [[nodiscard]] auto draft_value(std::string_view field) const -> std::optional<db::Value>;
     [[nodiscard]] auto lookup_options(std::string_view field, std::size_t limit = 100) const
         -> std::vector<LookupOption>;
+    [[nodiscard]] auto lookup_options(std::string_view field, const LookupQuery& query) const
+        -> std::vector<LookupOption>;
+    [[nodiscard]] auto related_record(std::string_view field, const db::Value& value) const
+        -> std::optional<RelatedRecord>;
     void save();
     void cancel() noexcept;
     void erase();
@@ -88,6 +104,7 @@ class Dataset {
     [[nodiscard]] auto order_clause() const -> std::string;
     [[nodiscard]] auto has_text_fields() const -> bool;
     [[nodiscard]] auto foreign_key_for(std::string_view field) const -> const db::ForeignKeySchema*;
+    [[nodiscard]] auto referenced_schema(const db::ForeignKeySchema& foreign_key) const -> db::TableSchema;
     [[nodiscard]] auto keyset_field() const -> std::optional<std::string>;
     [[nodiscard]] auto keyset_order_clause(bool reverse) const -> std::string;
     [[nodiscard]] auto fetch_keyset_page(const db::Value& anchor, bool forward) -> bool;

@@ -75,21 +75,39 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
     throw Error{ErrorCategory::validation, "invalid number for filter: " + field.name};
 }
 
+auto table_metadata(const appmeta::ApplicationMetadata* metadata, std::string_view table)
+    -> std::optional<appmeta::TableMetadata> {
+    if (metadata == nullptr)
+        return std::nullopt;
+    const auto* result = metadata->table(table);
+    return result == nullptr ? std::nullopt : std::optional{*result};
+}
+
+auto table_label(const appmeta::ApplicationMetadata* metadata, std::string_view table) -> std::string {
+    if (metadata != nullptr) {
+        if (const auto* result = metadata->table(table); result != nullptr && result->label)
+            return *result->label;
+    }
+    return std::string{table};
+}
+
 } // namespace
 
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
-                               const Theme& theme, core::Clipboard* clipboard)
-    : messages_{&messages}, theme_{&theme}, clipboard_{clipboard}, dataset_{database, std::move(table)},
-      controller_{dataset_},
+                               const Theme& theme, core::Clipboard* clipboard,
+                               const appmeta::ApplicationMetadata* metadata)
+    : messages_{&messages}, metadata_{metadata}, theme_{&theme}, clipboard_{clipboard},
+      dataset_{database, std::move(table)}, controller_{dataset_},
       grid_{dataset_,
-            dataset_.schema().name,
+            table_label(metadata, dataset_.schema().name),
             messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"),
             theme,
             {.empty = messages.translate("grid.empty"),
              .row = messages.translate("grid.row"),
              .rows = messages.translate("grid.rows"),
              .column = messages.translate("grid.column")},
-            core::LocaleFormatter{std::string{messages.locale()}}} {
+            core::LocaleFormatter{std::string{messages.locale()}},
+            table_metadata(metadata, dataset_.schema().name)} {
 }
 
 auto BrowseDocument::is_dirty() const noexcept -> bool {
@@ -101,10 +119,11 @@ auto BrowseDocument::is_dirty() const noexcept -> bool {
 
 void BrowseDocument::begin_form(FormMode mode) {
     const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
-    auto title = messages_->translate(title_key, {{"table", dataset_.schema().name}});
+    auto title = messages_->translate(title_key, {{"table", table_label(metadata_, dataset_.schema().name)}});
     windows_.push({.id = "record-form", .title = title, .kind = WindowLayerKind::form},
                   BrowseWindow{std::in_place_type<RecordForm>, dataset_, std::move(title), mode,
-                               messages_->translate("form.instructions"), *theme_, clipboard_});
+                               messages_->translate("form.instructions"), *theme_, clipboard_,
+                               metadata_ == nullptr ? nullptr : metadata_->table(dataset_.schema().name)});
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {
@@ -156,6 +175,10 @@ void BrowseDocument::apply_prompt(PromptWindow& window) {
 auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult {
     if (!windows_.empty()) {
         bool pop_window{false};
+        std::optional<LookupOpenRequest> open_lookup;
+        std::optional<model::LookupOption> selected_lookup;
+        std::string selected_lookup_field;
+        std::optional<model::RelatedRecord> open_related;
         const auto outcome = std::visit(
             [&](auto& window) -> DocumentResult {
                 using Window = std::remove_cvref_t<decltype(window)>;
@@ -164,6 +187,8 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
                     windows_.top().descriptor.dirty = window.is_dirty();
                     if (result == FormResult::saved || result == FormResult::cancelled)
                         pop_window = true;
+                    else if (result == FormResult::lookup_requested)
+                        open_lookup = window.lookup_request();
                     return result == FormResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
                 } else if constexpr (std::is_same_v<Window, PromptWindow>) {
                     const auto result = window.prompt.handle(event);
@@ -180,7 +205,7 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
                         window.prompt.set_error(error.what());
                     }
                     return DocumentResult::redraw;
-                } else {
+                } else if constexpr (std::is_same_v<Window, ConfirmationDialog>) {
                     const auto result = window.handle(event);
                     if (result == ConfirmationResult::confirmed) {
                         dataset_.erase();
@@ -192,11 +217,59 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
                         return DocumentResult::redraw;
                     }
                     return result == ConfirmationResult::unchanged ? DocumentResult::unchanged : DocumentResult::redraw;
+                } else if constexpr (std::is_same_v<Window, RelationshipLookup>) {
+                    const auto result = window.handle(event);
+                    if (result == RelationshipLookupResult::selected) {
+                        selected_lookup = *window.selected_option();
+                        selected_lookup_field = std::string{window.field()};
+                        pop_window = true;
+                    } else if (result == RelationshipLookupResult::cancelled) {
+                        pop_window = true;
+                    } else if (result == RelationshipLookupResult::drill_down) {
+                        open_related = dataset_.related_record(window.field(), window.selected_option()->value);
+                    }
+                    return result == RelationshipLookupResult::unchanged ? DocumentResult::unchanged
+                                                                         : DocumentResult::redraw;
+                } else {
+                    const auto result = window.handle(event);
+                    if (result == RelatedRecordResult::cancelled)
+                        pop_window = true;
+                    return result == RelatedRecordResult::unchanged ? DocumentResult::unchanged
+                                                                    : DocumentResult::redraw;
                 }
             },
             windows_.top().content);
         if (pop_window)
             static_cast<void>(windows_.pop());
+        if (selected_lookup && !windows_.empty()) {
+            if (auto* form = std::get_if<RecordForm>(&windows_.top().content))
+                form->select_lookup(selected_lookup_field, std::move(*selected_lookup));
+        }
+        if (open_lookup) {
+            auto label = open_lookup->field;
+            if (metadata_ != nullptr) {
+                if (const auto* table = metadata_->table(dataset_.schema().name)) {
+                    if (const auto* field = table->field(open_lookup->field); field != nullptr && field->label)
+                        label = *field->label;
+                }
+            }
+            auto title = messages_->translate("lookup.title", {{"field", label}});
+            windows_.push({.id = "lookup:" + open_lookup->field, .title = title, .kind = WindowLayerKind::lookup},
+                          BrowseWindow{std::in_place_type<RelationshipLookup>, dataset_, open_lookup->field,
+                                       std::move(open_lookup->query), open_lookup->allow_drill_down, std::move(title),
+                                       messages_->translate("lookup.search"),
+                                       messages_->translate("lookup.instructions"), *theme_, clipboard_});
+        }
+        if (open_related) {
+            const auto* table_metadata = metadata_ == nullptr ? nullptr : metadata_->table(open_related->schema.name);
+            const auto label =
+                table_metadata != nullptr && table_metadata->label ? *table_metadata->label : open_related->schema.name;
+            auto title = messages_->translate("lookup.related_title", {{"table", label}});
+            windows_.push(
+                {.id = "related:" + open_related->schema.name, .title = title, .kind = WindowLayerKind::drill_down},
+                BrowseWindow{std::in_place_type<RelatedRecordView>, std::move(*open_related), std::move(title),
+                             messages_->translate("lookup.related_instructions"), *theme_, table_metadata});
+        }
         return outcome;
     }
 
@@ -269,9 +342,21 @@ void BrowseDocument::render(terminal::ScreenBuffer& buffer, Rect bounds) {
                     window.prompt.render(buffer,
                                          {bounds.x + (bounds.width - prompt_width) / 2,
                                           bounds.y + (bounds.height - prompt_height) / 2, prompt_width, prompt_height});
-                } else {
+                } else if constexpr (std::is_same_v<Window, ConfirmationDialog>) {
                     constexpr int dialog_height = 6;
                     const int dialog_width = std::min(bounds.width, 60);
+                    window.render(buffer,
+                                  {bounds.x + (bounds.width - dialog_width) / 2,
+                                   bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+                } else if constexpr (std::is_same_v<Window, RelationshipLookup>) {
+                    const int dialog_width = std::min(bounds.width, 70);
+                    const int dialog_height = std::min(bounds.height, 14);
+                    window.render(buffer,
+                                  {bounds.x + (bounds.width - dialog_width) / 2,
+                                   bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
+                } else {
+                    const int dialog_width = std::min(bounds.width, 72);
+                    const int dialog_height = std::clamp(static_cast<int>(window.field_count()) + 3, 6, bounds.height);
                     window.render(buffer,
                                   {bounds.x + (bounds.width - dialog_width) / 2,
                                    bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});

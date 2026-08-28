@@ -164,12 +164,12 @@ on Windows, Linux, and macOS.
 - [x] Infer boolean-like fields conservatively.
 - [x] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
   implement a bounded keyboard relationship lookup.
-- [ ] Add searchable, metadata-configurable relationship lookups and related-record
+- [x] Add searchable, metadata-configurable relationship lookups and related-record
   drill-down.
 - [ ] Validate the complete workshop success scenario on all platforms.
-- [ ] Add field labels, ordering, hidden/read-only overrides, formats, and lookup
+- [x] Add field labels, ordering, hidden/read-only overrides, formats, and lookup
   behavior from optional application metadata.
-- [ ] Add date/time display/edit controls only after an explicit SQLite annotation
+- [x] Add date/time display/edit controls only after an explicit SQLite annotation
   policy is defined.
 
 ## M6 — Inventory dogfood and 0.1 packaging

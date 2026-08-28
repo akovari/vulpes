@@ -64,8 +64,10 @@ human-facing prose. Catalog patterns are parsed when loaded, and malformed
 patterns are reported as metadata errors before an affected screen is opened.
 
 `core::LocaleFormatter` centralizes CLDR number, currency, date, time, and
-date-time display. Currency always requires an explicit uppercase ISO 4217 code;
-dates and times always use an explicit IANA time zone. These policies affect
-display only. Vulpes does not parse localized text back into SQLite or infer a
-date from a declared type until application metadata explicitly annotates the
-field. See ADR 0025.
+date-time display. Currency always requires an explicit uppercase ISO 4217 code.
+Vulpes never infers calendar meaning from a declared SQLite type: validated
+application metadata must annotate a TEXT-affinity field as `date`, `time`, or
+`date_time`. Dates and times use unambiguous ISO text; date-times require an
+explicit RFC 3339 offset, normalize to UTC on edit, and use an explicit IANA zone
+for display. Formatting ordinary grid values never changes SQLite storage. See
+ADR 0026.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/appmeta/metadata.hpp"
 #include "vulpes/core/browse_controller.hpp"
 #include "vulpes/core/clipboard.hpp"
 #include "vulpes/core/localization.hpp"
@@ -9,6 +10,7 @@
 #include "vulpes/ui/document_surface.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
+#include "vulpes/ui/relationship_lookup.hpp"
 #include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/window_stack.hpp"
@@ -24,7 +26,8 @@ namespace vulpes::ui {
 class BrowseDocument final : public DocumentSurface {
   public:
     BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
-                   const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr);
+                   const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr,
+                   const appmeta::ApplicationMetadata* metadata = nullptr);
 
     [[nodiscard]] auto is_dirty() const noexcept -> bool override;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
@@ -37,7 +40,8 @@ class BrowseDocument final : public DocumentSurface {
         PromptPurpose purpose{PromptPurpose::none};
         TextPrompt prompt;
     };
-    using BrowseWindow = std::variant<RecordForm, PromptWindow, ConfirmationDialog>;
+    using BrowseWindow =
+        std::variant<RecordForm, PromptWindow, ConfirmationDialog, RelationshipLookup, RelatedRecordView>;
 
     void begin_form(FormMode mode);
     void begin_prompt(PromptPurpose purpose);
@@ -45,6 +49,7 @@ class BrowseDocument final : public DocumentSurface {
     void apply_prompt(PromptWindow& window);
 
     const core::Localizer* messages_;
+    const appmeta::ApplicationMetadata* metadata_;
     const Theme* theme_;
     core::Clipboard* clipboard_;
     model::Dataset dataset_;

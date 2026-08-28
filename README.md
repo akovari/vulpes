@@ -149,7 +149,9 @@ numeric fields use numeric validation, conservative boolean-like fields use a
 checkbox, generated/primary-key fields are protected, and BLOB fields remain
 read-only until a binary editor exists. Compact form windows keep the focused
 field visible and show scroll indicators when more fields exist. Failed database
-validation leaves the draft open for correction. Grids size columns from their
+validation leaves the draft open for correction. Enter on a relationship opens
+a searchable lookup: type to filter, use Up/Down, press F2 to inspect the related
+row, Enter to apply, and Esc to unwind one window. Grids size columns from their
 headers and current page rather than assigning every column the same width; the
 focused cell remains distinct from the selected row. The footer reports the
 absolute row and selected-column position, border markers expose horizontal and
@@ -157,10 +159,18 @@ vertical overflow, and empty datasets have an explicit empty state. Use
 `Ctrl+Left` and `Ctrl+Right` to narrow or widen the selected column for the
 current document.
 
+The UI-neutral application-metadata model can override generated table/field
+labels, field order and visibility, additional read-only policy, display formats,
+and relationship behavior without terminal coordinates. Explicit TEXT
+annotations provide strict ISO date/time editing and locale-aware presentation;
+date-times require an RFC 3339 offset and a display time zone. SQLite-resident
+metadata loading is tracked separately, so ordinary databases continue to use
+safe schema inference.
+
 Single-line prompts and generated text/number fields have a logical UTF-8
 cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long
 values follow the caret horizontally without changing the stored text. Lookup
-fields retain Left/Right for relationship selection. Hold Shift while moving to
+fields retain Left/Right for quick relationship cycling. Hold Shift while moving to
 select, use Ctrl+Left/Right for Unicode-aware word movement, and press Insert to
 toggle insert/overwrite mode. The classic cross-platform clipboard bindings are
 Ctrl+Insert to copy, Shift+Delete to cut, and Shift+Insert to paste; Ctrl+A

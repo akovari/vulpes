@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/appmeta/metadata.hpp"
 #include "vulpes/core/formatting.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/model/dataset.hpp"
@@ -34,10 +35,12 @@ class Grid {
   public:
     Grid(const model::Dataset& dataset, std::string title, std::string footer,
          const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {},
-         std::optional<core::LocaleFormatter> formatter = std::nullopt);
+         std::optional<core::LocaleFormatter> formatter = std::nullopt,
+         std::optional<appmeta::TableMetadata> metadata = std::nullopt);
     Grid(const GridRows& rows, std::string title, std::string footer,
          const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {},
-         std::optional<core::LocaleFormatter> formatter = std::nullopt);
+         std::optional<core::LocaleFormatter> formatter = std::nullopt,
+         std::optional<appmeta::TableMetadata> metadata = std::nullopt);
     [[nodiscard]] auto move_left() -> bool;
     [[nodiscard]] auto move_right() -> bool;
     [[nodiscard]] auto move_previous_row() -> bool;
@@ -51,12 +54,15 @@ class Grid {
     void render(terminal::ScreenBuffer& buffer, Rect bounds);
 
   private:
+    [[nodiscard]] auto display_fields() const -> std::vector<const db::FieldSchema*>;
+
     const model::Dataset* dataset_;
     const GridRows* rows_{};
     std::string title_;
     std::string footer_;
     const Theme* theme_;
     std::optional<core::LocaleFormatter> formatter_;
+    std::optional<appmeta::TableMetadata> metadata_;
     GridText text_;
     std::size_t selected_column_{};
     std::size_t first_visible_column_{};

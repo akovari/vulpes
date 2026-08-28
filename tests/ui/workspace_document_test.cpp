@@ -1,3 +1,4 @@
+#include "vulpes/appmeta/metadata.hpp"
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
@@ -74,4 +75,53 @@ TEST_CASE("workspace SQL document switches keyboard focus between editor and res
     CHECK(document.handle(vulpes::core::ActionId::application_back,
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::DocumentResult::redraw);
+}
+
+TEST_CASE("workspace browse document hosts searchable relationship selection", "[ui][workspace][lookup]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute(
+        "CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL);"
+        "INSERT INTO customer VALUES (1, 'Acme'), (2, 'Beta');"
+        "CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customer(id), description TEXT);");
+    const auto schemas = vulpes::db::inspect_schema(database);
+    const auto job = std::ranges::find(schemas, "job", &vulpes::db::TableSchema::name);
+    REQUIRE(job != schemas.end());
+    vulpes::appmeta::ApplicationMetadata metadata{{{
+        .name = "job",
+        .fields = {{.name = "customer_id",
+                    .label = "Customer",
+                    .lookup = vulpes::appmeta::LookupMetadata{.display_field = "name", .search_fields = {"name"}}}},
+    }}};
+    metadata.validate(schemas);
+    vulpes::core::Localizer messages{"en"};
+    vulpes::ui::BrowseDocument document{
+        database, *job, messages, vulpes::ui::theme(vulpes::ui::ThemeName::midnight), nullptr, &metadata};
+
+    static_cast<void>(document.handle(vulpes::core::ActionId::record_new,
+                                      vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::insert_key}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none,
+                        vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'B'}));
+    static_cast<void>(document.handle(vulpes::core::ActionId::record_edit,
+                                      vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f2}));
+    static_cast<void>(document.handle(vulpes::core::ActionId::application_back,
+                                      vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    static_cast<void>(
+        document.handle(vulpes::core::ActionId::none,
+                        vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'J'}));
+    CHECK(document.handle(vulpes::core::ActionId::none, vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) ==
+          vulpes::ui::DocumentResult::redraw);
+
+    auto query = database.prepare("SELECT customer_id, description FROM job");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_int() == 2);
+    CHECK(query.column(1).as_string() == "J");
 }

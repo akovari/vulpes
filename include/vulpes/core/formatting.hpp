@@ -34,10 +34,20 @@ class LocaleFormatter {
     [[nodiscard]] auto date_time(std::chrono::system_clock::time_point value,
                                  DateTimeStyle date_style = DateTimeStyle::medium,
                                  DateTimeStyle time_style = DateTimeStyle::medium) const -> std::string;
+    [[nodiscard]] auto iso_date(std::string_view value, DateTimeStyle style = DateTimeStyle::medium) const
+        -> std::string;
+    [[nodiscard]] auto iso_time(std::string_view value, DateTimeStyle style = DateTimeStyle::medium) const
+        -> std::string;
+    [[nodiscard]] auto rfc3339(std::string_view value, DateTimeStyle date_style = DateTimeStyle::medium,
+                               DateTimeStyle time_style = DateTimeStyle::medium) const -> std::string;
 
   private:
     std::string locale_;
     std::string time_zone_;
 };
+
+[[nodiscard]] auto normalize_iso_date(std::string_view value) -> std::string;
+[[nodiscard]] auto normalize_iso_time(std::string_view value) -> std::string;
+[[nodiscard]] auto normalize_rfc3339(std::string_view value) -> std::string;
 
 } // namespace vulpes::core

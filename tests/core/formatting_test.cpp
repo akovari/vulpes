@@ -44,3 +44,21 @@ TEST_CASE("locale formatter rejects ambiguous or invalid display policy", "[core
     CHECK_THROWS_AS(formatter.currency(1, "usd"), vulpes::Error);
     CHECK_THROWS_AS(formatter.number(1.0, {.minimum_fraction_digits = 3, .maximum_fraction_digits = 2}), vulpes::Error);
 }
+
+TEST_CASE("temporal formatting validates explicit SQLite text encodings", "[core][i18n][format][temporal]") {
+    const vulpes::core::LocaleFormatter czech{"cs-CZ", "Europe/Prague"};
+
+    CHECK(vulpes::core::normalize_iso_date("2024-02-29") == "2024-02-29");
+    CHECK(vulpes::core::normalize_iso_time("09:07") == "09:07");
+    CHECK(vulpes::core::normalize_iso_time("09:07:05") == "09:07:05");
+    CHECK(vulpes::core::normalize_rfc3339("2024-01-02T16:04:05+01:00") == "2024-01-02T15:04:05Z");
+    CHECK(czech.iso_date("2024-01-02", vulpes::core::DateTimeStyle::short_) == "02.01.24");
+    CHECK(czech.iso_time("15:04:05", vulpes::core::DateTimeStyle::short_) == "15:04");
+    CHECK(
+        czech.rfc3339("2024-01-02T15:04:05Z", vulpes::core::DateTimeStyle::short_, vulpes::core::DateTimeStyle::short_)
+            .find("16:04") != std::string::npos);
+
+    CHECK_THROWS_AS(vulpes::core::normalize_iso_date("2023-02-29"), vulpes::Error);
+    CHECK_THROWS_AS(vulpes::core::normalize_iso_time("24:00"), vulpes::Error);
+    CHECK_THROWS_AS(vulpes::core::normalize_rfc3339("2024-01-02T15:04:05"), vulpes::Error);
+}

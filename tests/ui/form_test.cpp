@@ -1,3 +1,4 @@
+#include "vulpes/appmeta/metadata.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/model/dataset.hpp"
@@ -160,4 +161,96 @@ TEST_CASE("generated form selects a foreign key by its inferred display field", 
     REQUIRE(query.step());
     CHECK(query.column(0).as_int() == 1);
     CHECK(query.column(1).as_string() == "J");
+}
+
+TEST_CASE("generated form applies metadata labels order visibility and read-only policy", "[ui][form][appmeta]") {
+    vulpes::db::Database database{":memory:"};
+    auto dataset = form_dataset(database);
+    const vulpes::appmeta::TableMetadata metadata{
+        .name = "customer",
+        .fields = {{.name = "id", .visible = false},
+                   {.name = "name", .label = "Customer name", .order = 1},
+                   {.name = "balance", .visible = false},
+                   {.name = "active", .label = "Enabled", .order = 0, .read_only = true}},
+    };
+    vulpes::ui::RecordForm form{
+        dataset, "Customer", vulpes::ui::FormMode::edit, "F8 Save", vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+        nullptr, &metadata};
+
+    REQUIRE(form.fields().size() == 2);
+    CHECK(form.fields()[0].name == "active");
+    CHECK(form.fields()[0].label == "Enabled");
+    CHECK(form.fields()[0].read_only);
+    CHECK(form.fields()[1].name == "name");
+    CHECK(form.fields()[1].label == "Customer name");
+    CHECK(form.selected_field_index() == 1);
+}
+
+TEST_CASE("generated form requests a configured searchable relationship lookup", "[ui][form][lookup][appmeta]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute(
+        "CREATE TABLE customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL, code TEXT);"
+        "INSERT INTO customer VALUES (1, 'Acme', 'A'), (2, 'Beta', 'B');"
+        "CREATE TABLE job(id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customer(id), description TEXT);");
+    const auto schemas = vulpes::db::inspect_schema(database);
+    const auto job = std::ranges::find(schemas, "job", &vulpes::db::TableSchema::name);
+    REQUIRE(job != schemas.end());
+    vulpes::model::Dataset dataset{database, *job};
+    const vulpes::appmeta::TableMetadata metadata{
+        .name = "job",
+        .fields = {{.name = "customer_id",
+                    .label = "Customer",
+                    .lookup = vulpes::appmeta::LookupMetadata{.display_field = "name",
+                                                              .search_fields = {"name", "code"},
+                                                              .result_limit = 25}}},
+    };
+    vulpes::ui::RecordForm form{
+        dataset, "New job", vulpes::ui::FormMode::insert, "F8 Save", vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+        nullptr, &metadata};
+
+    static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::FormResult::lookup_requested);
+    const auto request = form.lookup_request();
+    REQUIRE(request);
+    CHECK(request->field == "customer_id");
+    CHECK(request->query.search_fields == std::vector<std::string>{"name", "code"});
+    CHECK(request->query.limit == 25);
+
+    form.select_lookup("customer_id", {.value = 2, .label = "Beta"});
+    CHECK(form.fields()[1].editor.text() == "Beta");
+    CHECK(form.is_dirty());
+}
+
+TEST_CASE("generated temporal controls normalize explicitly annotated text fields", "[ui][form][appmeta][temporal]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE event(id INTEGER PRIMARY KEY, occurred_at TEXT)");
+    const auto schema = vulpes::db::inspect_schema(database);
+    vulpes::model::Dataset dataset{database, schema.front()};
+    const vulpes::appmeta::TableMetadata metadata{
+        .name = "event",
+        .fields = {{.name = "id", .visible = false},
+                   {.name = "occurred_at",
+                    .label = "Occurred",
+                    .format = vulpes::appmeta::FieldFormat::date_time,
+                    .time_zone = "Europe/Prague"}},
+    };
+    vulpes::ui::RecordForm form{dataset,
+                                "New event",
+                                vulpes::ui::FormMode::insert,
+                                "F8 Save",
+                                vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+                                nullptr,
+                                &metadata};
+
+    REQUIRE(form.fields().size() == 1);
+    CHECK(form.fields().front().kind == vulpes::ui::FormFieldKind::date_time);
+    for (const auto character : std::u32string{U"2024-01-02T16:04:05+01:00"})
+        static_cast<void>(
+            form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = character}));
+    CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f8}) == vulpes::ui::FormResult::saved);
+
+    auto query = database.prepare("SELECT occurred_at FROM event");
+    REQUIRE(query.step());
+    CHECK(query.column(0).as_string() == "2024-01-02T15:04:05Z");
 }

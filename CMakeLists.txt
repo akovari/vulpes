@@ -62,6 +62,7 @@ else()
 endif()
 
 add_library(vulpes_core
+    src/appmeta/metadata.cpp
     src/core/actions.cpp
     src/core/application.cpp
     src/core/browse_controller.cpp
@@ -99,6 +100,7 @@ add_library(vulpes_core
     src/ui/label.cpp
     src/ui/line_editor.cpp
     src/ui/multiline_editor.cpp
+    src/ui/relationship_lookup.cpp
     src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp

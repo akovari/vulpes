@@ -1,25 +1,25 @@
 #include "vulpes/ui/grid.hpp"
 
+#include "vulpes/core/error.hpp"
 #include "vulpes/terminal/unicode.hpp"
 
 #include <algorithm>
 #include <charconv>
+#include <limits>
 #include <variant>
 
 namespace vulpes::ui {
 namespace {
 
-auto display_value(const db::Value& value, const core::LocaleFormatter* formatter) -> std::string {
+auto raw_value(const db::Value& value) -> std::string {
     return std::visit(
-        [formatter](const auto& item) -> std::string {
+        [](const auto& item) -> std::string {
             using T = std::decay_t<decltype(item)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return {};
             else if constexpr (std::is_same_v<T, std::int64_t>)
-                return formatter == nullptr ? std::to_string(item) : formatter->number(item);
+                return std::to_string(item);
             else if constexpr (std::is_same_v<T, double>) {
-                if (formatter != nullptr)
-                    return formatter->number(item);
                 char output[64]{};
                 const auto [end, error] = std::to_chars(std::begin(output), std::end(output), item);
                 return error == std::errc{} ? std::string{output, end} : "?";
@@ -29,6 +29,60 @@ auto display_value(const db::Value& value, const core::LocaleFormatter* formatte
                 return "<blob " + std::to_string(item.size()) + " bytes>";
         },
         value.storage());
+}
+
+auto display_value(const db::Value& value, const core::LocaleFormatter* formatter,
+                   const appmeta::FieldMetadata* metadata) -> std::string {
+    const auto automatic = [&] {
+        if (formatter != nullptr && std::holds_alternative<std::int64_t>(value.storage()))
+            return formatter->number(value.as_int());
+        if (formatter != nullptr && std::holds_alternative<double>(value.storage()))
+            return formatter->number(value.as_double());
+        return raw_value(value);
+    };
+    if (metadata == nullptr || metadata->format == appmeta::FieldFormat::automatic)
+        return automatic();
+    try {
+        switch (metadata->format) {
+        case appmeta::FieldFormat::number:
+            if (formatter != nullptr && std::holds_alternative<std::int64_t>(value.storage()))
+                return formatter->number(value.as_int());
+            if (formatter != nullptr && std::holds_alternative<double>(value.storage()))
+                return formatter->number(value.as_double());
+            return raw_value(value);
+        case appmeta::FieldFormat::currency:
+            if (formatter != nullptr && metadata->currency_code &&
+                std::holds_alternative<std::int64_t>(value.storage()))
+                return formatter->currency(static_cast<double>(value.as_int()), *metadata->currency_code);
+            if (formatter != nullptr && metadata->currency_code && std::holds_alternative<double>(value.storage()))
+                return formatter->currency(value.as_double(), *metadata->currency_code);
+            return raw_value(value);
+        case appmeta::FieldFormat::boolean:
+            if (std::holds_alternative<std::int64_t>(value.storage()))
+                return value.as_int() == 0 ? " " : "✓";
+            return raw_value(value);
+        case appmeta::FieldFormat::date:
+            return formatter != nullptr && std::holds_alternative<std::string>(value.storage())
+                       ? formatter->iso_date(value.as_string())
+                       : raw_value(value);
+        case appmeta::FieldFormat::time:
+            return formatter != nullptr && std::holds_alternative<std::string>(value.storage())
+                       ? formatter->iso_time(value.as_string())
+                       : raw_value(value);
+        case appmeta::FieldFormat::date_time:
+            if (formatter != nullptr && metadata->time_zone && std::holds_alternative<std::string>(value.storage())) {
+                return core::LocaleFormatter{std::string{formatter->locale()}, *metadata->time_zone}.rfc3339(
+                    value.as_string());
+            }
+            return raw_value(value);
+        case appmeta::FieldFormat::text:
+        case appmeta::FieldFormat::automatic:
+            return raw_value(value);
+        }
+    } catch (const Error&) {
+        return "⚠ " + raw_value(value);
+    }
+    return raw_value(value);
 }
 
 void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_view text,
@@ -51,30 +105,41 @@ auto GridRows::from_sql_result(db::SqlResult result) -> GridRows {
 }
 
 Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer, const Theme& theme, GridText text,
-           std::optional<core::LocaleFormatter> formatter)
+           std::optional<core::LocaleFormatter> formatter, std::optional<appmeta::TableMetadata> metadata)
     : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme},
-      formatter_{std::move(formatter)}, text_{std::move(text)} {
+      formatter_{std::move(formatter)}, metadata_{std::move(metadata)}, text_{std::move(text)} {
 }
 
 Grid::Grid(const GridRows& rows, std::string title, std::string footer, const Theme& theme, GridText text,
-           std::optional<core::LocaleFormatter> formatter)
+           std::optional<core::LocaleFormatter> formatter, std::optional<appmeta::TableMetadata> metadata)
     : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme},
-      formatter_{std::move(formatter)}, text_{std::move(text)} {
+      formatter_{std::move(formatter)}, metadata_{std::move(metadata)}, text_{std::move(text)} {
     if (!rows.rows.empty())
         selected_result_row_ = 0;
 }
 
 auto Grid::selected_field() const -> const db::FieldSchema* {
-    std::size_t visible_index{};
-    const auto& fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
-    for (const auto& field : fields) {
-        if (field.hidden)
-            continue;
-        if (visible_index == selected_column_)
-            return &field;
-        ++visible_index;
+    const auto fields = display_fields();
+    return selected_column_ < fields.size() ? fields[selected_column_] : nullptr;
+}
+
+auto Grid::display_fields() const -> std::vector<const db::FieldSchema*> {
+    std::vector<const db::FieldSchema*> fields;
+    const auto& schema_fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
+    for (const auto& field : schema_fields) {
+        const auto* metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(field.name);
+        if (!field.hidden && (metadata == nullptr || metadata->visible != false))
+            fields.push_back(&field);
     }
-    return nullptr;
+    std::ranges::stable_sort(fields, [&](const auto* left, const auto* right) {
+        const auto* left_metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(left->name);
+        const auto* right_metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(right->name);
+        const auto left_order = left_metadata == nullptr ? std::nullopt : left_metadata->order;
+        const auto right_order = right_metadata == nullptr ? std::nullopt : right_metadata->order;
+        return left_order.value_or(std::numeric_limits<std::size_t>::max()) <
+               right_order.value_or(std::numeric_limits<std::size_t>::max());
+    });
+    return fields;
 }
 
 auto Grid::selected_column_width() const -> std::optional<int> {
@@ -94,12 +159,7 @@ auto Grid::move_left() -> bool {
 }
 
 auto Grid::move_right() -> bool {
-    std::size_t field_count{};
-    const auto& fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
-    for (const auto& field : fields) {
-        if (!field.hidden)
-            ++field_count;
-    }
+    const auto field_count = display_fields().size();
     if (selected_column_ + 1 >= field_count)
         return false;
     ++selected_column_;
@@ -130,10 +190,12 @@ auto Grid::resize_selected_column(int delta) -> bool {
     constexpr int maximum_width = 64;
     const auto rendered = rendered_column_widths_.find(field->name);
     const auto configured = column_width_overrides_.find(field->name);
+    const auto* field_metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(field->name);
+    const auto label = field_metadata != nullptr && field_metadata->label ? *field_metadata->label : field->name;
     const auto current = configured != column_width_overrides_.end() ? configured->second
                          : rendered != rendered_column_widths_.end()
                              ? rendered->second
-                             : std::clamp(terminal::text_width(field->name) + 2, minimum_width, maximum_width);
+                             : std::clamp(terminal::text_width(label) + 2, minimum_width, maximum_width);
     const auto resized = std::clamp(current + delta, minimum_width, maximum_width);
     if (resized == current)
         return false;
@@ -146,11 +208,7 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
         bounds.x + bounds.width > buffer.width() || bounds.y + bounds.height > buffer.height())
         return;
 
-    std::vector<const db::FieldSchema*> all_fields;
-    const auto& schema_fields = dataset_ != nullptr ? dataset_->schema().fields : rows_->fields;
-    for (const auto& field : schema_fields)
-        if (!field.hidden)
-            all_fields.push_back(&field);
+    const auto all_fields = display_fields();
     if (all_fields.empty())
         return;
 
@@ -185,11 +243,14 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     fixed_widths.reserve(fields.size());
     const auto& displayed_rows = dataset_ != nullptr ? dataset_->rows() : rows_->rows;
     for (const auto* field : fields) {
-        int preferred = terminal::text_width(field->name) + 2;
+        const auto* field_metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(field->name);
+        const auto header = field_metadata != nullptr && field_metadata->label ? *field_metadata->label : field->name;
+        int preferred = terminal::text_width(header) + 2;
         for (const auto& row : displayed_rows)
-            preferred = std::max(
-                preferred,
-                terminal::text_width(display_value(row.at(field->name), formatter_ ? &*formatter_ : nullptr)) + 2);
+            preferred =
+                std::max(preferred, terminal::text_width(display_value(
+                                        row.at(field->name), formatter_ ? &*formatter_ : nullptr, field_metadata)) +
+                                        2);
         const auto configured = column_width_overrides_.find(field->name);
         fixed_widths.push_back(configured != column_width_overrides_.end());
         preferred_widths.push_back(configured != column_width_overrides_.end()
@@ -240,7 +301,10 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
         const int width = column_widths[index];
         auto header_style = current_theme.style(ThemeRole::grid_header);
         header_style.underline = first_visible + index == selected_column_;
-        write_padded(buffer, x, header_y, width, fields[index]->name, header_style);
+        const auto* field_metadata = metadata_ == std::nullopt ? nullptr : metadata_->field(fields[index]->name);
+        const auto header =
+            field_metadata != nullptr && field_metadata->label ? *field_metadata->label : fields[index]->name;
+        write_padded(buffer, x, header_y, width, header, header_style);
         x += width;
         buffer.put(x++, header_y, U'│', current_theme.style(ThemeRole::border));
     }
@@ -279,8 +343,10 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
             const auto& style = current_theme.style(selected_cell  ? ThemeRole::grid_selected_cell
                                                     : selected_row ? ThemeRole::grid_selected_row
                                                                    : ThemeRole::grid_cell);
+            const auto* field_metadata =
+                metadata_ == std::nullopt ? nullptr : metadata_->field(fields[field_index]->name);
             const auto text = row_exists ? display_value(displayed_rows[source_index].at(fields[field_index]->name),
-                                                         formatter_ ? &*formatter_ : nullptr)
+                                                         formatter_ ? &*formatter_ : nullptr, field_metadata)
                                          : std::string{};
             write_padded(buffer, x, y, width, text, style);
             x += width;

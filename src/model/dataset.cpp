@@ -224,37 +224,94 @@ auto Dataset::draft_value(std::string_view field) const -> std::optional<db::Val
 }
 
 auto Dataset::lookup_options(std::string_view field, std::size_t limit) const -> std::vector<LookupOption> {
-    if (limit == 0)
-        throw Error{ErrorCategory::validation, "lookup limit must be greater than zero"};
+    return lookup_options(field, LookupQuery{.limit = limit});
+}
+
+auto Dataset::lookup_options(std::string_view field, const LookupQuery& request) const -> std::vector<LookupOption> {
+    if (request.limit == 0 || request.limit > 1000)
+        throw Error{ErrorCategory::validation, "lookup limit must be between 1 and 1000"};
     const auto* foreign_key = foreign_key_for(field);
     if (foreign_key == nullptr)
         throw Error{ErrorCategory::validation, "field is not a foreign key: " + std::string{field}};
 
-    const auto schemas = db::inspect_schema(*database_);
-    const auto referenced = std::ranges::find(schemas, foreign_key->referenced_table, &db::TableSchema::name);
-    if (referenced == schemas.end())
-        throw Error{ErrorCategory::database, "referenced table does not exist: " + foreign_key->referenced_table};
-
+    const auto referenced = referenced_schema(*foreign_key);
     static constexpr std::array<std::string_view, 4> display_candidates{"name", "title", "description", "code"};
     std::string display_field = foreign_key->referenced_field;
-    for (const auto candidate : display_candidates) {
-        if (std::ranges::find(referenced->fields, candidate, &db::FieldSchema::name) != referenced->fields.end()) {
-            display_field = std::string{candidate};
-            break;
+    if (request.display_field) {
+        if (std::ranges::find(referenced.fields, *request.display_field, &db::FieldSchema::name) ==
+            referenced.fields.end()) {
+            throw Error{ErrorCategory::validation,
+                        "unknown lookup display field: " + referenced.name + "." + *request.display_field};
         }
+        display_field = *request.display_field;
+    } else {
+        for (const auto candidate : display_candidates) {
+            if (std::ranges::find(referenced.fields, candidate, &db::FieldSchema::name) != referenced.fields.end()) {
+                display_field = std::string{candidate};
+                break;
+            }
+        }
+    }
+
+    auto search_fields = request.search_fields;
+    if (search_fields.empty())
+        search_fields.push_back(display_field);
+    for (const auto& search_field : search_fields) {
+        if (std::ranges::find(referenced.fields, search_field, &db::FieldSchema::name) == referenced.fields.end())
+            throw Error{ErrorCategory::validation,
+                        "unknown lookup search field: " + referenced.name + "." + search_field};
     }
 
     const auto key = db::detail::quote_identifier(foreign_key->referenced_field);
     const auto display = db::detail::quote_identifier(display_field);
-    auto query = database_->prepare("SELECT " + key + ", " + display + " FROM " +
-                                    db::detail::quote_identifier(foreign_key->referenced_table) + " ORDER BY " +
-                                    display + " COLLATE NOCASE, " + key + " LIMIT ?");
-    query.bind(1, db::Value{static_cast<std::int64_t>(limit)});
+    auto sql = "SELECT " + key + ", " + display + " FROM " + db::detail::quote_identifier(referenced.name);
+    if (!request.search.empty()) {
+        sql += " WHERE (";
+        for (std::size_t index = 0; index < search_fields.size(); ++index) {
+            if (index != 0)
+                sql += " OR ";
+            sql += db::detail::quote_identifier(search_fields[index]) + " LIKE ? ESCAPE '\\'";
+        }
+        sql += ')';
+    }
+    sql += " ORDER BY " + display + " COLLATE NOCASE, " + key + " LIMIT ?";
+    auto statement = database_->prepare(sql);
+    int parameter = 1;
+    if (!request.search.empty()) {
+        const auto pattern = escape_like_pattern(request.search);
+        for (std::size_t index = 0; index < search_fields.size(); ++index)
+            statement.bind(parameter++, db::Value{pattern});
+    }
+    statement.bind(parameter, db::Value{static_cast<std::int64_t>(request.limit)});
 
     std::vector<LookupOption> options;
-    while (query.step())
-        options.push_back({query.column(0), display_value(query.column(1))});
+    while (statement.step())
+        options.push_back({statement.column(0), display_value(statement.column(1))});
     return options;
+}
+
+auto Dataset::related_record(std::string_view field, const db::Value& value) const -> std::optional<RelatedRecord> {
+    const auto* foreign_key = foreign_key_for(field);
+    if (foreign_key == nullptr)
+        throw Error{ErrorCategory::validation, "field is not a foreign key: " + std::string{field}};
+    if (value.is_null())
+        return std::nullopt;
+
+    auto schema = referenced_schema(*foreign_key);
+    auto statement = database_->prepare("SELECT * FROM " + db::detail::quote_identifier(schema.name) + " WHERE " +
+                                        db::detail::quote_identifier(foreign_key->referenced_field) + " = ? LIMIT 1");
+    statement.bind(1, value);
+    if (!statement.step())
+        return std::nullopt;
+    return RelatedRecord{.schema = std::move(schema), .row = statement.row()};
+}
+
+auto Dataset::referenced_schema(const db::ForeignKeySchema& foreign_key) const -> db::TableSchema {
+    const auto schemas = db::inspect_schema(*database_);
+    const auto referenced = std::ranges::find(schemas, foreign_key.referenced_table, &db::TableSchema::name);
+    if (referenced == schemas.end())
+        throw Error{ErrorCategory::database, "referenced table does not exist: " + foreign_key.referenced_table};
+    return *referenced;
 }
 
 void Dataset::save() {

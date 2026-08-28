@@ -1,6 +1,7 @@
 find_package(Catch2 3 CONFIG REQUIRED)
 
 add_executable(vulpes_tests
+    appmeta/metadata_test.cpp
     core/application_test.cpp
     core/actions_test.cpp
     core/browse_controller_test.cpp
@@ -26,6 +27,7 @@ add_executable(vulpes_tests
     ui/line_editor_test.cpp
     ui/multiline_editor_test.cpp
     ui/presentation_matrix_test.cpp
+    ui/relationship_lookup_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
     ui/status_bar_test.cpp

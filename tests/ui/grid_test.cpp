@@ -1,3 +1,4 @@
+#include "vulpes/appmeta/metadata.hpp"
 #include "vulpes/core/formatting.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
@@ -119,6 +120,45 @@ TEST_CASE("grid applies locale-aware numeric display without changing stored val
     CHECK(buffer.cell(3, 3).glyph == U'\u00a0');
     CHECK(buffer.cell(7, 3).glyph == U',');
     CHECK(rows.rows.front().at("amount").as_double() == 12'345.5);
+}
+
+TEST_CASE("grid applies metadata currency and temporal presentation", "[ui][grid][i18n][appmeta]") {
+    vulpes::db::Database database{":memory:"};
+    const auto rows = vulpes::ui::GridRows::from_sql_result(
+        database.run_sql("SELECT '2024-01-02' AS issued_on, 1234.5 AS total, 'internal' AS secret"));
+    const vulpes::appmeta::TableMetadata metadata{
+        .name = "invoice",
+        .fields = {{.name = "issued_on", .label = "Issued", .order = 1, .format = vulpes::appmeta::FieldFormat::date},
+                   {.name = "total",
+                    .label = "Amount",
+                    .order = 0,
+                    .format = vulpes::appmeta::FieldFormat::currency,
+                    .currency_code = "EUR"},
+                   {.name = "secret", .visible = false}},
+    };
+    vulpes::ui::Grid grid{rows,    "Invoices",
+                          "",      vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+                          {},      vulpes::core::LocaleFormatter{"cs-CZ"},
+                          metadata};
+    vulpes::terminal::ScreenBuffer buffer{50, 8};
+
+    grid.render(buffer, {0, 0, 50, 8});
+
+    bool has_date_separator{false};
+    bool has_currency_symbol{false};
+    for (int column = 0; column < buffer.width(); ++column) {
+        has_date_separator = has_date_separator || buffer.cell(column, 3).glyph == U'.';
+        has_currency_symbol = has_currency_symbol || buffer.cell(column, 3).glyph == U'€';
+    }
+    CHECK(has_date_separator);
+    CHECK(has_currency_symbol);
+    REQUIRE(grid.selected_field());
+    CHECK(grid.selected_field()->name == "total");
+    CHECK(buffer.cell(1, 1).glyph == U'A');
+    CHECK(grid.move_right());
+    CHECK_FALSE(grid.move_right());
+    CHECK(rows.rows.front().at("issued_on").as_string() == "2024-01-02");
+    CHECK(rows.rows.front().at("total").as_double() == 1234.5);
 }
 
 TEST_CASE("grid applies an injected palette to document cells", "[ui][grid][theme]") {

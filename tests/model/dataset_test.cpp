@@ -121,8 +121,20 @@ TEST_CASE("dataset exposes bounded foreign-key lookup options with display-field
     REQUIRE(options.size() == 1);
     CHECK(options.front().value.as_int() == 2);
     CHECK(options.front().label == "AT");
+
+    const auto filtered = dataset.lookup_options(
+        "region_id", vulpes::model::LookupQuery{.display_field = "code", .search_fields = {"code"}, .search = "C"});
+    REQUIRE(filtered.size() == 1);
+    CHECK(filtered.front().label == "CZ");
+
+    const auto related = dataset.related_record("region_id", filtered.front().value);
+    REQUIRE(related);
+    CHECK(related->schema.name == "region");
+    CHECK(related->row.at("code").as_string() == "CZ");
     CHECK_THROWS_AS(dataset.lookup_options("id"), Error);
     CHECK_THROWS_AS(dataset.lookup_options("region_id", 0), Error);
+    CHECK_THROWS_AS(dataset.lookup_options("region_id", vulpes::model::LookupQuery{.display_field = "missing"}), Error);
+    CHECK_FALSE(dataset.related_record("region_id", nullptr));
 }
 
 TEST_CASE("dataset rejects unknown fields and invalid NULL comparisons", "[model][dataset]") {
