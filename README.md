@@ -59,9 +59,8 @@ To try the workspace without a database, run:
 Use `Ctrl+O` to open a SQLite file, `Ctrl+N` to create one, `F10` (or `Alt+F`)
 for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
 `Ctrl+C` to exit. `Alt+D`, `Alt+V`, `Alt+W`, and `Alt+H` open the other menu
-groups. Browse and SQL tabs are represented by the workspace document manager;
-hosting their full interactive surfaces in those tabs remains tracked in
-[TODO.md](TODO.md).
+groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
+switches tabs and `Ctrl+W` closes the active non-workspace tab.
 
 The browse view is keyboard driven: arrow keys move through the grid, `F2`
 opens the selected record, `Insert` creates a record, `F8` saves a record form,

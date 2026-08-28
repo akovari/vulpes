@@ -84,7 +84,7 @@ on Windows, Linux, and macOS.
 - [x] Add keyboard-navigable File, Database, View, Window, and Help menus.
 - [x] Open or create SQLite databases through a portable path-entry dialog.
 - [ ] Manage active document tabs, modal input, focus, and a status bar.
-- [ ] Host browse and SQL-console surfaces as workspace documents.
+- [x] Host browse and SQL-console surfaces as persistent workspace documents.
 - [ ] Make File-menu Escape/Left/Right/Alt mnemonic behavior reliable on all
   supported Windows terminal hosts.
 - [x] Implement the Database, View, Window, and Help menus rather than only the

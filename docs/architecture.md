@@ -38,6 +38,12 @@ forward-declare opaque SQLite types where ownership requires it.
 Directories are added when they contain working code. This avoids empty modules
 that imply stability or design decisions not yet earned.
 
+Workspace document surfaces own UI-level state such as a dataset/grid/form or
+SQL editor/result grid. The workspace shell owns tabs and routes normalized
+events to the active surface. Neither layer knows terminal escape sequences;
+database operations remain inside `Dataset` or the explicit SQL-console
+boundary.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

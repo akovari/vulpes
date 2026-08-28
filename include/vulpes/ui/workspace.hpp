@@ -23,6 +23,9 @@ class Workspace {
     void set_status(std::string status);
     [[nodiscard]] auto requested_path() const -> std::string;
     [[nodiscard]] auto selected_table() const -> const db::TableSchema*;
+    [[nodiscard]] auto active_document() const -> const Document&;
+    [[nodiscard]] auto has_document(std::string_view id) const -> bool;
+    [[nodiscard]] auto close_active_document() -> bool;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 

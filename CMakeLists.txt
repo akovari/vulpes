@@ -69,9 +69,11 @@ add_library(vulpes_core
     src/terminal/test_terminal.cpp
     src/terminal/unicode.cpp
     src/ui/confirmation_dialog.cpp
+    src/ui/browse_document.cpp
     src/ui/form.cpp
     src/ui/grid.cpp
     src/ui/sql_console.cpp
+    src/ui/sql_document.cpp
     src/ui/text_prompt.cpp
     src/ui/workspace.cpp
     src/ui/window_manager.cpp

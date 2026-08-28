@@ -9,10 +9,12 @@
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
+#include "vulpes/ui/browse_document.hpp"
 #include "vulpes/ui/confirmation_dialog.hpp"
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/ui/sql_console.hpp"
+#include "vulpes/ui/sql_document.hpp"
 #include "vulpes/ui/text_prompt.hpp"
 #include "vulpes/ui/workspace.hpp"
 #include "vulpes/version.hpp"
@@ -25,6 +27,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <variant>
 #include <vector>
 
 #ifdef _WIN32
@@ -387,6 +391,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                                     "Create SQLite database",
                                     "Enter a SQLite database path   Enter Apply   Esc Cancel"};
     std::optional<vulpes::db::Database> database;
+    using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SqlDocument>;
+    std::unordered_map<std::string, WorkspaceSurface> surfaces;
     for (;;) {
         const auto updated = terminal.size();
         if (updated.width != size.width || updated.height != size.height) {
@@ -397,11 +403,20 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         if (size.width < 40 || size.height < 10)
             continue;
         current.clear();
+        const auto& active_document = workspace.active_document();
+        if (active_document.kind != vulpes::ui::DocumentKind::workspace) {
+            if (const auto surface = surfaces.find(active_document.id); surface != surfaces.end()) {
+                std::visit([&](auto& document) { document.render(current, {0, 2, size.width, size.height - 3}); },
+                           surface->second);
+            }
+        }
         workspace.render(current, {0, 0, size.width, size.height});
         terminal.present(previous, current);
         previous = current;
         const auto event = terminal.read_event();
-        const auto outcome = workspace.handle(actions.action_for(event), event);
+        const auto action = actions.action_for(event);
+        const auto active_document_id = workspace.active_document().id;
+        const auto outcome = workspace.handle(action, event);
         if (outcome == vulpes::ui::WorkspaceResult::quit)
             return 0;
         if (outcome == vulpes::ui::WorkspaceResult::open_database ||
@@ -410,6 +425,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 const auto path = workspace.requested_path();
                 if (path.empty())
                     throw vulpes::Error{vulpes::ErrorCategory::validation, "a database path is required"};
+                surfaces.clear();
                 database.emplace(std::filesystem::path{path}, outcome == vulpes::ui::WorkspaceResult::open_database
                                                                   ? vulpes::db::OpenMode::read_write
                                                                   : vulpes::db::OpenMode::read_write_create);
@@ -418,10 +434,28 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 workspace.set_status(error.what());
             }
         } else if (outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) {
-            browse(*database, *workspace.selected_table(), messages);
+            const auto& document = workspace.active_document();
+            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database,
+                                 *workspace.selected_table(), messages);
         } else if (outcome == vulpes::ui::WorkspaceResult::run_sql && database) {
-            sql_console(*database, messages);
+            const auto& document = workspace.active_document();
+            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages);
+        } else if (outcome == vulpes::ui::WorkspaceResult::unchanged) {
+            const auto& document = workspace.active_document();
+            if (document.kind != vulpes::ui::DocumentKind::workspace) {
+                if (const auto surface = surfaces.find(document.id); surface != surfaces.end()) {
+                    const auto result = std::visit(
+                        [&](auto& active_surface) { return active_surface.handle(action, event); }, surface->second);
+                    if (result == vulpes::ui::DocumentResult::close) {
+                        const auto closed_id = document.id;
+                        static_cast<void>(workspace.close_active_document());
+                        surfaces.erase(closed_id);
+                    }
+                }
+            }
         }
+        if (!workspace.has_document(active_document_id))
+            surfaces.erase(active_document_id);
     }
 }
 

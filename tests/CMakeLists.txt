@@ -12,6 +12,7 @@ add_executable(vulpes_tests
     model/dataset_test.cpp
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp
+    ui/workspace_document_test.cpp
     ui/grid_test.cpp
     ui/sql_console_test.cpp
     ui/text_prompt_test.cpp

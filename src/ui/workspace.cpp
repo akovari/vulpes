@@ -57,6 +57,15 @@ auto Workspace::requested_path() const -> std::string {
 auto Workspace::selected_table() const -> const db::TableSchema* {
     return selected_table_ < tables_.size() ? &tables_[selected_table_] : nullptr;
 }
+auto Workspace::active_document() const -> const Document& {
+    return windows_.active();
+}
+auto Workspace::has_document(std::string_view id) const -> bool {
+    return std::ranges::any_of(windows_.documents(), [id](const auto& document) { return document.id == id; });
+}
+auto Workspace::close_active_document() -> bool {
+    return windows_.close_active();
+}
 
 void Workspace::begin_path_prompt(Modal modal) {
     modal_ = modal;
@@ -258,6 +267,8 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         begin_path_prompt(Modal::create);
         return WorkspaceResult::redraw;
     }
+    if (windows_.active().kind != DocumentKind::workspace)
+        return WorkspaceResult::unchanged;
     if (action == core::ActionId::dataset_next && selected_table_ + 1 < tables_.size()) {
         ++selected_table_;
         return WorkspaceResult::redraw;
@@ -288,18 +299,20 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     write_menu(buffer, bounds.x + 23, bounds.y, "Window", menu_ == Menu::window);
     write_menu(buffer, bounds.x + 32, bounds.y, "Help", menu_ == Menu::help);
     windows_.render_tabs(buffer, {bounds.x, bounds.y + 1, bounds.width, 1});
-    write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, title_, title_style);
-    if (database_path_.empty()) {
-        write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, "No database open.");
-        write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4,
-              "Ctrl+O Open database   Ctrl+N Create database   F10 Menu");
-    } else {
-        write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, database_path_);
-        write(buffer, bounds.x + 2, bounds.y + 7, bounds.width - 4, "Tables and views:", {.bold = true});
-        for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 11; ++index)
-            write(buffer, bounds.x + 4, bounds.y + 8 + static_cast<int>(index), bounds.width - 8,
-                  tables_[index].name + (tables_[index].is_view ? " [view]" : ""),
-                  index == selected_table_ ? selected_style : terminal::Style{});
+    if (windows_.active().kind == DocumentKind::workspace) {
+        write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, title_, title_style);
+        if (database_path_.empty()) {
+            write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, "No database open.");
+            write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4,
+                  "Ctrl+O Open database   Ctrl+N Create database   F10 Menu");
+        } else {
+            write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, database_path_);
+            write(buffer, bounds.x + 2, bounds.y + 7, bounds.width - 4, "Tables and views:", {.bold = true});
+            for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 11; ++index)
+                write(buffer, bounds.x + 4, bounds.y + 8 + static_cast<int>(index), bounds.width - 8,
+                      tables_[index].name + (tables_[index].is_view ? " [view]" : ""),
+                      index == selected_table_ ? selected_style : terminal::Style{});
+        }
     }
     if (menu_ != Menu::none) {
         static constexpr std::array<std::string_view, 3> file_items{"Open database", "Create database", "Exit"};
