@@ -214,6 +214,9 @@ browse, or SQL documents rather than executing SQLite through a widget.
 Widgets render semantic cells into `ScreenBuffer`. A backend diffs frames and
 encodes cells for the host. utf8proc supplies current Unicode cell-width data and
 UTF-8 decoding. Extended grapheme layout is deliberately deferred; see ADR 0002.
+Every ANSI style run starts with an SGR reset before applying its complete
+semantic style. This prevents stateful underline, bold, or reverse attributes
+from leaking from a highlighted cell into later cells or rows.
 `ConsoleTerminal` is the current native adapter and is replaceable; see ADR 0004.
 The `--terminal-diagnostics` document hosts the same adapter and reports only
 normalized `KeyEvent` and `ResizeEvent` values. It provides a repeatable manual

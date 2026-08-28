@@ -16,8 +16,21 @@ TEST_CASE("ANSI encoding translates semantic rendering operations", "[terminal][
          {}},
         {RenderOperationKind::write, 0, 0, {}, "Hi"},
     };
-    CHECK(encode_ansi(operations) == "\x1B[4;3H\x1B[38;2;1;2;3;48;2;4;5;6;1mHi");
+    CHECK(encode_ansi(operations) == "\x1B[4;3H\x1B[0;38;2;1;2;3;48;2;4;5;6;1mHi");
     CHECK(ansi_reset() == "\x1B[0m");
+}
+
+TEST_CASE("ANSI styles clear attributes inherited from the preceding cell run", "[terminal][ansi][style]") {
+    const std::vector<RenderOperation> operations{
+        {RenderOperationKind::set_style, 0, 0, Style{.underline = true}, {}},
+        {RenderOperationKind::write, 0, 0, {}, "underlined"},
+        {RenderOperationKind::set_style, 0, 0, Style{}, {}},
+        {RenderOperationKind::write, 0, 0, {}, "plain"},
+    };
+
+    const auto encoded = encode_ansi(operations);
+    CHECK(encoded.find(";4munderlined") != std::string::npos);
+    CHECK(encoded.find("underlined\x1B[0;38;2;255;255;255;48;2;0;0;0mplain") != std::string::npos);
 }
 
 TEST_CASE("test terminal queues normalized input and captures frames", "[terminal][fake]") {

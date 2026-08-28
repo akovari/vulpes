@@ -29,7 +29,10 @@ auto encode_ansi(const std::vector<RenderOperation>& operations) -> std::string 
             result += "\x1B[" + std::to_string(operation.y + 1) + ';' + std::to_string(operation.x + 1) + 'H';
             break;
         case RenderOperationKind::set_style:
-            result += "\x1B[";
+            // SGR attributes are stateful: setting new colors does not clear a
+            // previous underline, bold, or reverse attribute. Reset first so
+            // every semantic Style is encoded as a complete terminal state.
+            result += "\x1B[0;";
             append_color(result, 38, operation.style.foreground);
             result += ';';
             append_color(result, 48, operation.style.background);
