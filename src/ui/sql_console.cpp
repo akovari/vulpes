@@ -1,6 +1,7 @@
 #include "vulpes/ui/sql_console.hpp"
 
 #include "vulpes/terminal/unicode.hpp"
+#include "vulpes/ui/window_frame.hpp"
 
 #include <algorithm>
 
@@ -26,8 +27,8 @@ void erase_last_code_point(std::string& text) {
 
 } // namespace
 
-SqlConsole::SqlConsole(std::string title, std::string instructions)
-    : title_{std::move(title)}, instructions_{std::move(instructions)} {
+SqlConsole::SqlConsole(std::string title, std::string instructions, const Theme& theme)
+    : title_{std::move(title)}, instructions_{std::move(instructions)}, theme_{&theme} {
 }
 
 void SqlConsole::set_error(std::string message) {
@@ -72,23 +73,17 @@ void SqlConsole::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         return;
 
     const int interior = bounds.width - 2;
-    buffer.put(bounds.x, bounds.y, U'+');
-    for (int column = 0; column < interior; ++column)
-        buffer.put(bounds.x + 1 + column, bounds.y, U'-');
-    buffer.put(bounds.x + bounds.width - 1, bounds.y, U'+');
-    write_padded(buffer, bounds.x + 2, bounds.y, interior - 2, title_);
+    WindowFrame::render(buffer, bounds, title_, window_frame_appearance(*theme_));
 
     const auto line_count = (std::max)(1, bounds.height - 4);
     std::size_t line_start{};
     for (int line = 0; line < line_count; ++line) {
         const int y = bounds.y + 1 + line;
-        buffer.put(bounds.x, y, U'|');
         const auto line_end = script_.find('\n', line_start);
         const auto source =
             script_.substr(line_start, line_end == std::string::npos ? std::string::npos : line_end - line_start);
         write_padded(buffer, bounds.x + 1, y, interior, (line == 0 ? "sql> " : "...> ") + source,
-                     {.reverse = line == 0});
-        buffer.put(bounds.x + bounds.width - 1, y, U'|');
+                     theme_->style(line == 0 ? ThemeRole::input_focus : ThemeRole::input));
         if (line_end == std::string::npos)
             line_start = script_.size();
         else
@@ -96,16 +91,9 @@ void SqlConsole::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     }
 
     const int message_y = bounds.y + bounds.height - 2;
-    buffer.put(bounds.x, message_y, U'|');
     write_padded(buffer, bounds.x + 1, message_y, interior,
-                 error_.empty() ? (status_.empty() ? instructions_ : status_) : error_);
-    buffer.put(bounds.x + bounds.width - 1, message_y, U'|');
-
-    const int bottom = bounds.y + bounds.height - 1;
-    buffer.put(bounds.x, bottom, U'+');
-    for (int column = 0; column < interior; ++column)
-        buffer.put(bounds.x + 1 + column, bottom, U'-');
-    buffer.put(bounds.x + bounds.width - 1, bottom, U'+');
+                 error_.empty() ? (status_.empty() ? instructions_ : status_) : error_,
+                 theme_->style(error_.empty() ? ThemeRole::muted_text : ThemeRole::error));
 }
 
 } // namespace vulpes::ui

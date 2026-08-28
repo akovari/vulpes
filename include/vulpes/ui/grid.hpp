@@ -4,6 +4,7 @@
 #include "vulpes/model/dataset.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <optional>
 #include <string>
@@ -22,8 +23,10 @@ struct GridRows {
 
 class Grid {
   public:
-    Grid(const model::Dataset& dataset, std::string title, std::string footer);
-    Grid(const GridRows& rows, std::string title, std::string footer);
+    Grid(const model::Dataset& dataset, std::string title, std::string footer,
+         const Theme& theme = ui::theme(ThemeName::midnight));
+    Grid(const GridRows& rows, std::string title, std::string footer,
+         const Theme& theme = ui::theme(ThemeName::midnight));
     [[nodiscard]] auto move_left() -> bool;
     [[nodiscard]] auto move_right() -> bool;
     [[nodiscard]] auto move_previous_row() -> bool;
@@ -38,6 +41,7 @@ class Grid {
     const GridRows* rows_{};
     std::string title_;
     std::string footer_;
+    const Theme* theme_;
     std::size_t selected_column_{};
     std::size_t first_visible_column_{};
     std::optional<std::size_t> selected_result_row_;

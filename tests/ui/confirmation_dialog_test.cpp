@@ -21,6 +21,8 @@ TEST_CASE("confirmation dialog defaults to cancel and requires deliberate confir
 
     vulpes::terminal::ScreenBuffer buffer{40, 8};
     dialog.render(buffer, {0, 1, 40, 6});
-    CHECK(buffer.cell(2, 1).glyph == U'D');
-    CHECK(buffer.cell(0, 2).glyph == U'|');
+    CHECK(buffer.cell(3, 1).glyph == U'D');
+    CHECK(buffer.cell(0, 2).glyph == U'│');
+    CHECK(buffer.cell(1, 7).style ==
+          vulpes::ui::theme(vulpes::ui::ThemeName::midnight).style(vulpes::ui::ThemeRole::shadow));
 }

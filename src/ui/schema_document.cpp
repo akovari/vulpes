@@ -29,9 +29,9 @@ auto describe_field(const db::FieldSchema& field, const core::Localizer& message
 
 } // namespace
 
-SchemaDocument::SchemaDocument(db::TableSchema table, const core::Localizer& messages)
+SchemaDocument::SchemaDocument(db::TableSchema table, const core::Localizer& messages, const Theme& theme)
     : table_{std::move(table)}, title_{messages.translate("schema.title", {{"name", table_.name}})},
-      footer_{messages.translate("schema.footer")} {
+      footer_{messages.translate("schema.footer")}, theme_{&theme} {
     lines_.reserve(table_.fields.size());
     for (const auto& field : table_.fields)
         lines_.push_back(describe_field(field, messages));
@@ -75,20 +75,21 @@ void SchemaDocument::render(terminal::ScreenBuffer& buffer, Rect bounds) {
         return;
     }
 
-    write_padded(buffer, bounds.x, bounds.y, bounds.width, title_, {.bold = true});
+    write_padded(buffer, bounds.x, bounds.y, bounds.width, title_, theme_->style(ThemeRole::title));
     const int content_height = bounds.height - 2;
     if (selected_line_ >= first_visible_line_ + static_cast<std::size_t>(content_height))
         first_visible_line_ = selected_line_ - static_cast<std::size_t>(content_height) + 1;
     for (int row = 0; row < content_height; ++row) {
         const auto index = first_visible_line_ + static_cast<std::size_t>(row);
         if (index >= lines_.size()) {
-            write_padded(buffer, bounds.x, bounds.y + 1 + row, bounds.width, "");
+            write_padded(buffer, bounds.x, bounds.y + 1 + row, bounds.width, "", theme_->style(ThemeRole::text));
             continue;
         }
         write_padded(buffer, bounds.x, bounds.y + 1 + row, bounds.width, lines_[index],
-                     {.reverse = index == selected_line_});
+                     theme_->style(index == selected_line_ ? ThemeRole::selection : ThemeRole::text));
     }
-    write_padded(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, footer_, {.bold = true});
+    write_padded(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, footer_,
+                 theme_->style(ThemeRole::grid_footer));
 }
 
 } // namespace vulpes::ui

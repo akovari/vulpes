@@ -56,8 +56,9 @@ void erase_last_code_point(std::string& text) {
 
 } // namespace
 
-RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions)
-    : dataset_{&dataset}, title_{std::move(title)}, instructions_{std::move(instructions)} {
+RecordForm::RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions,
+                       const Theme& theme)
+    : dataset_{&dataset}, title_{std::move(title)}, instructions_{std::move(instructions)}, theme_{&theme} {
     if (mode == FormMode::insert)
         dataset_->begin_insert();
     else
@@ -157,30 +158,38 @@ void RecordForm::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (!WindowFrame::fits(buffer, bounds, 20, 6))
         return;
     const int interior = bounds.width - 2;
-    WindowFrame::render(buffer, bounds, title_);
+    WindowFrame::render(buffer, bounds, title_, window_frame_appearance(*theme_, true));
 
     const int label_width = std::min(18, interior / 2);
     const int value_width = interior - label_width;
     const int maximum_fields = bounds.height - 4;
+    const auto first_visible_field = selected_field_ < static_cast<std::size_t>(maximum_fields)
+                                         ? std::size_t{0}
+                                         : selected_field_ - static_cast<std::size_t>(maximum_fields) + 1;
     for (int index = 0; index < maximum_fields; ++index) {
         const int y = bounds.y + 1 + index;
-        buffer.put(bounds.x, y, U'|');
-        if (static_cast<std::size_t>(index) < fields_.size()) {
-            const auto& field = fields_[static_cast<std::size_t>(index)];
-            const bool selected = static_cast<std::size_t>(index) == selected_field_;
-            write_padded(buffer, bounds.x + 1, y, label_width, field.label + ':', {.bold = !field.error.empty()});
+        const auto field_index = first_visible_field + static_cast<std::size_t>(index);
+        if (field_index < fields_.size()) {
+            const auto& field = fields_[field_index];
+            const bool selected = field_index == selected_field_;
+            write_padded(buffer, bounds.x + 1, y, label_width, field.label + ':',
+                         theme_->style(field.error.empty() ? ThemeRole::text : ThemeRole::error));
             std::string value = field.text;
             if (field.kind == FormFieldKind::checkbox)
-                value = field.text == "1" ? "[x]" : "[ ]";
-            const terminal::Style style{.underline = selected, .reverse = selected};
-            write_padded(buffer, bounds.x + 1 + label_width, y, value_width, "[" + value + "]", style);
+                value = field.text == "1" ? "✓" : " ";
+            const auto role = field.read_only ? ThemeRole::muted_text
+                              : selected      ? ThemeRole::input_focus
+                                              : ThemeRole::input;
+            write_padded(buffer, bounds.x + 1 + label_width, y, value_width, " " + value, theme_->style(role));
         }
-        buffer.put(bounds.x + bounds.width - 1, y, U'|');
     }
+    if (first_visible_field > 0)
+        buffer.put(bounds.x + bounds.width - 1, bounds.y + 1, U'▲', theme_->style(ThemeRole::border));
+    if (first_visible_field + static_cast<std::size_t>(maximum_fields) < fields_.size())
+        buffer.put(bounds.x + bounds.width - 1, bounds.y + bounds.height - 3, U'▼', theme_->style(ThemeRole::border));
     const int footer_y = bounds.y + bounds.height - 2;
-    buffer.put(bounds.x, footer_y, U'|');
-    write_padded(buffer, bounds.x + 2, footer_y, interior - 2, error_.empty() ? instructions_ : error_);
-    buffer.put(bounds.x + bounds.width - 1, footer_y, U'|');
+    write_padded(buffer, bounds.x + 1, footer_y, interior, error_.empty() ? instructions_ : error_,
+                 theme_->style(error_.empty() ? ThemeRole::muted_text : ThemeRole::error));
 }
 
 auto RecordForm::field_kind(const db::FieldSchema& field, FormMode mode, bool is_foreign_key) -> FormFieldKind {

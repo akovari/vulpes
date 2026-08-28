@@ -75,27 +75,29 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
 
 } // namespace
 
-BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages)
-    : messages_{&messages}, dataset_{database, std::move(table)}, controller_{dataset_},
+BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
+                               const Theme& theme)
+    : messages_{&messages}, theme_{&theme}, dataset_{database, std::move(table)}, controller_{dataset_},
       grid_{dataset_, dataset_.schema().name,
-            messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer")} {
+            messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"), theme} {
 }
 
 void BrowseDocument::begin_form(FormMode mode) {
     const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
     form_.emplace(dataset_, messages_->translate(title_key, {{"table", dataset_.schema().name}}), mode,
-                  messages_->translate("form.instructions"));
+                  messages_->translate("form.instructions"), *theme_);
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {
     prompt_purpose_ = purpose;
     if (purpose == PromptPurpose::search)
-        prompt_.emplace(messages_->translate("browse.search_prompt"), messages_->translate("prompt.instructions"));
+        prompt_.emplace(messages_->translate("browse.search_prompt"), messages_->translate("prompt.instructions"),
+                        std::string{}, *theme_);
     else {
         const auto* field = grid_.selected_field();
         if (field != nullptr)
             prompt_.emplace(messages_->translate("browse.filter_prompt", {{"field", field->name}}),
-                            messages_->translate("prompt.instructions"));
+                            messages_->translate("prompt.instructions"), std::string{}, *theme_);
     }
 }
 
@@ -103,7 +105,7 @@ void BrowseDocument::begin_delete_confirmation() {
     confirmation_.emplace(messages_->translate("browse.delete_title"),
                           messages_->translate("browse.delete_message", {{"table", dataset_.schema().name}}),
                           messages_->translate("dialog.delete"), messages_->translate("dialog.cancel"),
-                          messages_->translate("dialog.select"));
+                          messages_->translate("dialog.select"), *theme_);
 }
 
 void BrowseDocument::apply_prompt() {
@@ -215,13 +217,18 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
 void BrowseDocument::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     grid_.render(buffer, bounds);
     if (form_) {
-        form_->render(buffer, bounds);
+        const int dialog_width = std::min(72, bounds.width);
+        const int requested_height = static_cast<int>(form_->fields().size()) + 4;
+        const int dialog_height = std::clamp(requested_height, 6, bounds.height);
+        form_->render(buffer, {bounds.x + (bounds.width - dialog_width) / 2,
+                               bounds.y + (bounds.height - dialog_height) / 2, dialog_width, dialog_height});
         return;
     }
     if (prompt_) {
         constexpr int prompt_height = 5;
-        prompt_->render(buffer,
-                        {bounds.x, bounds.y + (bounds.height - prompt_height) / 2, bounds.width, prompt_height});
+        const int prompt_width = std::min(64, bounds.width);
+        prompt_->render(buffer, {bounds.x + (bounds.width - prompt_width) / 2,
+                                 bounds.y + (bounds.height - prompt_height) / 2, prompt_width, prompt_height});
         return;
     }
     if (confirmation_) {

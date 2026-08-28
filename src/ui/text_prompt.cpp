@@ -24,8 +24,9 @@ void erase_last_code_point(std::string& text) {
 
 } // namespace
 
-TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value)
-    : label_{std::move(label)}, instructions_{std::move(instructions)}, value_{std::move(initial_value)} {
+TextPrompt::TextPrompt(std::string label, std::string instructions, std::string initial_value, const Theme& theme)
+    : label_{std::move(label)}, instructions_{std::move(instructions)}, value_{std::move(initial_value)},
+      theme_{&theme} {
 }
 
 void TextPrompt::set_error(std::string message) {
@@ -57,9 +58,10 @@ void TextPrompt::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (!WindowFrame::fits(buffer, bounds, 20, 5))
         return;
     const int interior = bounds.width - 2;
-    WindowFrame::render(buffer, bounds, label_);
-    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, "> " + value_, {.reverse = true});
-    write_padded(buffer, bounds.x + 1, bounds.y + 2, interior, error_.empty() ? instructions_ : error_);
+    WindowFrame::render(buffer, bounds, label_, window_frame_appearance(*theme_, true));
+    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, "> " + value_, theme_->style(ThemeRole::input_focus));
+    write_padded(buffer, bounds.x + 1, bounds.y + 2, interior, error_.empty() ? instructions_ : error_,
+                 theme_->style(error_.empty() ? ThemeRole::muted_text : ThemeRole::error));
 }
 
 } // namespace vulpes::ui

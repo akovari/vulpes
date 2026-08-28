@@ -17,7 +17,7 @@ enum class ConfirmationResult { unchanged, redraw, confirmed, cancelled };
 class ConfirmationDialog {
   public:
     ConfirmationDialog(std::string title, std::string message, std::string confirm_label, std::string cancel_label,
-                       std::string instructions);
+                       std::string instructions, const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto confirmed() const noexcept -> bool { return button_focus_.current().value_or(1) == 0; }
     [[nodiscard]] auto handle(const terminal::InputEvent& event) -> ConfirmationResult;
@@ -30,6 +30,7 @@ class ConfirmationDialog {
     Button confirm_button_;
     Button cancel_button_;
     FocusRing button_focus_;
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui

@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <string>
 #include <string_view>
@@ -14,7 +15,7 @@ enum class SqlConsoleResult { unchanged, redraw, execute, cancelled };
 // the presentation layer executes submitted SQL through db::Database.
 class SqlConsole {
   public:
-    SqlConsole(std::string title, std::string instructions);
+    SqlConsole(std::string title, std::string instructions, const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto script() const noexcept -> std::string_view { return script_; }
     void set_error(std::string message);
@@ -28,6 +29,7 @@ class SqlConsole {
     std::string script_;
     std::string status_;
     std::string error_;
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui

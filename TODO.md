@@ -72,6 +72,10 @@ on Windows, Linux, and macOS.
 - [x] Add terminal capability/redirected-stream diagnostics and a plain
   user-facing failure path before raw-mode initialization.
 - [x] Map configurable keys to semantic action IDs.
+- [x] Apply shared semantic theme roles to workspace and document surfaces,
+  including focused inputs, errors, disabled controls, grids, and window chrome.
+- [x] Add Unicode window frames, opaque overlays, clipped drop shadows, and
+  deterministic logical-cell tests.
 
 ## M4 — First vertical slice: browse
 
@@ -105,6 +109,27 @@ on Windows, Linux, and macOS.
   read-only dataset guards, visual indication, and a CLI non-creation test.
 - [x] Design and implement an optional directory browser separately from
   portable path entry.
+- [x] Add measured classic-style pop-up menus with separator rows, aligned
+  shortcut columns, disabled actions, item mnemonics, and Unicode tab chrome.
+- [x] Make modal geometry safe at the minimum supported terminal width.
+
+## M4.6 — TUI interaction and presentation quality
+
+- [x] Size grid columns from headers/current-page values and distinguish the
+  focused cell from the selected row.
+- [x] Keep the focused generated-form field visible in compact windows and show
+  overflow indicators.
+- [ ] Replace append-only text entry with a shared cursor-aware line editor
+  supporting Left/Right, Home/End, Delete, selection-safe UTF-8 edits, horizontal
+  scrolling, and paste normalization.
+- [ ] Define explicit per-locale menu mnemonics instead of inferring the first
+  character, including collision validation and unambiguous activation.
+- [ ] Add grid row/column position indicators, scrollbar affordances, empty-state
+  presentation, and user-adjustable column widths.
+- [ ] Add dirty-document markers and a general modal/window stack before forms
+  can host nested relationship drill-down windows.
+- [ ] Audit every interactive surface at 40x10, 80x25, and wide terminals with
+  English and Czech catalogs, both palettes, and Windows display scaling.
 
 ## Cross-cutting — localization
 

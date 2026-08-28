@@ -43,10 +43,15 @@ struct WorkspaceText {
     std::array<std::string, 5> menu_bar;
     std::array<ShortcutHint, 5> status_shortcuts;
     std::array<std::string, 5> file_menu;
+    std::array<std::string, 5> file_menu_shortcuts;
     std::array<std::string, 6> database_menu;
+    std::array<std::string, 6> database_menu_shortcuts;
     std::array<std::string, 2> view_menu;
+    std::array<std::string, 2> view_menu_shortcuts;
     std::array<std::string, 2> window_menu;
+    std::array<std::string, 2> window_menu_shortcuts;
     std::array<std::string, 1> help_menu;
+    std::array<std::string, 1> help_menu_shortcuts;
 };
 
 [[nodiscard]] auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText;

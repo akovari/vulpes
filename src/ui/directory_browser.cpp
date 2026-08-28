@@ -32,8 +32,9 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
 } // namespace
 
 DirectoryBrowser::DirectoryBrowser(std::filesystem::path initial_directory, std::string title, std::string instructions,
-                                   std::string parent_label)
-    : title_{std::move(title)}, instructions_{std::move(instructions)}, parent_label_{std::move(parent_label)} {
+                                   std::string parent_label, const Theme& theme)
+    : title_{std::move(title)}, instructions_{std::move(instructions)}, parent_label_{std::move(parent_label)},
+      theme_{&theme} {
     std::error_code error;
     if (!std::filesystem::is_directory(initial_directory, error))
         initial_directory = initial_directory.parent_path();
@@ -162,9 +163,9 @@ auto DirectoryBrowser::handle(const terminal::InputEvent& event) -> DirectoryBro
 void DirectoryBrowser::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (!WindowFrame::fits(buffer, bounds, 30, 8))
         return;
-    WindowFrame::render(buffer, bounds, title_);
+    WindowFrame::render(buffer, bounds, title_, window_frame_appearance(*theme_, true));
     const auto content = WindowFrame::content_bounds(bounds);
-    write(buffer, content.x, content.y, content.width, path_text(directory_));
+    write(buffer, content.x, content.y, content.width, path_text(directory_), theme_->style(ThemeRole::title));
     const auto visible_count = static_cast<std::size_t>(std::max(0, content.height - 3));
     auto first_visible = std::size_t{0};
     if (visible_count > 0) {
@@ -176,9 +177,10 @@ void DirectoryBrowser::render(terminal::ScreenBuffer& buffer, Rect bounds) const
     for (std::size_t row = 0; row < visible_count && first_visible + row < entries_.size(); ++row) {
         const auto index = first_visible + row;
         write(buffer, content.x, content.y + 1 + static_cast<int>(row), content.width, entries_[index].label,
-              {.reverse = index == selected_});
+              theme_->style(index == selected_ ? ThemeRole::selection : ThemeRole::text));
     }
-    write(buffer, content.x, content.y + content.height - 1, content.width, error_.empty() ? instructions_ : error_);
+    write(buffer, content.x, content.y + content.height - 1, content.width, error_.empty() ? instructions_ : error_,
+          theme_->style(error_.empty() ? ThemeRole::muted_text : ThemeRole::error));
 }
 
 } // namespace vulpes::ui

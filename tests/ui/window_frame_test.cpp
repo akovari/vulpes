@@ -7,11 +7,14 @@ TEST_CASE("window frame is opaque and exposes its logical content bounds", "[ui]
     vulpes::terminal::ScreenBuffer buffer{20, 8};
     buffer.put(5, 3, U'X');
 
-    vulpes::ui::WindowFrame::render(buffer, {2, 1, 12, 6}, "Title");
+    const auto& theme = vulpes::ui::theme(vulpes::ui::ThemeName::midnight);
+    vulpes::ui::WindowFrame::render(buffer, {2, 1, 12, 6}, "Title", vulpes::ui::window_frame_appearance(theme, true));
 
     CHECK(vulpes::ui::WindowFrame::fits(buffer, {2, 1, 12, 6}, 12, 6));
     CHECK(vulpes::ui::WindowFrame::content_bounds({2, 1, 12, 6}) == vulpes::ui::Rect{3, 2, 10, 4});
-    CHECK(buffer.cell(2, 1).glyph == U'+');
-    CHECK(buffer.cell(4, 1).glyph == U'T');
+    CHECK(buffer.cell(2, 1).glyph == U'┌');
+    CHECK(buffer.cell(5, 1).glyph == U'T');
     CHECK(buffer.cell(5, 3).glyph == U' ');
+    CHECK(buffer.cell(14, 2).style == theme.style(vulpes::ui::ThemeRole::shadow));
+    CHECK(buffer.cell(3, 7).style == theme.style(vulpes::ui::ThemeRole::shadow));
 }

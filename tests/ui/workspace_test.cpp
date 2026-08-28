@@ -73,7 +73,7 @@ TEST_CASE("workspace opens a selected recent database from its home screen", "[u
     vulpes::terminal::ScreenBuffer buffer{80, 25};
 
     workspace.render(buffer, {0, 0, 80, 25});
-    CHECK(buffer.cell(2, 8).glyph == U'R');
+    CHECK(buffer.cell(3, 8).glyph == U'R');
     CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
           vulpes::ui::WorkspaceResult::redraw);
@@ -101,6 +101,60 @@ TEST_CASE("workspace menu navigation supports arrows, mnemonics, and Escape", "[
     CHECK(workspace.handle(vulpes::core::ActionId::application_back,
                            vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::WorkspaceResult::redraw);
+}
+
+TEST_CASE("workspace menus render classic chrome, shortcuts, disabled states, and item mnemonics", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    vulpes::terminal::ScreenBuffer buffer{80, 25};
+
+    CHECK(workspace.handle(vulpes::core::ActionId::application_menu,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f10}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    workspace.render(buffer, {0, 0, 80, 25});
+    CHECK(buffer.cell(1, 1).glyph == U'┌');
+    CHECK(buffer.cell(2, 2).glyph == U'►');
+    CHECK(buffer.cell(4, 2).glyph == U'O');
+    CHECK(buffer.cell(4, 2).style.underline);
+    CHECK(buffer.cell(28, 2).glyph == U'C');
+
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(
+              vulpes::core::ActionId::none,
+              vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'd', .alt = true}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    workspace.render(buffer, {0, 0, 80, 25});
+    const auto& theme = vulpes::ui::theme(vulpes::ui::ThemeName::midnight);
+    CHECK(buffer.cell(12, 7).style == theme.style(vulpes::ui::ThemeRole::disabled));
+
+    CHECK(workspace.handle(vulpes::core::ActionId::application_back,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::application_menu,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f10}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'c'}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    static_cast<void>(
+        workspace.handle(vulpes::core::ActionId::none,
+                         vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U'x'}));
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::create_database);
+}
+
+TEST_CASE("workspace path prompt remains visible at the minimum supported width", "[ui][workspace]") {
+    auto workspace = english_workspace();
+    vulpes::terminal::ScreenBuffer buffer{40, 10};
+    CHECK(workspace.handle(vulpes::core::ActionId::database_open, {}) == vulpes::ui::WorkspaceResult::redraw);
+
+    workspace.render(buffer, {0, 0, 40, 10});
+
+    CHECK(buffer.cell(0, 2).glyph == U'┌');
+    CHECK(buffer.cell(3, 2).glyph == U'O');
+    CHECK(buffer.cell(0, 3).glyph == U'│');
 }
 
 TEST_CASE("workspace launches and dismisses the optional directory browser", "[ui][workspace]") {

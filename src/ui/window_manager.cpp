@@ -77,13 +77,23 @@ void WindowManager::render_tabs(terminal::ScreenBuffer& buffer, Rect bounds) con
     if (bounds.width < 8 || bounds.height < 1)
         return;
     write(buffer, bounds.x, bounds.y, bounds.width, "", theme_->style(ThemeRole::tab));
-    int x = bounds.x + 1;
-    for (std::size_t index = 0; index < documents_.size() && x < bounds.x + bounds.width; ++index) {
-        const auto label = " " + documents_[index].title + (documents_[index].closable ? " x " : " ");
-        const int width = std::min(static_cast<int>(label.size()), bounds.x + bounds.width - x);
+    constexpr int minimum_tab_width = 8;
+    const auto maximum_visible = std::max(std::size_t{1}, static_cast<std::size_t>(bounds.width / minimum_tab_width));
+    const auto visible_count = std::min(maximum_visible, documents_.size());
+    const auto first_visible = active_index_ < visible_count ? std::size_t{0} : active_index_ - visible_count + 1;
+    int x = bounds.x;
+    for (std::size_t index = first_visible; index < first_visible + visible_count; ++index) {
+        const auto remaining_tabs = static_cast<int>(first_visible + visible_count - index);
+        const auto available = bounds.x + bounds.width - x;
+        const auto fair_width = available / remaining_tabs;
+        const auto preferred = terminal::text_width(documents_[index].title) + (documents_[index].closable ? 5 : 3);
+        const int width = std::min({24, fair_width, std::max(minimum_tab_width, preferred)});
+        const auto label = " " + documents_[index].title + (documents_[index].closable ? " × " : " ");
         write(buffer, x, bounds.y, width, label,
               index == active_index_ ? theme_->style(ThemeRole::active_tab) : theme_->style(ThemeRole::tab));
         x += width;
+        if (x < bounds.x + bounds.width)
+            buffer.put(x++, bounds.y, U'│', theme_->style(ThemeRole::tab));
     }
 }
 

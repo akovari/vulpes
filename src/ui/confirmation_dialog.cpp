@@ -16,9 +16,10 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 } // namespace
 
 ConfirmationDialog::ConfirmationDialog(std::string title, std::string message, std::string confirm_label,
-                                       std::string cancel_label, std::string instructions)
+                                       std::string cancel_label, std::string instructions, const Theme& theme)
     : title_{std::move(title)}, message_{std::move(message)}, instructions_{std::move(instructions)},
-      confirm_button_{std::move(confirm_label)}, cancel_button_{std::move(cancel_label)}, button_focus_{{true, true}} {
+      confirm_button_{std::move(confirm_label)}, cancel_button_{std::move(cancel_label)}, button_focus_{{true, true}},
+      theme_{&theme} {
     static_cast<void>(button_focus_.select(1));
 }
 
@@ -55,12 +56,14 @@ void ConfirmationDialog::render(terminal::ScreenBuffer& buffer, Rect bounds) con
     if (!WindowFrame::fits(buffer, bounds, 24, 6))
         return;
     const int interior = bounds.width - 2;
-    WindowFrame::render(buffer, bounds, title_);
-    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, message_);
+    WindowFrame::render(buffer, bounds, title_, window_frame_appearance(*theme_, true));
+    write_padded(buffer, bounds.x + 1, bounds.y + 1, interior, message_, theme_->style(ThemeRole::text));
     const int midpoint = interior / 2;
-    confirm_button_.render(buffer, {bounds.x + 1, bounds.y + 3, midpoint, 1}, confirmed());
-    cancel_button_.render(buffer, {bounds.x + 1 + midpoint, bounds.y + 3, interior - midpoint, 1}, !confirmed());
-    write_padded(buffer, bounds.x + 1, bounds.y + 4, interior, instructions_);
+    confirm_button_.render(buffer, {bounds.x + 1, bounds.y + 3, midpoint, 1}, confirmed(),
+                           theme_->style(ThemeRole::input));
+    cancel_button_.render(buffer, {bounds.x + 1 + midpoint, bounds.y + 3, interior - midpoint, 1}, !confirmed(),
+                          theme_->style(ThemeRole::input));
+    write_padded(buffer, bounds.x + 1, bounds.y + 4, interior, instructions_, theme_->style(ThemeRole::muted_text));
 }
 
 } // namespace vulpes::ui

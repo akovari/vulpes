@@ -52,5 +52,6 @@ TEST_CASE("directory browser navigates directories and selects existing files", 
 
     vulpes::terminal::ScreenBuffer buffer{60, 15};
     browser.render(buffer, {0, 0, 60, 15});
-    CHECK(buffer.cell(2, 0).glyph == U'O');
+    CHECK(buffer.cell(3, 0).glyph == U'O');
+    CHECK(buffer.cell(60 - 1, 14).glyph == U'┘');
 }

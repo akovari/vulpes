@@ -15,7 +15,8 @@ enum class PromptResult { unchanged, redraw, submitted, cancelled };
 // submitted text, keeping command, filter, and search parsing out of widgets.
 class TextPrompt {
   public:
-    TextPrompt(std::string label, std::string instructions, std::string initial_value = {});
+    TextPrompt(std::string label, std::string instructions, std::string initial_value = {},
+               const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto value() const noexcept -> std::string_view { return value_; }
     void set_error(std::string message);
@@ -27,6 +28,7 @@ class TextPrompt {
     std::string instructions_;
     std::string value_;
     std::string error_;
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui

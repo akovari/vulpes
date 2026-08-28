@@ -32,7 +32,8 @@ struct FormField {
 // text input but delegates validation and persistence to Dataset.
 class RecordForm {
   public:
-    RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions);
+    RecordForm(model::Dataset& dataset, std::string title, FormMode mode, std::string instructions,
+               const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto fields() const noexcept -> const std::vector<FormField>& { return fields_; }
     [[nodiscard]] auto selected_field_index() const noexcept -> std::size_t { return selected_field_; }
@@ -60,6 +61,7 @@ class RecordForm {
     std::size_t selected_field_{};
     std::optional<std::size_t> error_field_;
     std::string error_;
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui

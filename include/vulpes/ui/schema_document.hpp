@@ -3,6 +3,7 @@
 #include "vulpes/core/localization.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/ui/document_surface.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <string>
 #include <vector>
@@ -12,7 +13,8 @@ namespace vulpes::ui {
 // A read-only schema inspection surface used by the workspace command palette.
 class SchemaDocument final : public DocumentSurface {
   public:
-    SchemaDocument(db::TableSchema table, const core::Localizer& messages);
+    SchemaDocument(db::TableSchema table, const core::Localizer& messages,
+                   const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
@@ -24,6 +26,7 @@ class SchemaDocument final : public DocumentSurface {
     std::vector<std::string> lines_;
     std::size_t selected_line_{};
     std::size_t first_visible_line_{};
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui

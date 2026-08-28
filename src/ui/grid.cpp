@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/unicode.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <variant>
 
@@ -47,12 +48,12 @@ auto GridRows::from_sql_result(db::SqlResult result) -> GridRows {
     return grid_rows;
 }
 
-Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer)
-    : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)} {
+Grid::Grid(const model::Dataset& dataset, std::string title, std::string footer, const Theme& theme)
+    : dataset_{&dataset}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme} {
 }
 
-Grid::Grid(const GridRows& rows, std::string title, std::string footer)
-    : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)} {
+Grid::Grid(const GridRows& rows, std::string title, std::string footer, const Theme& theme)
+    : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme} {
     if (!rows.rows.empty())
         selected_result_row_ = 0;
 }
@@ -118,17 +119,14 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
     if (all_fields.empty())
         return;
 
+    const auto& current_theme = *theme_;
     const int interior_width = bounds.width - 2;
+    constexpr int minimum_column_width = 4;
     auto visible_fields = [&](std::size_t first_visible) {
         std::vector<const db::FieldSchema*> fields;
-        constexpr int minimum_column_width = 4;
-        for (std::size_t index = first_visible; index < all_fields.size(); ++index) {
-            const auto candidate_count = static_cast<int>(fields.size()) + 1;
-            const int candidate_content_width = interior_width - candidate_count + 1;
-            if (candidate_content_width / candidate_count < minimum_column_width)
-                break;
+        const auto maximum_count = static_cast<std::size_t>((interior_width + 1) / (minimum_column_width + 1));
+        for (std::size_t index = first_visible; index < all_fields.size() && fields.size() < maximum_count; ++index)
             fields.push_back(all_fields[index]);
-        }
         return fields;
     };
 
@@ -143,30 +141,59 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
         return;
 
     const int content_width = interior_width - static_cast<int>(fields.size()) + 1;
-    if (content_width < static_cast<int>(fields.size()))
+    if (content_width < static_cast<int>(fields.size()) * minimum_column_width)
         return;
-    const int base_width = content_width / static_cast<int>(fields.size());
-    const int remainder = content_width % static_cast<int>(fields.size());
-    auto draw_border = [&](int y) {
-        buffer.put(bounds.x, y, U'+');
-        for (int column = 0; column < interior_width; ++column)
-            buffer.put(bounds.x + 1 + column, y, U'-');
-        buffer.put(bounds.x + bounds.width - 1, y, U'+');
+    std::vector<int> column_widths(fields.size(), minimum_column_width);
+    std::vector<int> preferred_widths;
+    preferred_widths.reserve(fields.size());
+    const auto& displayed_rows = dataset_ != nullptr ? dataset_->rows() : rows_->rows;
+    for (const auto* field : fields) {
+        int preferred = terminal::text_width(field->name) + 2;
+        for (const auto& row : displayed_rows)
+            preferred = std::max(preferred, terminal::text_width(display_value(row.at(field->name))) + 2);
+        preferred_widths.push_back(std::clamp(preferred, minimum_column_width, 32));
+    }
+    int remaining = content_width - static_cast<int>(fields.size()) * minimum_column_width;
+    for (bool changed = true; remaining > 0 && changed;) {
+        changed = false;
+        for (std::size_t index = 0; index < column_widths.size() && remaining > 0; ++index) {
+            if (column_widths[index] >= preferred_widths[index])
+                continue;
+            ++column_widths[index];
+            --remaining;
+            changed = true;
+        }
+    }
+    for (std::size_t index = 0; remaining > 0; ++index, --remaining)
+        ++column_widths[index % column_widths.size()];
+
+    auto draw_border = [&](int y, char32_t left, char32_t junction, char32_t right) {
+        buffer.put(bounds.x, y, left, current_theme.style(ThemeRole::border));
+        int column = bounds.x + 1;
+        for (std::size_t index = 0; index < column_widths.size(); ++index) {
+            for (int offset = 0; offset < column_widths[index]; ++offset)
+                buffer.put(column++, y, U'─', current_theme.style(ThemeRole::border));
+            if (index + 1 < column_widths.size())
+                buffer.put(column++, y, junction, current_theme.style(ThemeRole::border));
+        }
+        buffer.put(bounds.x + bounds.width - 1, y, right, current_theme.style(ThemeRole::border));
     };
-    draw_border(bounds.y);
-    write_padded(buffer, bounds.x + 2, bounds.y, interior_width - 2, title_);
+    draw_border(bounds.y, U'┌', U'┬', U'┐');
+    write_padded(buffer, bounds.x + 2, bounds.y, interior_width - 2, " " + title_ + " ",
+                 current_theme.style(ThemeRole::title));
 
     const int header_y = bounds.y + 1;
-    buffer.put(bounds.x, header_y, U'|');
+    buffer.put(bounds.x, header_y, U'│', current_theme.style(ThemeRole::border));
     int x = bounds.x + 1;
     for (std::size_t index = 0; index < fields.size(); ++index) {
-        const int width = base_width + (static_cast<int>(index) < remainder ? 1 : 0);
-        const terminal::Style header_style{.bold = true, .underline = first_visible + index == selected_column_};
+        const int width = column_widths[index];
+        auto header_style = current_theme.style(ThemeRole::grid_header);
+        header_style.underline = first_visible + index == selected_column_;
         write_padded(buffer, x, header_y, width, fields[index]->name, header_style);
         x += width;
-        buffer.put(x++, header_y, U'|');
+        buffer.put(x++, header_y, U'│', current_theme.style(ThemeRole::border));
     }
-    draw_border(bounds.y + 2);
+    draw_border(bounds.y + 2, U'├', U'┼', U'┤');
 
     const int maximum_rows = bounds.height - 5;
     if (selected_result_row_) {
@@ -176,32 +203,32 @@ void Grid::render(terminal::ScreenBuffer& buffer, Rect bounds) {
             first_visible_result_row_ = *selected_result_row_ - static_cast<std::size_t>(maximum_rows) + 1;
     }
     const auto selected = dataset_ != nullptr ? dataset_->current_row_index() : selected_result_row_;
-    const auto& displayed_rows = dataset_ != nullptr ? dataset_->rows() : rows_->rows;
     for (int row_index = 0; row_index < maximum_rows; ++row_index) {
         const int y = bounds.y + 3 + row_index;
-        buffer.put(bounds.x, y, U'|');
+        buffer.put(bounds.x, y, U'│', current_theme.style(ThemeRole::border));
         x = bounds.x + 1;
         const auto source_index = dataset_ != nullptr ? static_cast<std::size_t>(row_index)
                                                       : first_visible_result_row_ + static_cast<std::size_t>(row_index);
         const auto row_exists = source_index < displayed_rows.size();
         for (std::size_t field_index = 0; field_index < fields.size(); ++field_index) {
-            const int width = base_width + (static_cast<int>(field_index) < remainder ? 1 : 0);
-            const terminal::Style style{
-                .underline = first_visible + field_index == selected_column_,
-                .reverse = selected && *selected == source_index,
-            };
+            const int width = column_widths[field_index];
+            const bool selected_row = selected && *selected == source_index;
+            const bool selected_cell = selected_row && first_visible + field_index == selected_column_;
+            const auto& style = current_theme.style(selected_cell  ? ThemeRole::grid_selected_cell
+                                                    : selected_row ? ThemeRole::grid_selected_row
+                                                                   : ThemeRole::grid_cell);
             const auto text =
                 row_exists ? display_value(displayed_rows[source_index].at(fields[field_index]->name)) : std::string{};
             write_padded(buffer, x, y, width, text, style);
             x += width;
-            buffer.put(x++, y, U'|', style);
+            buffer.put(x++, y, U'│', current_theme.style(ThemeRole::border));
         }
     }
     const int footer_y = bounds.y + bounds.height - 2;
-    buffer.put(bounds.x, footer_y, U'|');
-    write_padded(buffer, bounds.x + 1, footer_y, interior_width, footer_);
-    buffer.put(bounds.x + bounds.width - 1, footer_y, U'|');
-    draw_border(bounds.y + bounds.height - 1);
+    buffer.put(bounds.x, footer_y, U'│', current_theme.style(ThemeRole::border));
+    write_padded(buffer, bounds.x + 1, footer_y, interior_width, footer_, current_theme.style(ThemeRole::grid_footer));
+    buffer.put(bounds.x + bounds.width - 1, footer_y, U'│', current_theme.style(ThemeRole::border));
+    draw_border(bounds.y + bounds.height - 1, U'└', U'┴', U'┘');
 }
 
 } // namespace vulpes::ui

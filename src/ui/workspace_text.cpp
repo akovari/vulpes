@@ -62,6 +62,7 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu.file.create"),
                 messages.translate("workspace.menu.file.exit"),
             },
+        .file_menu_shortcuts = {"Ctrl+O", "Ctrl+R", "", "Ctrl+N", "Ctrl+C"},
         .database_menu =
             {
                 messages.translate("workspace.menu.database.open"),
@@ -71,17 +72,21 @@ auto make_workspace_text(const core::Localizer& messages) -> WorkspaceText {
                 messages.translate("workspace.menu.database.browse"),
                 messages.translate("workspace.menu.database.sql"),
             },
+        .database_menu_shortcuts = {"Ctrl+O", "Ctrl+R", "", "Ctrl+N", "Enter", "F7"},
         .view_menu =
             {
                 messages.translate("workspace.menu.view.previous"),
                 messages.translate("workspace.menu.view.next"),
             },
+        .view_menu_shortcuts = {"Up", "Down"},
         .window_menu =
             {
                 messages.translate("workspace.menu.window.next"),
                 messages.translate("workspace.menu.window.close"),
             },
+        .window_menu_shortcuts = {"Ctrl+Tab", "Ctrl+W"},
         .help_menu = {messages.translate("workspace.menu.help.shortcuts")},
+        .help_menu_shortcuts = {""},
     };
 }
 

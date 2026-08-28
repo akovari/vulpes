@@ -20,7 +20,7 @@ TEST_CASE("document session hosts a browse document through the terminal abstrac
     session.run();
 
     REQUIRE(terminal.frames().size() == 1);
-    CHECK(terminal.frames().front().cell(2, 0).glyph == U'c');
+    CHECK(terminal.frames().front().cell(3, 0).glyph == U'c');
 }
 
 TEST_CASE("document session shows a resize warning and still permits a clean exit", "[ui][document]") {

@@ -26,3 +26,17 @@ TEST_CASE("window manager owns tabs and gives modal Escape priority", "[ui][wind
     CHECK(windows.active().title == "Workspace");
     CHECK(windows.active_status() == "Workspace ready");
 }
+
+TEST_CASE("window manager keeps the active Unicode tab visible in narrow layouts", "[ui][window]") {
+    const auto& theme = vulpes::ui::theme(vulpes::ui::ThemeName::midnight);
+    vulpes::ui::WindowManager windows{theme, "Workspace"};
+    windows.open({.id = "one", .title = "Příliš dlouhá tabulka", .kind = vulpes::ui::DocumentKind::browse});
+    windows.open({.id = "two", .title = "Orders", .kind = vulpes::ui::DocumentKind::browse});
+    windows.open({.id = "sql", .title = "SQL", .kind = vulpes::ui::DocumentKind::sql_console});
+    vulpes::terminal::ScreenBuffer buffer{24, 2};
+
+    windows.render_tabs(buffer, {0, 0, 24, 1});
+
+    CHECK(buffer.cell(18, 0).glyph == U'S');
+    CHECK(buffer.cell(18, 0).style == theme.style(vulpes::ui::ThemeRole::active_tab));
+}

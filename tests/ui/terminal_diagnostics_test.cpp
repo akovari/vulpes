@@ -16,7 +16,7 @@ TEST_CASE("terminal diagnostics renders normalized key and resize events", "[ui]
           vulpes::ui::DocumentResult::redraw);
     diagnostics.render(buffer, {0, 0, 80, 20});
 
-    CHECK(buffer.cell(2, 0).glyph == U'T');
+    CHECK(buffer.cell(3, 0).glyph == U'T');
     CHECK(buffer.cell(1, 1).glyph == U'K');
     CHECK(buffer.cell(1, 2).glyph == U'R');
     CHECK(diagnostics.handle(vulpes::core::ActionId::application_back,

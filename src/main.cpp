@@ -56,17 +56,18 @@ auto load_messages(const std::string& locale, const std::vector<std::string>& ca
 }
 
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
-            const vulpes::core::Localizer& messages) {
+            const vulpes::core::Localizer& messages, const vulpes::ui::Theme& theme) {
     vulpes::terminal::ConsoleTerminal terminal;
-    vulpes::ui::BrowseDocument document{database, table, messages};
+    vulpes::ui::BrowseDocument document{database, table, messages, theme};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 6}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "6"}})}
         .run();
 }
 
-void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& messages) {
+void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& messages,
+                 const vulpes::ui::Theme& theme) {
     vulpes::terminal::ConsoleTerminal terminal;
-    vulpes::ui::SqlDocument document{database, messages};
+    vulpes::ui::SqlDocument document{database, messages, theme};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 8}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "8"}})}
         .run();
@@ -154,16 +155,17 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 table = workspace.selected_table();
             if (table != nullptr) {
                 surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database, *table,
-                                     messages);
+                                     messages, theme);
             }
             return;
         case vulpes::ui::DocumentKind::schema:
             if (table != nullptr) {
-                surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SchemaDocument>, *table, messages);
+                surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SchemaDocument>, *table, messages,
+                                     theme);
             }
             return;
         case vulpes::ui::DocumentKind::sql_console:
-            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages);
+            surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::SqlDocument>, *database, messages, theme);
             return;
         case vulpes::ui::DocumentKind::workspace:
             return;
@@ -321,7 +323,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
 
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
          const std::optional<std::string>& command_source, const std::string& locale,
-         const std::vector<std::string>& catalog_paths) -> int {
+         const std::vector<std::string>& catalog_paths, const vulpes::ui::Theme& theme) -> int {
     vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
     auto messages = load_messages(locale, catalog_paths);
     vulpes::core::ApplicationRuntime application{database};
@@ -348,10 +350,10 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
         print_schema(*response.table, messages);
         break;
     case vulpes::core::CommandOutcome::browse:
-        browse(database, *response.table, messages);
+        browse(database, *response.table, messages, theme);
         break;
     case vulpes::core::CommandOutcome::sql:
-        sql_console(database, messages);
+        sql_console(database, messages, theme);
         break;
     case vulpes::core::CommandOutcome::quit:
         break;
@@ -452,7 +454,7 @@ auto main(int argc, char** argv) -> int {
                    sql                      ? std::optional{std::string{"sql"}}
                    : command_source.empty() ? std::nullopt
                                             : std::optional{command_source},
-                   locale, catalog_paths);
+                   locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)));
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;

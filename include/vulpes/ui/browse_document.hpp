@@ -9,6 +9,7 @@
 #include "vulpes/ui/form.hpp"
 #include "vulpes/ui/grid.hpp"
 #include "vulpes/ui/text_prompt.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <optional>
 #include <string>
@@ -19,7 +20,8 @@ namespace vulpes::ui {
 // frontend. It owns datasets and transient semantic overlays, never a terminal.
 class BrowseDocument final : public DocumentSurface {
   public:
-    BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages);
+    BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
+                   const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
@@ -33,6 +35,7 @@ class BrowseDocument final : public DocumentSurface {
     void apply_prompt();
 
     const core::Localizer* messages_;
+    const Theme* theme_;
     model::Dataset dataset_;
     core::BrowseController controller_;
     Grid grid_;

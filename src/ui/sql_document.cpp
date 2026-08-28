@@ -18,9 +18,9 @@ auto trim_ascii(std::string_view text) -> std::string_view {
 
 } // namespace
 
-SqlDocument::SqlDocument(db::Database& database, const core::Localizer& messages)
-    : database_{&database}, messages_{&messages},
-      console_{messages.translate("sql.title"), messages.translate("sql.instructions")} {
+SqlDocument::SqlDocument(db::Database& database, const core::Localizer& messages, const Theme& theme)
+    : database_{&database}, messages_{&messages}, theme_{&theme},
+      console_{messages.translate("sql.title"), messages.translate("sql.instructions"), theme} {
 }
 
 void SqlDocument::execute() {
@@ -34,7 +34,7 @@ void SqlDocument::execute() {
     result_rows_ = GridRows::from_sql_result(std::move(result));
     if (!result_rows_->fields.empty())
         result_grid_.emplace(*result_rows_, messages_->translate("sql.results"),
-                             messages_->translate("sql.result_footer"));
+                             messages_->translate("sql.result_footer"), *theme_);
     console_.set_status(messages_->translate(
         "sql.status",
         {{"rows", std::to_string(rows)}, {"changes", std::to_string(changes)}, {"truncated", truncated}}));

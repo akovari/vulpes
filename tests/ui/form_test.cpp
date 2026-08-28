@@ -46,8 +46,11 @@ TEST_CASE("generated form cancels drafts and renders logical cells", "[ui][form]
     vulpes::terminal::ScreenBuffer buffer{40, 10};
 
     form.render(buffer, {0, 0, 40, 10});
-    CHECK(buffer.cell(2, 0).glyph == U'C');
+    CHECK(buffer.cell(0, 0).glyph == U'┌');
+    CHECK(buffer.cell(3, 0).glyph == U'C');
     CHECK(buffer.cell(1, 1).glyph == U'i');
+    CHECK(buffer.cell(19, 2).style ==
+          vulpes::ui::theme(vulpes::ui::ThemeName::midnight).style(vulpes::ui::ThemeRole::input_focus));
     CHECK(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::escape}) ==
           vulpes::ui::FormResult::cancelled);
     CHECK(dataset.mode() == vulpes::model::DatasetMode::browse);
@@ -62,6 +65,24 @@ TEST_CASE("generated form keeps blob columns read only", "[ui][form]") {
     REQUIRE(form.fields().size() == 2);
     CHECK(form.fields()[1].name == "contents");
     CHECK(form.fields()[1].kind == vulpes::ui::FormFieldKind::read_only);
+}
+
+TEST_CASE("generated form keeps the focused field visible in a compact window", "[ui][form]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute(
+        "CREATE TABLE many_fields(id INTEGER PRIMARY KEY, a TEXT, b TEXT, c TEXT, d TEXT, e TEXT, f TEXT, g TEXT)");
+    vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front()};
+    vulpes::ui::RecordForm form{dataset, "Compact form", vulpes::ui::FormMode::insert, "F8 Save"};
+    vulpes::terminal::ScreenBuffer buffer{40, 6};
+
+    for (int index = 0; index < 6; ++index)
+        static_cast<void>(form.handle(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}));
+    form.render(buffer, {0, 0, 40, 6});
+
+    CHECK(form.selected_field_index() == 6);
+    CHECK(buffer.cell(39, 1).glyph == U'▲');
+    CHECK(buffer.cell(39, 3).glyph == U'▼');
+    CHECK(buffer.cell(1, 2).glyph == U'f');
 }
 
 TEST_CASE("generated form infers boolean controls without treating ordinary integers as booleans", "[ui][form]") {

@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/unicode.hpp"
 #include "vulpes/ui/status_bar.hpp"
+#include "vulpes/ui/window_frame.hpp"
 
 #include <algorithm>
 #include <array>
@@ -19,8 +20,9 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
 
 void write_menu(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_view name, bool active,
                 const Theme& theme) {
-    write(buffer, x, y, width, name, active ? theme.style(ThemeRole::active_menu) : theme.style(ThemeRole::menu));
-    buffer.put(x, y, terminal::first_code_point(name),
+    const auto label = " " + std::string{name} + " ";
+    write(buffer, x, y, width, label, active ? theme.style(ThemeRole::active_menu) : theme.style(ThemeRole::menu));
+    buffer.put(x + 1, y, terminal::first_code_point(name),
                active ? theme.style(ThemeRole::active_menu_mnemonic) : theme.style(ThemeRole::menu_mnemonic));
 }
 
@@ -129,7 +131,7 @@ void Workspace::begin_path_prompt(Modal modal) {
     const auto& title = modal == Modal::open             ? text_.open_database_title
                         : modal == Modal::open_read_only ? text_.open_read_only_database_title
                                                          : text_.create_database_title;
-    prompt_.emplace(title, text_.path_instructions);
+    prompt_.emplace(title, text_.path_instructions, std::string{}, *theme_);
     windows_.show_modal(title);
 }
 
@@ -140,14 +142,14 @@ void Workspace::begin_directory_browser() {
     if (error)
         directory.clear();
     directory_browser_.emplace(std::move(directory), text_.directory_browser_title,
-                               text_.directory_browser_instructions, text_.directory_browser_parent);
+                               text_.directory_browser_instructions, text_.directory_browser_parent, *theme_);
     windows_.show_modal(text_.directory_browser_title);
 }
 
 void Workspace::begin_command_prompt() {
     modal_ = Modal::command;
     submitted_value_.clear();
-    prompt_.emplace(text_.command_title, text_.command_instructions);
+    prompt_.emplace(text_.command_title, text_.command_instructions, std::string{}, *theme_);
     windows_.show_modal(text_.command_title);
 }
 
@@ -156,13 +158,25 @@ void Workspace::begin_close_confirmation() {
         return;
     close_confirmation_.emplace(
         text_.close_document_title, replace_argument(text_.close_document_message, "title", windows_.active().title),
-        text_.close_document_confirm, text_.close_document_cancel, text_.close_document_instructions);
+        text_.close_document_confirm, text_.close_document_cancel, text_.close_document_instructions, *theme_);
     windows_.show_modal(text_.close_document_title);
+}
+
+auto Workspace::menu_item_enabled(Menu menu, std::size_t item) const noexcept -> bool {
+    if (menu == Menu::database && item >= 4)
+        return !database_path_.empty();
+    if (menu == Menu::view)
+        return item == 0 ? selected_table_ > 0 : item == 1 && selected_table_ + 1 < tables_.size();
+    if (menu == Menu::window)
+        return item == 0 ? windows_.documents().size() > 1 : item == 1 && windows_.active().closable;
+    return true;
 }
 
 auto Workspace::activate_menu_item() -> WorkspaceResult {
     const auto selected = menu_selection_;
     const auto active_menu = menu_;
+    if (!menu_item_enabled(active_menu, selected))
+        return WorkspaceResult::unchanged;
     menu_ = Menu::none;
     menu_selection_ = 0;
 
@@ -298,13 +312,33 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         }
         return std::size_t{0};
     };
-    const auto move_menu = [this](int direction) {
+    const auto select_first_enabled = [this, &menu_item_count] {
+        const auto count = menu_item_count();
+        for (std::size_t index = 0; index < count; ++index) {
+            if (menu_item_enabled(menu_, index)) {
+                menu_selection_ = index;
+                return;
+            }
+        }
+        menu_selection_ = 0;
+    };
+    const auto move_menu_selection = [this, &menu_item_count](int direction) {
+        const auto count = menu_item_count();
+        if (count == 0)
+            return;
+        for (std::size_t attempt = 0; attempt < count; ++attempt) {
+            menu_selection_ = direction > 0 ? (menu_selection_ + 1) % count : (menu_selection_ + count - 1) % count;
+            if (menu_item_enabled(menu_, menu_selection_))
+                return;
+        }
+    };
+    const auto move_menu = [this, &select_first_enabled](int direction) {
         static constexpr std::array menus{Menu::file, Menu::database, Menu::view, Menu::window, Menu::help};
         const auto found = std::ranges::find(menus, menu_);
         const auto index = found == menus.end() ? 0 : static_cast<int>(std::distance(menus.begin(), found));
         const auto next = (index + direction + static_cast<int>(menus.size())) % static_cast<int>(menus.size());
         menu_ = menus[static_cast<std::size_t>(next)];
-        menu_selection_ = 0;
+        select_first_enabled();
     };
 
     if (prompt_) {
@@ -344,7 +378,7 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
     if (menu_ != Menu::none) {
         if (mnemonic_menu != Menu::none) {
             menu_ = mnemonic_menu;
-            menu_selection_ = 0;
+            select_first_enabled();
             return WorkspaceResult::redraw;
         }
         if ((key != nullptr && key->key == terminal::Key::escape) || action == core::ActionId::application_back) {
@@ -362,12 +396,51 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         }
         const auto item_count = menu_item_count();
         if (action == core::ActionId::dataset_next && item_count > 0) {
-            menu_selection_ = (menu_selection_ + 1) % item_count;
+            move_menu_selection(1);
             return WorkspaceResult::redraw;
         }
         if (action == core::ActionId::dataset_previous && item_count > 0) {
-            menu_selection_ = (menu_selection_ + item_count - 1) % item_count;
+            move_menu_selection(-1);
             return WorkspaceResult::redraw;
+        }
+        if (key != nullptr && key->key == terminal::Key::character && !key->ctrl && !key->alt) {
+            std::span<const std::string> items;
+            switch (menu_) {
+            case Menu::file:
+                items = text_.file_menu;
+                break;
+            case Menu::database:
+                items = text_.database_menu;
+                break;
+            case Menu::view:
+                items = text_.view_menu;
+                break;
+            case Menu::window:
+                items = text_.window_menu;
+                break;
+            case Menu::help:
+                items = text_.help_menu;
+                break;
+            case Menu::none:
+                break;
+            }
+            std::vector<std::size_t> matches;
+            for (std::size_t index = 0; index < items.size(); ++index) {
+                if (menu_item_enabled(menu_, index) &&
+                    lowercase_ascii(terminal::first_code_point(items[index])) == lowercase_ascii(key->character)) {
+                    matches.push_back(index);
+                }
+            }
+            if (matches.size() == 1) {
+                menu_selection_ = matches.front();
+                return activate_menu_item();
+            }
+            if (!matches.empty()) {
+                const auto next =
+                    std::ranges::find_if(matches, [&](std::size_t index) { return index > menu_selection_; });
+                menu_selection_ = next == matches.end() ? matches.front() : *next;
+                return WorkspaceResult::redraw;
+            }
         }
         if (key != nullptr && key->key == terminal::Key::enter)
             return activate_menu_item();
@@ -384,12 +457,12 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         return WorkspaceResult::redraw;
     if (mnemonic_menu != Menu::none) {
         menu_ = mnemonic_menu;
-        menu_selection_ = 0;
+        select_first_enabled();
         return WorkspaceResult::redraw;
     }
     if (action == core::ActionId::application_menu) {
         menu_ = Menu::file;
-        menu_selection_ = 0;
+        select_first_enabled();
         return WorkspaceResult::redraw;
     }
     if (action == core::ActionId::database_open) {
@@ -454,36 +527,47 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         const int available_width = bounds.x + bounds.width - next_menu_x;
         if (available_width <= 0)
             continue;
-        const int label_width = std::min(terminal::text_width(text_.menu_bar[index]), available_width);
+        const int label_width = std::min(terminal::text_width(text_.menu_bar[index]) + 2, available_width);
         write_menu(buffer, next_menu_x, bounds.y, label_width, text_.menu_bar[index], menu_ == menus[index],
                    current_theme);
         next_menu_x += label_width + 1;
     }
     windows_.render_tabs(buffer, {bounds.x, bounds.y + 1, bounds.width, 1});
     if (windows_.active().kind == DocumentKind::workspace) {
-        write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, text_.title, current_theme.style(ThemeRole::title));
+        for (int row = bounds.y + 2; row < bounds.y + bounds.height - 1; ++row)
+            write(buffer, bounds.x, row, bounds.width, "", current_theme.style(ThemeRole::desktop));
+        const Rect panel{bounds.x + 1, bounds.y + 3, bounds.width - 2, bounds.height - 5};
+        WindowFrame::render(buffer, panel, text_.title, window_frame_appearance(current_theme));
+        const auto content = WindowFrame::content_bounds(panel);
         if (database_path_.empty()) {
-            write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, text_.no_database_open);
-            write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4, text_.home_shortcuts);
+            write(buffer, content.x + 1, content.y + 1, content.width - 2, text_.no_database_open,
+                  current_theme.style(ThemeRole::text));
+            write(buffer, content.x + 1, content.y + 2, content.width - 2, text_.home_shortcuts,
+                  current_theme.style(ThemeRole::muted_text));
             if (!recent_databases_.empty()) {
-                write(buffer, bounds.x + 2, bounds.y + 8, bounds.width - 4, text_.recent_databases, {.bold = true});
-                const int first_recent_row = bounds.y + 9;
-                const int final_content_row = bounds.y + bounds.height - 2;
+                write(buffer, content.x + 1, content.y + 4, content.width - 2, text_.recent_databases,
+                      current_theme.style(ThemeRole::title));
+                const int first_recent_row = content.y + 5;
+                const int final_content_row = content.y + content.height;
                 for (std::size_t index = 0;
                      index < recent_databases_.size() && first_recent_row + static_cast<int>(index) < final_content_row;
                      ++index) {
-                    write(buffer, bounds.x + 4, first_recent_row + static_cast<int>(index), bounds.width - 8,
-                          recent_databases_[index],
+                    write(buffer, content.x + 2, first_recent_row + static_cast<int>(index), content.width - 4,
+                          " " + recent_databases_[index],
                           index == selected_recent_database_ ? current_theme.style(ThemeRole::selection)
                                                              : current_theme.style(ThemeRole::text));
                 }
             }
         } else {
-            write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, database_path_);
-            write(buffer, bounds.x + 2, bounds.y + 7, bounds.width - 4, text_.tables_and_views, {.bold = true});
-            for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 11; ++index)
-                write(buffer, bounds.x + 4, bounds.y + 8 + static_cast<int>(index), bounds.width - 8,
-                      tables_[index].name + (tables_[index].is_view ? text_.view_suffix : ""),
+            write(buffer, content.x + 1, content.y, content.width - 2,
+                  (database_read_only_ ? "▣ " : "▰ ") + database_path_, current_theme.style(ThemeRole::muted_text));
+            write(buffer, content.x + 1, content.y + 2, content.width - 2, text_.tables_and_views,
+                  current_theme.style(ThemeRole::title));
+            for (std::size_t index = 0;
+                 index < tables_.size() && content.y + 3 + static_cast<int>(index) < content.y + content.height;
+                 ++index)
+                write(buffer, content.x + 2, content.y + 3 + static_cast<int>(index), content.width - 4,
+                      " " + tables_[index].name + (tables_[index].is_view ? text_.view_suffix : ""),
                       index == selected_table_ ? current_theme.style(ThemeRole::selection)
                                                : current_theme.style(ThemeRole::text));
         }
@@ -514,31 +598,75 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         case Menu::none:
             break;
         }
-        const int menu_width = std::min(30, bounds.x + bounds.width - menu_x);
-        if (menu_width >= 3) {
-            const int menu_y = bounds.y + 1;
-            buffer.put(menu_x, menu_y, U'+', current_theme.style(ThemeRole::popup));
-            for (int column = 1; column < menu_width - 1; ++column)
-                buffer.put(menu_x + column, menu_y, U'-', current_theme.style(ThemeRole::popup));
-            buffer.put(menu_x + menu_width - 1, menu_y, U'+', current_theme.style(ThemeRole::popup));
-            for (std::size_t index = 0; index < items.size(); ++index) {
-                const int y = menu_y + 1 + static_cast<int>(index);
-                const auto& style = index == menu_selection_ ? current_theme.style(ThemeRole::popup_selection)
-                                                             : current_theme.style(ThemeRole::popup);
-                buffer.put(menu_x, y, U'|', current_theme.style(ThemeRole::popup));
-                write(buffer, menu_x + 1, y, menu_width - 2, items[index], style);
-                buffer.put(menu_x + menu_width - 1, y, U'|', current_theme.style(ThemeRole::popup));
+        const auto shortcuts = [&]() -> std::span<const std::string> {
+            switch (menu_) {
+            case Menu::file:
+                return text_.file_menu_shortcuts;
+            case Menu::database:
+                return text_.database_menu_shortcuts;
+            case Menu::view:
+                return text_.view_menu_shortcuts;
+            case Menu::window:
+                return text_.window_menu_shortcuts;
+            case Menu::help:
+                return text_.help_menu_shortcuts;
+            case Menu::none:
+                return {};
             }
-            const int bottom = menu_y + static_cast<int>(items.size()) + 1;
-            buffer.put(menu_x, bottom, U'+', current_theme.style(ThemeRole::popup));
-            for (int column = 1; column < menu_width - 1; ++column)
-                buffer.put(menu_x + column, bottom, U'-', current_theme.style(ThemeRole::popup));
-            buffer.put(menu_x + menu_width - 1, bottom, U'+', current_theme.style(ThemeRole::popup));
+            return {};
+        }();
+        int desired_width = 18;
+        for (std::size_t index = 0; index < items.size(); ++index)
+            desired_width = std::max(desired_width,
+                                     terminal::text_width(items[index]) + terminal::text_width(shortcuts[index]) + 6);
+        const bool separated = menu_ == Menu::file || menu_ == Menu::database;
+        const int menu_height = static_cast<int>(items.size()) + 2 + (separated ? 1 : 0);
+        const int maximum_width = bounds.x + bounds.width - 1;
+        const int menu_width = std::min(desired_width, bounds.width - 1);
+        menu_x = std::clamp(menu_x, bounds.x, maximum_width - menu_width);
+        const int menu_y = bounds.y + 1;
+        if (menu_width >= 10 && menu_y + menu_height <= bounds.y + bounds.height) {
+            const WindowFrameAppearance appearance{.content = current_theme.style(ThemeRole::popup),
+                                                   .border = current_theme.style(ThemeRole::popup),
+                                                   .title = current_theme.style(ThemeRole::popup),
+                                                   .shadow = current_theme.style(ThemeRole::shadow),
+                                                   .drop_shadow = true};
+            WindowFrame::render(buffer, {menu_x, menu_y, menu_width, menu_height}, "", appearance);
+            int row = menu_y + 1;
+            for (std::size_t index = 0; index < items.size(); ++index) {
+                if (separated && index == 4) {
+                    buffer.put(menu_x, row, U'├', current_theme.style(ThemeRole::popup));
+                    for (int column = 1; column < menu_width - 1; ++column)
+                        buffer.put(menu_x + column, row, U'─', current_theme.style(ThemeRole::popup));
+                    buffer.put(menu_x + menu_width - 1, row, U'┤', current_theme.style(ThemeRole::popup));
+                    ++row;
+                }
+                const bool selected = index == menu_selection_;
+                const auto role = !menu_item_enabled(menu_, index) ? ThemeRole::disabled
+                                  : selected                       ? ThemeRole::popup_selection
+                                                                   : ThemeRole::popup;
+                const auto& style = current_theme.style(role);
+                write(buffer, menu_x + 1, row, menu_width - 2, "", style);
+                buffer.put(menu_x + 1, row, selected ? U'►' : U' ', style);
+                write(buffer, menu_x + 3, row, menu_width - 6, items[index], style);
+                if (!items[index].empty()) {
+                    auto mnemonic_style = style;
+                    mnemonic_style.underline = true;
+                    buffer.put(menu_x + 3, row, terminal::first_code_point(items[index]), mnemonic_style);
+                }
+                const int shortcut_width = terminal::text_width(shortcuts[index]);
+                if (shortcut_width > 0)
+                    write(buffer, menu_x + menu_width - shortcut_width - 2, row, shortcut_width, shortcuts[index],
+                          style);
+                ++row;
+            }
         }
     }
-    if (prompt_)
-        prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,
-                                 std::min(60, bounds.width), 5});
+    if (prompt_) {
+        const int dialog_width = std::min(60, bounds.width);
+        prompt_->render(buffer, {bounds.x + (bounds.width - dialog_width) / 2, bounds.y + (bounds.height - 5) / 2,
+                                 dialog_width, 5});
+    }
     if (directory_browser_) {
         const int dialog_height = std::min(20, bounds.height - 2);
         const int dialog_width = std::min(60, bounds.width);

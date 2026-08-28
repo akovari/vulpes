@@ -19,7 +19,7 @@ TEST_CASE("workspace text uses the selected Czech catalog for labels and mnemoni
     vulpes::ui::Workspace workspace{text};
     vulpes::terminal::ScreenBuffer buffer{80, 25};
     workspace.render(buffer, {0, 0, 80, 25});
-    CHECK(buffer.cell(1, 0).glyph == U'S');
+    CHECK(buffer.cell(2, 0).glyph == U'S');
     CHECK(workspace.handle(
               vulpes::core::ActionId::none,
               vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character, .character = U's', .alt = true}) ==

@@ -71,6 +71,13 @@ switches tabs and `Ctrl+W` asks before closing the active non-workspace tab.
 Opening or creating another database closes its old documents, so no tab can
 retain a dataset from the previous database.
 
+Menus use measured Unicode window chrome, a right-aligned shortcut column, and
+visually disabled actions when their prerequisites are unavailable. Type the
+underlined first letter of a unique menu item to invoke it; repeated first
+letters cycle among the matching items. Pop-up windows are opaque and clipped
+to the current terminal, so closing a menu or dialog restores the document
+beneath it on the next diffed frame.
+
 Choose **Browse files...** from the File or Database menu to navigate the
 current directory without leaving Vulpes. Enter opens a directory or selects a
 file, Backspace goes to its parent, Home/End move within the listing, and Esc
@@ -96,8 +103,11 @@ With a translated catalog, menu Alt mnemonics follow the first character of
 each translated menu label; `F10` always opens the first menu. For example, the
 shipped Czech catalog uses `Alt+S` for `Soubor`.
 
-The default workspace palette is `midnight`. Use `--theme high-contrast` for a
-black-and-white high-contrast workspace chrome with underlined mnemonics:
+The default palette is `midnight`. It is applied consistently to the workspace,
+grids, forms, prompts, SQL console, schema documents, and window chrome. Use
+`--theme high-contrast` for a black-and-white high-contrast presentation with
+underlined mnemonics; the option also applies to direct `--table` and `--sql`
+sessions:
 
 ```powershell
 .\build\windows-msvc\Debug\vulpes.exe --theme high-contrast
@@ -120,8 +130,11 @@ opens the selected record, `Insert` creates a record, `F8` saves a record form,
 and `Esc` cancels it. Form controls are inferred from SQLite schema information:
 numeric fields use numeric validation, conservative boolean-like fields use a
 checkbox, generated/primary-key fields are protected, and BLOB fields remain
-read-only until a binary editor exists. Failed database validation leaves the
-draft open for correction.
+read-only until a binary editor exists. Compact form windows keep the focused
+field visible and show scroll indicators when more fields exist. Failed database
+validation leaves the draft open for correction. Grids size columns from their
+headers and current page rather than assigning every column the same width; the
+focused cell remains distinct from the selected row.
 
 Read-only database sessions keep browse, sort, filter, search, schema, and SQL
 result viewing available, but generated form and delete actions are disabled and

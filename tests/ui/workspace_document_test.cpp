@@ -17,7 +17,7 @@ TEST_CASE("workspace browse document owns transient forms and closes semanticall
     vulpes::terminal::ScreenBuffer buffer{80, 22};
 
     document.render(buffer, {0, 0, 80, 22});
-    CHECK(buffer.cell(2, 0).glyph == U'c');
+    CHECK(buffer.cell(3, 0).glyph == U'c');
 
     CHECK(document.handle(vulpes::core::ActionId::record_new,
                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::insert_key}) ==

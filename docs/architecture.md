@@ -59,9 +59,11 @@ clean exits while waiting for a resize. Workspace and direct modes continue to
 present that frame and consume input after a resize, so a temporary small
 terminal cannot produce a busy loop or a stale screen.
 
-Workspace chrome selects semantic `ThemeRole` values rather than defining RGB
-colors inside menus, tabs, or status bars. `midnight` is the default theme and
-`high-contrast` is a deliberately high-contrast alternative. Themes affect
+All semantic surfaces select `ThemeRole` values rather than defining RGB colors
+inside menus, grids, forms, tabs, or status bars. `midnight` is the default
+theme and `high-contrast` is a deliberately high-contrast alternative. A theme
+reference is injected through the workspace into hosted documents and controls;
+direct document sessions receive the same selected theme. Themes affect
 presentation only; they never change action IDs, document state, or the data
 model.
 
@@ -70,10 +72,20 @@ items. Forms use it to avoid read-only fields, and destructive confirmations
 use it for their buttons. The controls retain responsibility for their own key
 semantics, so the focus model remains independent of a terminal implementation.
 
-`WindowFrame` renders opaque, logical terminal windows; `Button` renders a
-focusable action affordance. Prompts, confirmations, and record forms compose
-these primitives rather than each implementing terminal borders. `WindowManager`
-continues to own document lifetime, tab selection, and modal priority.
+`WindowFrame` renders opaque Unicode terminal windows with an optional clipped
+drop shadow; `Button` renders a focusable action affordance. Prompts,
+confirmations, directory selection, record forms, and the SQL editor compose
+the frame instead of implementing borders independently. Pop-up menus use the
+same visual language while keeping their item state in `Workspace`.
+`WindowManager` continues to own document lifetime, tab selection, and modal
+priority. See ADR 0018.
+
+`Grid` computes bounded preferred widths from field names and the current owned
+page, then distributes remaining cells without changing dataset paging. It uses
+separate header, ordinary-row, selected-row, focused-cell, and footer roles.
+Record forms derive a viewport from the focused field when a schema contains
+more fields than the current window can show. These are rendering policies;
+they do not leak into the dataset model.
 
 `StatusBar` renders either a localized status message or shortcut hints using
 dedicated semantic theme roles. It owns no command mapping; action IDs remain

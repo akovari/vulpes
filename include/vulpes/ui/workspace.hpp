@@ -57,6 +57,7 @@ class Workspace {
     void begin_directory_browser();
     void begin_command_prompt();
     void begin_close_confirmation();
+    [[nodiscard]] auto menu_item_enabled(Menu menu, std::size_t item) const noexcept -> bool;
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
     WorkspaceText text_;
     std::string database_path_;

@@ -14,12 +14,32 @@ TEST_CASE("theme parser accepts named workspace palettes", "[ui][theme]") {
 
 TEST_CASE("high contrast palette keeps all workspace roles distinguishable", "[ui][theme]") {
     const auto& high_contrast = vulpes::ui::theme(vulpes::ui::ThemeName::high_contrast);
-    for (const auto role :
-         {vulpes::ui::ThemeRole::text, vulpes::ui::ThemeRole::title, vulpes::ui::ThemeRole::menu,
-          vulpes::ui::ThemeRole::menu_mnemonic, vulpes::ui::ThemeRole::selection, vulpes::ui::ThemeRole::popup,
-          vulpes::ui::ThemeRole::popup_selection, vulpes::ui::ThemeRole::active_menu,
-          vulpes::ui::ThemeRole::active_menu_mnemonic, vulpes::ui::ThemeRole::tab, vulpes::ui::ThemeRole::active_tab,
-          vulpes::ui::ThemeRole::status_bar, vulpes::ui::ThemeRole::status_bar_shortcut}) {
+    for (const auto role : {vulpes::ui::ThemeRole::desktop,
+                            vulpes::ui::ThemeRole::text,
+                            vulpes::ui::ThemeRole::muted_text,
+                            vulpes::ui::ThemeRole::title,
+                            vulpes::ui::ThemeRole::border,
+                            vulpes::ui::ThemeRole::shadow,
+                            vulpes::ui::ThemeRole::input,
+                            vulpes::ui::ThemeRole::input_focus,
+                            vulpes::ui::ThemeRole::error,
+                            vulpes::ui::ThemeRole::disabled,
+                            vulpes::ui::ThemeRole::menu,
+                            vulpes::ui::ThemeRole::menu_mnemonic,
+                            vulpes::ui::ThemeRole::selection,
+                            vulpes::ui::ThemeRole::popup,
+                            vulpes::ui::ThemeRole::popup_selection,
+                            vulpes::ui::ThemeRole::active_menu,
+                            vulpes::ui::ThemeRole::active_menu_mnemonic,
+                            vulpes::ui::ThemeRole::tab,
+                            vulpes::ui::ThemeRole::active_tab,
+                            vulpes::ui::ThemeRole::grid_header,
+                            vulpes::ui::ThemeRole::grid_cell,
+                            vulpes::ui::ThemeRole::grid_selected_row,
+                            vulpes::ui::ThemeRole::grid_selected_cell,
+                            vulpes::ui::ThemeRole::grid_footer,
+                            vulpes::ui::ThemeRole::status_bar,
+                            vulpes::ui::ThemeRole::status_bar_shortcut}) {
         const auto& style = high_contrast.style(role);
         CHECK(style.foreground != style.background);
     }
@@ -36,6 +56,6 @@ TEST_CASE("workspace renders its chrome through injected theme roles", "[ui][the
     workspace.render(buffer, {0, 0, 80, 25});
 
     CHECK(buffer.cell(0, 0).style == high_contrast.style(vulpes::ui::ThemeRole::menu));
-    CHECK(buffer.cell(1, 0).style == high_contrast.style(vulpes::ui::ThemeRole::menu_mnemonic));
+    CHECK(buffer.cell(2, 0).style == high_contrast.style(vulpes::ui::ThemeRole::menu_mnemonic));
     CHECK(buffer.cell(1, 24).style == high_contrast.style(vulpes::ui::ThemeRole::status_bar_shortcut));
 }

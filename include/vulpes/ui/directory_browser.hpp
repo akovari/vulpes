@@ -2,6 +2,7 @@
 
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <filesystem>
 #include <optional>
@@ -18,7 +19,7 @@ enum class DirectoryBrowserResult { unchanged, redraw, selected, cancelled };
 class DirectoryBrowser {
   public:
     DirectoryBrowser(std::filesystem::path initial_directory, std::string title, std::string instructions,
-                     std::string parent_label);
+                     std::string parent_label, const Theme& theme = ui::theme(ThemeName::midnight));
 
     [[nodiscard]] auto selected_path() const -> const std::optional<std::filesystem::path>& { return selected_path_; }
     [[nodiscard]] auto directory() const -> const std::filesystem::path& { return directory_; }
@@ -45,6 +46,7 @@ class DirectoryBrowser {
     std::size_t selected_{};
     std::optional<std::filesystem::path> selected_path_;
     std::string error_;
+    const Theme* theme_;
 };
 
 } // namespace vulpes::ui
