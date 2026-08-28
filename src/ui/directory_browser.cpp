@@ -50,7 +50,7 @@ void DirectoryBrowser::load(std::filesystem::path directory) {
     error_.clear();
 
     std::error_code error;
-    const auto normalized = std::filesystem::absolute(std::move(directory), error).lexically_normal();
+    const auto normalized = std::filesystem::absolute(directory, error).lexically_normal();
     if (error) {
         error_ = error.message();
         return;

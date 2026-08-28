@@ -15,7 +15,7 @@ Transaction::~Transaction() {
     if (active_) {
         try {
             database_->execute("ROLLBACK");
-        } catch (...) {
+        } catch (...) { // NOLINT(bugprone-empty-catch): destructors must not throw after best-effort rollback.
         }
     }
 }
