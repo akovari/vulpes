@@ -243,7 +243,12 @@ validates command arity and resolves schema objects, then returns a semantic
 `CommandResponse` for the caller to localize and render. The executable's
 `--command` option is a non-interactive adapter. The workspace `Ctrl+P`
 command palette uses the same parser/runtime, then opens semantic schema,
-browse, or SQL documents rather than executing SQLite through a widget.
+browse, report, or SQL documents rather than executing SQLite through a widget.
+Named forms, views, reports, and recursively bounded commands resolve from an
+optional `ApplicationDefinition`. Metadata menu items return `run <name>` to
+this same boundary; they do not invoke documents or SQL directly. In app mode,
+reserved `_app_*` tables are hidden from normal navigation while low-level
+SQLite introspection remains complete. See ADR 0028.
 
 ### Terminal rendering
 
@@ -307,6 +312,11 @@ SQLite work. Once a result Grid exists, the document owns semantic editor/result
 focus. `document.switch_pane` (F7 by default) changes which pane consumes
 navigation actions; an unfocused selection remains visible without using the
 focused-cell theme role.
+
+Named reports use the separate `Database::run_query` boundary. It accepts one
+SQLite-classified read-only statement with result columns, rejects scripts and
+writes, and owns a bounded result. `ReportDocument` delegates navigation and
+rendering to Grid. See ADR 0028.
 
 ## Deferred decisions
 

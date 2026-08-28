@@ -97,6 +97,7 @@ void write_padded(terminal::ScreenBuffer& buffer, int x, int y, int width, std::
 
 auto GridRows::from_sql_result(db::SqlResult result) -> GridRows {
     GridRows grid_rows;
+    grid_rows.truncated = result.truncated;
     grid_rows.fields.reserve(result.columns.size());
     for (auto& column : result.columns)
         grid_rows.fields.push_back({.name = std::move(column)});
@@ -114,6 +115,14 @@ Grid::Grid(const GridRows& rows, std::string title, std::string footer, const Th
            std::optional<core::LocaleFormatter> formatter, std::optional<appmeta::TableMetadata> metadata)
     : dataset_{}, rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)}, theme_{&theme},
       formatter_{std::move(formatter)}, metadata_{std::move(metadata)}, text_{std::move(text)} {
+    if (!rows.rows.empty())
+        selected_result_row_ = 0;
+}
+
+Grid::Grid(GridRows& rows, std::string title, std::string footer, const Theme& theme, GridText text,
+           std::optional<core::LocaleFormatter> formatter, std::optional<appmeta::TableMetadata> metadata)
+    : dataset_{}, rows_{&rows}, mutable_rows_{&rows}, title_{std::move(title)}, footer_{std::move(footer)},
+      theme_{&theme}, formatter_{std::move(formatter)}, metadata_{std::move(metadata)}, text_{std::move(text)} {
     if (!rows.rows.empty())
         selected_result_row_ = 0;
 }
@@ -200,6 +209,38 @@ auto Grid::resize_selected_column(int delta) -> bool {
     if (resized == current)
         return false;
     column_width_overrides_[field->name] = resized;
+    return true;
+}
+
+auto Grid::sort_selected() -> bool {
+    const auto* field = selected_field();
+    if (field == nullptr || mutable_rows_ == nullptr)
+        return false;
+    bool ascending = true;
+    if (result_sort_ && result_sort_->first == field->name)
+        ascending = !result_sort_->second;
+    result_sort_ = std::pair{field->name, ascending};
+
+    const auto less = [](const db::Value& left, const db::Value& right) {
+        if (left.storage().index() != right.storage().index())
+            return left.storage().index() < right.storage().index();
+        if (left.is_null())
+            return false;
+        if (std::holds_alternative<std::int64_t>(left.storage()))
+            return left.as_int() < right.as_int();
+        if (std::holds_alternative<double>(left.storage()))
+            return left.as_double() < right.as_double();
+        if (std::holds_alternative<std::string>(left.storage()))
+            return left.as_string() < right.as_string();
+        return std::ranges::lexicographical_compare(left.as_blob(), right.as_blob());
+    };
+    std::ranges::stable_sort(mutable_rows_->rows, [&](const auto& left, const auto& right) {
+        return ascending ? less(left.at(field->name), right.at(field->name))
+                         : less(right.at(field->name), left.at(field->name));
+    });
+    if (!mutable_rows_->rows.empty())
+        selected_result_row_ = 0;
+    first_visible_row_ = 0;
     return true;
 }
 

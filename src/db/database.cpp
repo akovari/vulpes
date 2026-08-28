@@ -111,6 +111,51 @@ auto Database::run_sql(std::string_view script, std::size_t row_limit) -> SqlRes
     return result;
 }
 
+auto Database::run_query(std::string_view query, std::size_t row_limit) -> SqlResult {
+    if (row_limit == 0 || row_limit > 100'000)
+        throw Error{ErrorCategory::validation, "query row limit must be between 1 and 100000"};
+    if (query.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+        throw Error{ErrorCategory::database, "SQL query exceeds SQLite's maximum statement size"};
+
+    SqlResult result;
+    std::size_t statement_count{};
+    const auto* current = query.data();
+    const auto* const end = query.data() + query.size();
+    while (current < end) {
+        sqlite3_stmt* raw_statement{};
+        const char* tail{};
+        const int prepare_result =
+            sqlite3_prepare_v2(handle_, current, static_cast<int>(end - current), &raw_statement, &tail);
+        if (prepare_result != SQLITE_OK)
+            throw detail::sqlite_error(handle_, prepare_result);
+        if (tail == nullptr || tail <= current)
+            break;
+        current = tail;
+        if (raw_statement == nullptr)
+            continue;
+
+        Statement statement{raw_statement};
+        ++statement_count;
+        if (statement_count != 1)
+            throw Error{ErrorCategory::validation, "a report must contain exactly one SQL query"};
+        if (sqlite3_stmt_readonly(raw_statement) == 0 || statement.column_count() == 0)
+            throw Error{ErrorCategory::validation, "a report query must be read-only and return columns"};
+
+        for (int index = 0; index < statement.column_count(); ++index)
+            result.columns.emplace_back(statement.column_name(index));
+        while (statement.step()) {
+            if (result.rows.size() == row_limit) {
+                result.truncated = true;
+                break;
+            }
+            result.rows.push_back(statement.row());
+        }
+    }
+    if (statement_count != 1)
+        throw Error{ErrorCategory::validation, "a report must contain exactly one SQL query"};
+    return result;
+}
+
 void Database::execute(std::string_view sql) {
     const std::string script{sql};
     char* error_message{};

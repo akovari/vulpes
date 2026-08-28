@@ -75,15 +75,21 @@ auto parse_filter(const db::FieldSchema& field, std::string_view source) -> mode
     throw Error{ErrorCategory::validation, "invalid number for filter: " + field.name};
 }
 
-auto table_metadata(const appmeta::ApplicationMetadata* metadata, std::string_view table)
-    -> std::optional<appmeta::TableMetadata> {
-    if (metadata == nullptr)
-        return std::nullopt;
-    const auto* result = metadata->table(table);
-    return result == nullptr ? std::nullopt : std::optional{*result};
+auto table_metadata(const appmeta::ApplicationMetadata* metadata, const std::optional<appmeta::TableMetadata>& override,
+                    std::string_view table) -> std::optional<appmeta::TableMetadata> {
+    if (override)
+        return override;
+    if (metadata != nullptr) {
+        if (const auto* result = metadata->table(table); result != nullptr)
+            return *result;
+    }
+    return std::nullopt;
 }
 
-auto table_label(const appmeta::ApplicationMetadata* metadata, std::string_view table) -> std::string {
+auto table_label(const appmeta::ApplicationMetadata* metadata, const appmeta::TableMetadata* override,
+                 std::string_view table) -> std::string {
+    if (override != nullptr && override->label)
+        return *override->label;
     if (metadata != nullptr) {
         if (const auto* result = metadata->table(table); result != nullptr && result->label)
             return *result->label;
@@ -95,11 +101,12 @@ auto table_label(const appmeta::ApplicationMetadata* metadata, std::string_view 
 
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
                                const Theme& theme, core::Clipboard* clipboard,
-                               const appmeta::ApplicationMetadata* metadata)
-    : messages_{&messages}, metadata_{metadata}, theme_{&theme}, clipboard_{clipboard},
-      dataset_{database, std::move(table)}, controller_{dataset_},
+                               const appmeta::ApplicationMetadata* metadata,
+                               std::optional<appmeta::TableMetadata> table_override)
+    : messages_{&messages}, metadata_{metadata}, table_override_{std::move(table_override)}, theme_{&theme},
+      clipboard_{clipboard}, dataset_{database, std::move(table)}, controller_{dataset_},
       grid_{dataset_,
-            table_label(metadata, dataset_.schema().name),
+            table_label(metadata, table_override_ ? &*table_override_ : nullptr, dataset_.schema().name),
             messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"),
             theme,
             {.empty = messages.translate("grid.empty"),
@@ -107,7 +114,13 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
              .rows = messages.translate("grid.rows"),
              .column = messages.translate("grid.column")},
             core::LocaleFormatter{std::string{messages.locale()}},
-            table_metadata(metadata, dataset_.schema().name)} {
+            table_metadata(metadata, table_override_, dataset_.schema().name)} {
+}
+
+auto BrowseDocument::current_table_metadata() const noexcept -> const appmeta::TableMetadata* {
+    if (table_override_)
+        return &*table_override_;
+    return metadata_ == nullptr ? nullptr : metadata_->table(dataset_.schema().name);
 }
 
 auto BrowseDocument::is_dirty() const noexcept -> bool {
@@ -119,11 +132,12 @@ auto BrowseDocument::is_dirty() const noexcept -> bool {
 
 void BrowseDocument::begin_form(FormMode mode) {
     const auto title_key = mode == FormMode::edit ? "form.edit_title" : "form.new_title";
-    auto title = messages_->translate(title_key, {{"table", table_label(metadata_, dataset_.schema().name)}});
+    auto title = messages_->translate(
+        title_key, {{"table", table_label(metadata_, current_table_metadata(), dataset_.schema().name)}});
     windows_.push({.id = "record-form", .title = title, .kind = WindowLayerKind::form},
                   BrowseWindow{std::in_place_type<RecordForm>, dataset_, std::move(title), mode,
                                messages_->translate("form.instructions"), *theme_, clipboard_,
-                               metadata_ == nullptr ? nullptr : metadata_->table(dataset_.schema().name)});
+                               current_table_metadata()});
 }
 
 void BrowseDocument::begin_prompt(PromptPurpose purpose) {
@@ -247,11 +261,9 @@ auto BrowseDocument::handle(core::ActionId action, const terminal::InputEvent& e
         }
         if (open_lookup) {
             auto label = open_lookup->field;
-            if (metadata_ != nullptr) {
-                if (const auto* table = metadata_->table(dataset_.schema().name)) {
-                    if (const auto* field = table->field(open_lookup->field); field != nullptr && field->label)
-                        label = *field->label;
-                }
+            if (const auto* table = current_table_metadata(); table != nullptr) {
+                if (const auto* field = table->field(open_lookup->field); field != nullptr && field->label)
+                    label = *field->label;
             }
             auto title = messages_->translate("lookup.title", {{"field", label}});
             windows_.push({.id = "lookup:" + open_lookup->field, .title = title, .kind = WindowLayerKind::lookup},

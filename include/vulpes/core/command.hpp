@@ -7,10 +7,27 @@
 namespace vulpes::core {
 
 // Stable semantic IDs are intentionally distinct from localized command labels.
-enum class CommandId { none, help, tables, schema, browse, sql, quit, unknown };
+enum class CommandId {
+    none,
+    help,
+    tables,
+    schema,
+    browse,
+    forms,
+    form,
+    views,
+    view,
+    reports,
+    report,
+    run,
+    sql,
+    quit,
+    unknown
+};
 
 struct Command {
     CommandId id{CommandId::none};
+    std::string name;
     std::vector<std::string> arguments;
 };
 

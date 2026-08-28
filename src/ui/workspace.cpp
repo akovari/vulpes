@@ -51,6 +51,9 @@ void Workspace::set_database(std::string path, std::vector<db::TableSchema> tabl
     windows_.reset_documents();
     database_path_ = std::move(path);
     database_read_only_ = read_only;
+    application_title_.clear();
+    application_menus_.clear();
+    selected_application_item_ = 0;
     set_tables(std::move(tables));
     auto status =
         text_.database_status.format({{"path", database_path_}, {"count", static_cast<std::int64_t>(tables_.size())}});
@@ -75,6 +78,29 @@ void Workspace::set_tables(std::vector<db::TableSchema> tables) {
             selected_table_ = static_cast<std::size_t>(std::distance(tables_.begin(), selected));
         }
     }
+}
+
+void Workspace::set_application(std::string title, std::vector<appmeta::MenuDefinition> menus) {
+    application_title_ = std::move(title);
+    application_menus_ = std::move(menus);
+    selected_application_item_ = 0;
+}
+
+auto Workspace::application_item_count() const noexcept -> std::size_t {
+    std::size_t count{};
+    for (const auto& menu : application_menus_)
+        count += menu.items.size();
+    return count;
+}
+
+auto Workspace::selected_application_command() const noexcept -> const std::string* {
+    auto index = selected_application_item_;
+    for (const auto& menu : application_menus_) {
+        if (index < menu.items.size())
+            return &menu.items[index].command;
+        index -= menu.items.size();
+    }
+    return nullptr;
 }
 
 void Workspace::set_status(std::string status) {
@@ -102,10 +128,12 @@ auto Workspace::close_active_document() -> bool {
     return windows_.close_active();
 }
 
-void Workspace::open_browse(const db::TableSchema& table) {
-    windows_.open({.id = "browse:" + table.name,
-                   .title = text_.browse_document.format({{"table", table.name}}),
-                   .kind = DocumentKind::browse});
+void Workspace::open_browse(const db::TableSchema& table, std::string document_name, std::string title) {
+    if (document_name.empty())
+        document_name = table.name;
+    if (title.empty())
+        title = text_.browse_document.format({{"table", table.name}});
+    windows_.open({.id = "browse:" + document_name, .title = std::move(title), .kind = DocumentKind::browse});
 }
 
 void Workspace::open_schema(const db::TableSchema& table) {
@@ -116,6 +144,10 @@ void Workspace::open_schema(const db::TableSchema& table) {
 
 void Workspace::open_sql_console() {
     windows_.open({.id = "sql", .title = text_.sql_document, .kind = DocumentKind::sql_console});
+}
+
+void Workspace::open_report(std::string name, std::string title) {
+    windows_.open({.id = "report:" + std::move(name), .title = std::move(title), .kind = DocumentKind::report});
 }
 
 void Workspace::begin_path_prompt(Modal modal) {
@@ -483,6 +515,28 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
         }
         return WorkspaceResult::unchanged;
     }
+    if (!application_menus_.empty()) {
+        const auto count = application_item_count();
+        if (action == core::ActionId::dataset_next && selected_application_item_ + 1 < count) {
+            ++selected_application_item_;
+            return WorkspaceResult::redraw;
+        }
+        if (action == core::ActionId::dataset_previous && selected_application_item_ > 0) {
+            --selected_application_item_;
+            return WorkspaceResult::redraw;
+        }
+        if (key && key->key == terminal::Key::enter) {
+            if (const auto* command = selected_application_command(); command != nullptr) {
+                submitted_value_ = "run \"" + *command + '"';
+                return WorkspaceResult::command;
+            }
+        }
+        if (key && key->key == terminal::Key::f7) {
+            open_sql_console();
+            return WorkspaceResult::run_sql;
+        }
+        return WorkspaceResult::unchanged;
+    }
     if (action == core::ActionId::dataset_next && selected_table_ + 1 < tables_.size()) {
         ++selected_table_;
         return WorkspaceResult::redraw;
@@ -550,15 +604,36 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         } else {
             write(buffer, content.x + 1, content.y, content.width - 2,
                   (database_read_only_ ? "▣ " : "▰ ") + database_path_, current_theme.style(ThemeRole::muted_text));
-            write(buffer, content.x + 1, content.y + 2, content.width - 2, text_.tables_and_views,
-                  current_theme.style(ThemeRole::title));
-            for (std::size_t index = 0;
-                 index < tables_.size() && content.y + 3 + static_cast<int>(index) < content.y + content.height;
-                 ++index)
-                write(buffer, content.x + 2, content.y + 3 + static_cast<int>(index), content.width - 4,
-                      " " + tables_[index].name + (tables_[index].is_view ? text_.view_suffix : ""),
-                      index == selected_table_ ? current_theme.style(ThemeRole::selection)
-                                               : current_theme.style(ThemeRole::text));
+            if (!application_menus_.empty()) {
+                write(buffer, content.x + 1, content.y + 2, content.width - 2, application_title_,
+                      current_theme.style(ThemeRole::title));
+                int row = content.y + 3;
+                std::size_t item_index{};
+                for (const auto& menu : application_menus_) {
+                    if (row >= content.y + content.height)
+                        break;
+                    write(buffer, content.x + 2, row++, content.width - 4, menu.label,
+                          current_theme.style(ThemeRole::muted_text));
+                    for (const auto& item : menu.items) {
+                        if (row >= content.y + content.height)
+                            break;
+                        write(buffer, content.x + 3, row++, content.width - 5, " " + item.label,
+                              item_index == selected_application_item_ ? current_theme.style(ThemeRole::selection)
+                                                                       : current_theme.style(ThemeRole::text));
+                        ++item_index;
+                    }
+                }
+            } else {
+                write(buffer, content.x + 1, content.y + 2, content.width - 2, text_.tables_and_views,
+                      current_theme.style(ThemeRole::title));
+                for (std::size_t index = 0;
+                     index < tables_.size() && content.y + 3 + static_cast<int>(index) < content.y + content.height;
+                     ++index)
+                    write(buffer, content.x + 2, content.y + 3 + static_cast<int>(index), content.width - 4,
+                          " " + tables_[index].name + (tables_[index].is_view ? text_.view_suffix : ""),
+                          index == selected_table_ ? current_theme.style(ThemeRole::selection)
+                                                   : current_theme.style(ThemeRole::text));
+            }
         }
     }
     if (menu_ != Menu::none) {

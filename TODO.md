@@ -187,15 +187,15 @@ on Windows, Linux, and macOS.
 
 - [x] Define and migrate SQLite-resident `_app_*` metadata tables.
 - [x] Load metadata as enhancements to ordinary SQLite schema introspection.
-- [ ] Support metadata-defined form labels, field order, visibility, read-only
+- [x] Support metadata-defined form labels, field order, visibility, read-only
   state, formatting, views, commands, menus, reports, and settings.
-- [ ] Launch a metadata-defined application from a `.vulpes` SQLite file while
+- [x] Launch a metadata-defined application from a `.vulpes` SQLite file while
   retaining ordinary SQLite-tool compatibility.
 
 ## Reports and export
 
-- [ ] Define named SQL-query report metadata and workspace commands.
-- [ ] Render reports through Grid with sorting/navigation shared with browse.
+- [x] Define named SQL-query report metadata and workspace commands.
+- [x] Render reports through Grid with sorting/navigation shared with browse.
 - [ ] Export report/query results to CSV, JSON, plain text, HTML, and PDF.
 - [ ] Define encoding, locale, overwrite, and error-handling behavior for exports.
 

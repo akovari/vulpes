@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulpes/appmeta/definition.hpp"
 #include "vulpes/core/actions.hpp"
 #include "vulpes/core/clipboard.hpp"
 #include "vulpes/db/schema.hpp"
@@ -38,6 +39,7 @@ class Workspace {
     void set_database(std::string path, std::vector<db::TableSchema> tables, bool read_only = false);
     void set_recent_databases(std::vector<std::string> paths);
     void set_tables(std::vector<db::TableSchema> tables);
+    void set_application(std::string title, std::vector<appmeta::MenuDefinition> menus);
     void set_status(std::string status);
     void set_active_document_dirty(bool dirty) noexcept;
     [[nodiscard]] auto requested_path() const -> std::string;
@@ -46,9 +48,10 @@ class Workspace {
     [[nodiscard]] auto active_document() const -> const Document&;
     [[nodiscard]] auto has_document(std::string_view id) const -> bool;
     [[nodiscard]] auto close_active_document() -> bool;
-    void open_browse(const db::TableSchema& table);
+    void open_browse(const db::TableSchema& table, std::string document_name = {}, std::string title = {});
     void open_schema(const db::TableSchema& table);
     void open_sql_console();
+    void open_report(std::string name, std::string title);
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
@@ -62,11 +65,16 @@ class Workspace {
     void begin_close_confirmation();
     [[nodiscard]] auto menu_item_enabled(Menu menu, std::size_t item) const noexcept -> bool;
     [[nodiscard]] auto activate_menu_item() -> WorkspaceResult;
+    [[nodiscard]] auto application_item_count() const noexcept -> std::size_t;
+    [[nodiscard]] auto selected_application_command() const noexcept -> const std::string*;
     WorkspaceText text_;
     std::string database_path_;
     bool database_read_only_{false};
     std::vector<std::string> recent_databases_;
     std::vector<db::TableSchema> tables_;
+    std::string application_title_;
+    std::vector<appmeta::MenuDefinition> application_menus_;
+    std::size_t selected_application_item_{};
     std::size_t selected_recent_database_{};
     std::size_t selected_table_{};
     Menu menu_{Menu::none};

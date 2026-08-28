@@ -27,9 +27,18 @@ sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db
 ```
 
-Then browse `products`, edit the hammer, open its Category or Supplier lookup,
-browse `stock_movements`, insert a movement, and run
-`SELECT * FROM low_stock` in the SQL console.
+To turn the same file into the metadata-defined dogfood application:
+
+```powershell
+.\build\windows-msvc\Debug\vulpes.exe inventory.db --migrate-app
+sqlite3 inventory.db ".read examples/inventory/application.sql"
+Move-Item inventory.db inventory.vulpes
+.\build\windows-msvc\Debug\vulpes.exe inventory.vulpes
+```
+
+Then choose Products, edit the hammer, open its Category or Supplier lookup,
+choose Stock movements to insert a movement, and open Low-stock report. The same
+workflows remain available through ordinary browse and SQL commands.
 
 ## Workshop success scenario
 

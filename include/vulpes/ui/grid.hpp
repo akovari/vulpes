@@ -20,6 +20,7 @@ namespace vulpes::ui {
 struct GridRows {
     std::vector<db::FieldSchema> fields;
     std::vector<db::Row> rows;
+    bool truncated{false};
 
     [[nodiscard]] static auto from_sql_result(db::SqlResult result) -> GridRows;
 };
@@ -41,11 +42,15 @@ class Grid {
          const Theme& theme = ui::theme(ThemeName::midnight), GridText text = {},
          std::optional<core::LocaleFormatter> formatter = std::nullopt,
          std::optional<appmeta::TableMetadata> metadata = std::nullopt);
+    Grid(GridRows& rows, std::string title, std::string footer, const Theme& theme = ui::theme(ThemeName::midnight),
+         GridText text = {}, std::optional<core::LocaleFormatter> formatter = std::nullopt,
+         std::optional<appmeta::TableMetadata> metadata = std::nullopt);
     [[nodiscard]] auto move_left() -> bool;
     [[nodiscard]] auto move_right() -> bool;
     [[nodiscard]] auto move_previous_row() -> bool;
     [[nodiscard]] auto move_next_row() -> bool;
     [[nodiscard]] auto resize_selected_column(int delta) -> bool;
+    [[nodiscard]] auto sort_selected() -> bool;
     [[nodiscard]] auto selected_column_index() const noexcept -> std::size_t { return selected_column_; }
     [[nodiscard]] auto first_visible_column_index() const noexcept -> std::size_t { return first_visible_column_; }
     [[nodiscard]] auto selected_column_width() const -> std::optional<int>;
@@ -58,6 +63,7 @@ class Grid {
 
     const model::Dataset* dataset_;
     const GridRows* rows_{};
+    GridRows* mutable_rows_{};
     std::string title_;
     std::string footer_;
     const Theme* theme_;
@@ -67,6 +73,7 @@ class Grid {
     std::size_t selected_column_{};
     std::size_t first_visible_column_{};
     std::optional<std::size_t> selected_result_row_;
+    std::optional<std::pair<std::string, bool>> result_sort_;
     std::size_t first_visible_row_{};
     std::size_t last_dataset_page_offset_{};
     std::unordered_map<std::string, int> column_width_overrides_;

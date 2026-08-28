@@ -108,6 +108,30 @@ TEST_CASE("grid reuses its renderer for owned SQL results", "[ui][grid][sql]") {
     CHECK(buffer.cell(1, 4).style == theme.style(vulpes::ui::ThemeRole::grid_selected_cell));
 }
 
+TEST_CASE("grid rows preserve SQL result truncation metadata", "[ui][grid][sql]") {
+    vulpes::db::Database database{":memory:"};
+    const auto rows =
+        vulpes::ui::GridRows::from_sql_result(database.run_query("SELECT 1 AS value UNION ALL SELECT 2", 1));
+
+    CHECK(rows.truncated);
+    REQUIRE(rows.rows.size() == 1);
+}
+
+TEST_CASE("grid sorts mutable owned SQL and report rows by the selected field", "[ui][grid][sql][sort]") {
+    vulpes::db::Database database{":memory:"};
+    auto rows =
+        vulpes::ui::GridRows::from_sql_result(database.run_query("SELECT 'Beta' AS name UNION ALL SELECT 'Acme'"));
+    vulpes::ui::Grid grid{rows, "Results", "F6 Sort"};
+    vulpes::terminal::ScreenBuffer buffer{32, 8};
+
+    REQUIRE(grid.sort_selected());
+    grid.render(buffer, {0, 0, 32, 8});
+    CHECK(buffer.cell(1, 3).glyph == U'A');
+    REQUIRE(grid.sort_selected());
+    grid.render(buffer, {0, 0, 32, 8});
+    CHECK(buffer.cell(1, 3).glyph == U'B');
+}
+
 TEST_CASE("grid applies locale-aware numeric display without changing stored values", "[ui][grid][i18n]") {
     vulpes::db::Database database{":memory:"};
     const auto rows = vulpes::ui::GridRows::from_sql_result(database.run_sql("SELECT 12345.5 AS amount"));

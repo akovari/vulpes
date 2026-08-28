@@ -30,6 +30,7 @@ add_executable(vulpes_tests
     ui/multiline_editor_test.cpp
     ui/presentation_matrix_test.cpp
     ui/relationship_lookup_test.cpp
+    ui/report_document_test.cpp
     ui/schema_document_test.cpp
     ui/sql_console_test.cpp
     ui/status_bar_test.cpp

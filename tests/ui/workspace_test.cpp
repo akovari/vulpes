@@ -271,6 +271,26 @@ TEST_CASE("workspace Database menu opens browse and SQL commands", "[ui][workspa
           vulpes::ui::WorkspaceResult::run_sql);
 }
 
+TEST_CASE("workspace application home routes metadata menu items as semantic commands", "[ui][workspace][appmeta]") {
+    auto workspace = english_workspace();
+    workspace.set_database("inventory.vulpes", {{.name = "products"}});
+    workspace.set_application("Inventory", {{.name = "main",
+                                             .label = "Main",
+                                             .items = {{.label = "Products", .command = "products"},
+                                                       {.label = "Low stock", .command = "low-stock"}}}});
+    vulpes::terminal::ScreenBuffer buffer{80, 25};
+    workspace.render(buffer, {0, 0, 80, 25});
+
+    CHECK(buffer.cell(4, 7).glyph == U'M');
+    CHECK(workspace.handle(vulpes::core::ActionId::dataset_next,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::down}) ==
+          vulpes::ui::WorkspaceResult::redraw);
+    CHECK(workspace.handle(vulpes::core::ActionId::none,
+                           vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::enter}) ==
+          vulpes::ui::WorkspaceResult::command);
+    CHECK(workspace.requested_command() == "run \"low-stock\"");
+}
+
 TEST_CASE("workspace clears a dismissed modal from the next frame", "[ui][workspace]") {
     auto workspace = english_workspace();
     vulpes::terminal::ScreenBuffer modal_frame{80, 25};

@@ -56,12 +56,13 @@ An exact `vMAJOR.MINOR.PATCH` tag produces that release version. Source-archive
 packagers can set `-DVULPES_BUILD_VERSION_OVERRIDE=<version>` when Git metadata
 is intentionally unavailable.
 
-To exercise the first schema-listing vertical slice after creating a database:
+To open the workspace on an existing database, or invoke one direct command:
 
 ```powershell
 sqlite3 inventory.db ".read examples/inventory/schema.sql"
 sqlite3 inventory.db ".read examples/inventory/seed.sql"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db
+.\build\windows-msvc\Debug\vulpes.exe inventory.db --command tables
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --command "schema products"
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --table products
 ```
@@ -169,8 +170,11 @@ labels, field order and visibility, additional read-only policy, display formats
 and relationship behavior without terminal coordinates. Explicit TEXT
 annotations provide strict ISO date/time editing and locale-aware presentation;
 date-times require an RFC 3339 offset and a display time zone. SQLite-resident
-metadata loading is tracked separately, so ordinary databases continue to use
-safe schema inference.
+metadata loading uses explicit, versioned `_app_*` tables, so ordinary databases
+continue to use safe schema inference without being modified. Initialize an
+existing database with `--migrate-app`; see
+[docs/application-metadata.md](docs/application-metadata.md) for the schema,
+commands, app-mode launch behavior, and inventory definition.
 
 Single-line prompts and generated text/number fields have a logical UTF-8
 cursor. Use Left/Right, Home/End, Backspace, and Delete to edit in place. Long
@@ -232,9 +236,11 @@ the editor and then returns to the shell. Execution is bounded to 1,000 result
 rows by default, and the console reports truncation and affected-row counts.
 Parameter prompts and multiple displayed result sets remain deliberately deferred.
 
-`--command` accepts `help`, `tables`, `schema <table>`, `browse <table>`,
-`sql`, and `quit`. It is a non-interactive bridge to the same application
-command dispatcher used by the in-app command palette.
+`--command` accepts the database commands plus `forms`, `form <name>`, `views`,
+`view <name>`, `reports`, `report <name>`, and `run <command-name>`. It is a
+non-interactive bridge to the same application command dispatcher used by the
+in-app command palette and metadata menus. Named report execution opens a
+read-only, bounded result through the shared Grid.
 
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
 example, use the shipped Czech translation with `--locale cs-CZ --catalog

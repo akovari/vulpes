@@ -36,6 +36,7 @@ class Database {
 
     [[nodiscard]] auto prepare(std::string_view sql) -> Statement;
     [[nodiscard]] auto run_sql(std::string_view script, std::size_t row_limit = 1'000) -> SqlResult;
+    [[nodiscard]] auto run_query(std::string_view query, std::size_t row_limit = 1'000) -> SqlResult;
     void execute(std::string_view sql);
     [[nodiscard]] auto in_transaction() const noexcept -> bool;
     [[nodiscard]] auto is_read_only() const noexcept -> bool { return read_only_; }

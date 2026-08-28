@@ -78,6 +78,8 @@ auto SqlDocument::handle(core::ActionId action, const terminal::InputEvent& even
                 return DocumentResult::redraw;
             if (action == core::ActionId::grid_widen_column && result_grid_->resize_selected_column(1))
                 return DocumentResult::redraw;
+            if (action == core::ActionId::dataset_sort && result_grid_->sort_selected())
+                return DocumentResult::redraw;
             return DocumentResult::unchanged;
         }
     }

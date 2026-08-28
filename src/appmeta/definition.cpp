@@ -27,6 +27,13 @@ template <typename Item> void require_unique_names(const std::vector<Item>& item
     return std::ranges::find(schema, name, &db::TableSchema::name) != schema.end();
 }
 
+[[nodiscard]] auto is_command_name(std::string_view name) -> bool {
+    return !name.empty() && std::ranges::all_of(name, [](unsigned char character) {
+        return (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9') || character == '-' ||
+               character == '_';
+    });
+}
+
 } // namespace
 
 auto ApplicationDefinition::form(std::string_view name) const noexcept -> const FormDefinition* {
@@ -99,9 +106,11 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
             throw Error{ErrorCategory::metadata, "application definition contains an empty or duplicate setting key"};
     }
     for (const auto& command_definition : commands) {
-        if ((command_definition.label && command_definition.label->empty()) || command_definition.command.empty())
+        if (!is_command_name(command_definition.name) ||
+            (command_definition.label && command_definition.label->empty()) || command_definition.command.empty())
             throw Error{ErrorCategory::metadata,
-                        "command requires a non-empty label and command: " + command_definition.name};
+                        "command requires a lowercase semantic name, non-empty label, and command: " +
+                            command_definition.name};
     }
     for (const auto& report_definition : reports) {
         if (report_definition.label.empty() || report_definition.sql.empty() || report_definition.row_limit == 0 ||
@@ -111,7 +120,7 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
         }
     }
     for (const auto& menu : menus) {
-        if (menu.label.empty())
+        if (menu.label.empty() || menu.items.size() > 1000)
             throw Error{ErrorCategory::metadata, "menu label cannot be empty: " + menu.name};
         for (const auto& item : menu.items) {
             if (item.label.empty() || command(item.command) == nullptr)

@@ -11,9 +11,11 @@ portable open/create path entry, modal input, status feedback, and documents
 for browse and SQL work. This is intentionally a classic local RAD workflow,
 not a browser-style application.
 
-Explicitly out of scope: Lua, metadata tables, reports beyond reusable SQL-grid
-results, form designers, plugins, networking, a server, GUI/web frontends, an
-ORM, and a custom database or programming language.
+The implemented post-0.1 foundation also includes optional SQLite-resident
+application metadata, named read-only Grid reports, and application menus. Lua
+hooks remain a later layer. Form designers, plugins, networking, a server,
+GUI/web frontends, an ORM, and a custom database or programming language remain
+out of scope.
 
 The long-form originating plan is represented as actionable phases in
 `TODO.md`; this document is the scope guard used during review.

@@ -26,6 +26,20 @@ auto command_id(std::string_view verb) -> CommandId {
         return CommandId::schema;
     if (verb == "browse")
         return CommandId::browse;
+    if (verb == "forms")
+        return CommandId::forms;
+    if (verb == "form")
+        return CommandId::form;
+    if (verb == "views")
+        return CommandId::views;
+    if (verb == "view")
+        return CommandId::view;
+    if (verb == "reports")
+        return CommandId::reports;
+    if (verb == "report")
+        return CommandId::report;
+    if (verb == "run")
+        return CommandId::run;
     if (verb == "sql")
         return CommandId::sql;
     if (verb == "quit" || verb == "exit")
@@ -71,7 +85,8 @@ auto parse_command(std::string_view source) -> Command {
     if (tokens.empty())
         return {};
     Command command;
-    command.id = command_id(lowercase_ascii(std::move(tokens.front())));
+    command.name = lowercase_ascii(std::move(tokens.front()));
+    command.id = command_id(command.name);
     command.arguments.assign(std::next(tokens.begin()), tokens.end());
     return command;
 }
@@ -86,6 +101,20 @@ auto action_id(CommandId command) -> std::string_view {
         return "database.schema";
     case CommandId::browse:
         return "dataset.browse";
+    case CommandId::forms:
+        return "application.forms";
+    case CommandId::form:
+        return "application.form";
+    case CommandId::views:
+        return "application.views";
+    case CommandId::view:
+        return "application.view";
+    case CommandId::reports:
+        return "application.reports";
+    case CommandId::report:
+        return "application.report";
+    case CommandId::run:
+        return "application.run";
     case CommandId::sql:
         return "database.sql";
     case CommandId::quit:

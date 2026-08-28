@@ -1,3 +1,6 @@
+#include "vulpes/appmeta/loader.hpp"
+#include "vulpes/core/application.hpp"
+#include "vulpes/core/command.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/model/dataset.hpp"
@@ -38,9 +41,15 @@ TEST_CASE("inventory acceptance scenario exercises generic edit relationship mov
     const std::filesystem::path inventory{VULPES_SOURCE_DIR};
     database.execute(read_script(inventory / "examples" / "inventory" / "schema.sql"));
     database.execute(read_script(inventory / "examples" / "inventory" / "seed.sql"));
+    vulpes::appmeta::migrate_application_metadata(database);
+    database.execute(read_script(inventory / "examples" / "inventory" / "application.sql"));
+    const auto application_definition = vulpes::appmeta::load_application_definition(database);
+    vulpes::core::ApplicationRuntime application{database, &application_definition};
+    const auto low_stock_report = application.execute(vulpes::core::parse_command("run low-stock"));
+    REQUIRE(low_stock_report.outcome == vulpes::core::CommandOutcome::report);
+    REQUIRE(low_stock_report.report);
 
-    const auto low_stock_result =
-        database.run_sql("SELECT sku, name, quantity, reorder_level FROM low_stock ORDER BY sku");
+    const auto low_stock_result = database.run_query(low_stock_report.report->sql, low_stock_report.report->row_limit);
     REQUIRE(low_stock_result.rows.size() == 1);
     CHECK(low_stock_result.rows.front().at("sku").as_string() == "HAM-001");
     const auto low_stock_rows = vulpes::ui::GridRows::from_sql_result(low_stock_result);

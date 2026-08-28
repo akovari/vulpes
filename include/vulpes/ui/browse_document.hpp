@@ -27,7 +27,8 @@ class BrowseDocument final : public DocumentSurface {
   public:
     BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
                    const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr,
-                   const appmeta::ApplicationMetadata* metadata = nullptr);
+                   const appmeta::ApplicationMetadata* metadata = nullptr,
+                   std::optional<appmeta::TableMetadata> table_override = std::nullopt);
 
     [[nodiscard]] auto is_dirty() const noexcept -> bool override;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
@@ -47,9 +48,11 @@ class BrowseDocument final : public DocumentSurface {
     void begin_prompt(PromptPurpose purpose);
     void begin_delete_confirmation();
     void apply_prompt(PromptWindow& window);
+    [[nodiscard]] auto current_table_metadata() const noexcept -> const appmeta::TableMetadata*;
 
     const core::Localizer* messages_;
     const appmeta::ApplicationMetadata* metadata_;
+    std::optional<appmeta::TableMetadata> table_override_;
     const Theme* theme_;
     core::Clipboard* clipboard_;
     model::Dataset dataset_;

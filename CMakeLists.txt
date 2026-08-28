@@ -103,6 +103,7 @@ add_library(vulpes_core
     src/ui/line_editor.cpp
     src/ui/multiline_editor.cpp
     src/ui/relationship_lookup.cpp
+    src/ui/report_document.cpp
     src/ui/schema_document.cpp
     src/ui/sql_console.cpp
     src/ui/sql_document.cpp
@@ -159,6 +160,13 @@ if(BUILD_TESTING)
             -DVULPES_EXE=$<TARGET_FILE:vulpes>
             -DTEST_DATABASE=${CMAKE_CURRENT_BINARY_DIR}/vulpes-missing-database.sqlite
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_missing_database_does_not_create.cmake
+    )
+    add_test(
+        NAME vulpes_migrate_application_metadata
+        COMMAND ${CMAKE_COMMAND}
+            -DVULPES_EXE=$<TARGET_FILE:vulpes>
+            -DTEST_DATABASE=${CMAKE_CURRENT_BINARY_DIR}/vulpes-migrate-app.sqlite
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_migrate_app.cmake
     )
 endif()
 

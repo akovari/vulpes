@@ -87,6 +87,20 @@ TEST_CASE("run_sql owns the final tabular result and bounds rows", "[db]") {
     CHECK_THROWS_AS(database.run_sql("SELECT 1", 0), vulpes::Error);
 }
 
+TEST_CASE("run_query accepts one bounded read-only result and rejects writes or scripts", "[db][report]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE sample(id INTEGER PRIMARY KEY, name TEXT);"
+                     "INSERT INTO sample(name) VALUES('one'),('two'),('three')");
+
+    const auto result = database.run_query("SELECT id, name FROM sample ORDER BY id", 2);
+    CHECK(result.columns == std::vector<std::string>{"id", "name"});
+    CHECK(result.rows.size() == 2);
+    CHECK(result.truncated);
+    CHECK_THROWS_AS(database.run_query("DELETE FROM sample"), vulpes::Error);
+    CHECK_THROWS_AS(database.run_query("SELECT 1; SELECT 2"), vulpes::Error);
+    CHECK_THROWS_AS(database.run_query("-- no query"), vulpes::Error);
+}
+
 TEST_CASE("rows own values independently from their statement", "[db]") {
     Database database{":memory:"};
     database.execute("CREATE TABLE sample(value TEXT); INSERT INTO sample VALUES ('persist');");
