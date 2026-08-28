@@ -62,6 +62,13 @@ for the File menu, arrow keys to navigate, `Esc` to close a menu or dialog, and
 groups. Browse and SQL tabs host their full interactive surfaces; `Ctrl+Tab`
 switches tabs and `Ctrl+W` closes the active non-workspace tab.
 
+The default workspace palette is `midnight`. Use `--theme high-contrast` for a
+black-and-white high-contrast workspace chrome with underlined mnemonics:
+
+```powershell
+.\build\windows-msvc\Debug\vulpes.exe --theme high-contrast
+```
+
 The browse view is keyboard driven: arrow keys move through the grid, `F2`
 opens the selected record, `Insert` creates a record, `F8` saves a record form,
 and `Esc` cancels it. Form controls are inferred from SQLite schema information:

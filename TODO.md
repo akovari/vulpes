@@ -60,7 +60,7 @@ on Windows, Linux, and macOS.
   Ctrl+C, UTF-8, and terminal restoration.
 - [ ] Implement focus traversal, measure/layout, container, label, button, and
   reusable status-bar primitives.
-- [ ] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
+- [x] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
   rendering without hard-coded colors in individual screens.
 - [ ] Add terminal capability/redirected-stream diagnostics and a user-facing
   terminal failure screen.

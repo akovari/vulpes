@@ -5,6 +5,7 @@
 #include "vulpes/terminal/terminal.hpp"
 #include "vulpes/ui/geometry.hpp"
 #include "vulpes/ui/text_prompt.hpp"
+#include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/window_manager.hpp"
 
 #include <optional>
@@ -17,7 +18,8 @@ enum class WorkspaceResult { unchanged, redraw, open_database, create_database, 
 
 class Workspace {
   public:
-    Workspace(std::string title, std::string open_label, std::string create_label, std::string path_instructions);
+    Workspace(std::string title, std::string open_label, std::string create_label, std::string path_instructions,
+              const Theme& theme = ui::theme(ThemeName::midnight));
 
     void set_database(std::string path, std::vector<db::TableSchema> tables);
     void set_status(std::string status);
@@ -47,6 +49,7 @@ class Workspace {
     std::size_t menu_selection_{};
     Modal modal_{Modal::none};
     std::optional<TextPrompt> prompt_;
+    const Theme* theme_;
     WindowManager windows_;
 };
 

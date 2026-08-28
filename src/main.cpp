@@ -10,6 +10,7 @@
 #include "vulpes/ui/browse_document.hpp"
 #include "vulpes/ui/document_session.hpp"
 #include "vulpes/ui/sql_document.hpp"
+#include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/workspace.hpp"
 #include "vulpes/version.hpp"
 
@@ -67,7 +68,8 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
     }
 }
 
-auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths) -> int {
+auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths,
+                   const vulpes::ui::Theme& theme) -> int {
     vulpes::core::Localizer messages{locale};
     for (const auto& catalog_path : catalog_paths)
         messages.load_catalog_file(std::filesystem::path{catalog_path});
@@ -79,8 +81,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
     vulpes::ui::Workspace workspace{messages.translate("application.title"), "Open SQLite database",
-                                    "Create SQLite database",
-                                    "Enter a SQLite database path   Enter Apply   Esc Cancel"};
+                                    "Create SQLite database", "Enter a SQLite database path   Enter Apply   Esc Cancel",
+                                    theme};
     std::optional<vulpes::db::Database> database;
     using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SqlDocument>;
     std::unordered_map<std::string, WorkspaceSurface> surfaces;
@@ -218,6 +220,7 @@ auto main(int argc, char** argv) -> int {
         std::string command_source;
         bool sql = false;
         std::string locale{"en"};
+        std::string theme_name{"midnight"};
         std::vector<std::string> catalog_paths;
         app.add_flag("--version", version, "Show Vulpes version and exit");
         app.add_option("database", database_argument, "SQLite database path");
@@ -229,6 +232,7 @@ auto main(int argc, char** argv) -> int {
         command_option->excludes(sql_option);
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
+        app.add_option("--theme", theme_name, "Workspace theme: midnight or high-contrast");
         app.set_help_flag("-h,--help", "Show this help and exit");
         try {
             app.parse(argc, argv);
@@ -240,9 +244,8 @@ auto main(int argc, char** argv) -> int {
             std::cout << "Vulpes " << VULPES_VERSION << '\n';
             return 0;
         }
-        if (database_argument.empty()) {
-            return run_workspace(locale, catalog_paths);
-        }
+        if (database_argument.empty())
+            return run_workspace(locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)));
 
         return run(std::filesystem::path{database_argument},
                    table_name.empty() ? std::nullopt : std::optional{table_name},

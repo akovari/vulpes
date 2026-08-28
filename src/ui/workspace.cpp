@@ -15,27 +15,19 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
         buffer.put(column, y, U' ', style);
 }
 
-constexpr terminal::Style menu_style{.foreground = {230, 242, 255}, .background = {0, 45, 110}, .bold = true};
-constexpr terminal::Style accent_style{
-    .foreground = {255, 220, 90}, .background = {0, 45, 110}, .bold = true, .underline = true};
-constexpr terminal::Style title_style{.foreground = {90, 210, 255}, .background = {0, 0, 0}, .bold = true};
-constexpr terminal::Style selected_style{.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true};
-constexpr terminal::Style popup_style{.foreground = {220, 235, 255}, .background = {0, 25, 65}};
-constexpr terminal::Style popup_selected_style{.foreground = {0, 0, 0}, .background = {255, 220, 90}, .bold = true};
-constexpr terminal::Style active_menu_style{.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true};
-constexpr terminal::Style active_accent_style{
-    .foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true, .underline = true};
-
-void write_menu(terminal::ScreenBuffer& buffer, int x, int y, std::string_view name, bool active) {
-    write(buffer, x, y, static_cast<int>(name.size()), name, active ? active_menu_style : menu_style);
-    buffer.put(x, y, static_cast<char32_t>(name.front()), active ? active_accent_style : accent_style);
+void write_menu(terminal::ScreenBuffer& buffer, int x, int y, std::string_view name, bool active, const Theme& theme) {
+    write(buffer, x, y, static_cast<int>(name.size()), name,
+          active ? theme.style(ThemeRole::active_menu) : theme.style(ThemeRole::menu));
+    buffer.put(x, y, static_cast<char32_t>(name.front()),
+               active ? theme.style(ThemeRole::active_menu_mnemonic) : theme.style(ThemeRole::menu_mnemonic));
 }
 
 } // namespace
 
-Workspace::Workspace(std::string title, std::string open_label, std::string create_label, std::string path_instructions)
+Workspace::Workspace(std::string title, std::string open_label, std::string create_label, std::string path_instructions,
+                     const Theme& theme)
     : title_{std::move(title)}, open_label_{std::move(open_label)}, create_label_{std::move(create_label)},
-      path_instructions_{std::move(path_instructions)} {
+      path_instructions_{std::move(path_instructions)}, theme_{&theme}, windows_{theme} {
 }
 
 void Workspace::set_database(std::string path, std::vector<db::TableSchema> tables) {
@@ -292,15 +284,16 @@ auto Workspace::handle(core::ActionId action, const terminal::InputEvent& event)
 void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (bounds.width < 40 || bounds.height < 10)
         return;
-    write(buffer, bounds.x, bounds.y, bounds.width, "", menu_style);
-    write_menu(buffer, bounds.x + 1, bounds.y, "File", menu_ == Menu::file);
-    write_menu(buffer, bounds.x + 7, bounds.y, "Database", menu_ == Menu::database);
-    write_menu(buffer, bounds.x + 17, bounds.y, "View", menu_ == Menu::view);
-    write_menu(buffer, bounds.x + 23, bounds.y, "Window", menu_ == Menu::window);
-    write_menu(buffer, bounds.x + 32, bounds.y, "Help", menu_ == Menu::help);
+    const auto& current_theme = *theme_;
+    write(buffer, bounds.x, bounds.y, bounds.width, "", current_theme.style(ThemeRole::menu));
+    write_menu(buffer, bounds.x + 1, bounds.y, "File", menu_ == Menu::file, current_theme);
+    write_menu(buffer, bounds.x + 7, bounds.y, "Database", menu_ == Menu::database, current_theme);
+    write_menu(buffer, bounds.x + 17, bounds.y, "View", menu_ == Menu::view, current_theme);
+    write_menu(buffer, bounds.x + 23, bounds.y, "Window", menu_ == Menu::window, current_theme);
+    write_menu(buffer, bounds.x + 32, bounds.y, "Help", menu_ == Menu::help, current_theme);
     windows_.render_tabs(buffer, {bounds.x, bounds.y + 1, bounds.width, 1});
     if (windows_.active().kind == DocumentKind::workspace) {
-        write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, title_, title_style);
+        write(buffer, bounds.x + 2, bounds.y + 3, bounds.width - 4, title_, current_theme.style(ThemeRole::title));
         if (database_path_.empty()) {
             write(buffer, bounds.x + 2, bounds.y + 5, bounds.width - 4, "No database open.");
             write(buffer, bounds.x + 2, bounds.y + 6, bounds.width - 4,
@@ -311,7 +304,8 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
             for (std::size_t index = 0; index < tables_.size() && static_cast<int>(index) < bounds.height - 11; ++index)
                 write(buffer, bounds.x + 4, bounds.y + 8 + static_cast<int>(index), bounds.width - 8,
                       tables_[index].name + (tables_[index].is_view ? " [view]" : ""),
-                      index == selected_table_ ? selected_style : terminal::Style{});
+                      index == selected_table_ ? current_theme.style(ThemeRole::selection)
+                                               : current_theme.style(ThemeRole::text));
         }
     }
     if (menu_ != Menu::none) {
@@ -348,38 +342,45 @@ void Workspace::render(terminal::ScreenBuffer& buffer, Rect bounds) const {
         }
         const int menu_width = std::min(30, bounds.x + bounds.width - menu_x);
         const int menu_y = bounds.y + 1;
-        buffer.put(menu_x, menu_y, U'+', popup_style);
+        buffer.put(menu_x, menu_y, U'+', current_theme.style(ThemeRole::popup));
         for (int column = 1; column < menu_width - 1; ++column)
-            buffer.put(menu_x + column, menu_y, U'-', popup_style);
-        buffer.put(menu_x + menu_width - 1, menu_y, U'+', popup_style);
+            buffer.put(menu_x + column, menu_y, U'-', current_theme.style(ThemeRole::popup));
+        buffer.put(menu_x + menu_width - 1, menu_y, U'+', current_theme.style(ThemeRole::popup));
         for (std::size_t index = 0; index < items.size(); ++index) {
             const int y = menu_y + 1 + static_cast<int>(index);
-            const auto style = index == menu_selection_ ? popup_selected_style : popup_style;
-            buffer.put(menu_x, y, U'|', popup_style);
+            const auto& style = index == menu_selection_ ? current_theme.style(ThemeRole::popup_selection)
+                                                         : current_theme.style(ThemeRole::popup);
+            buffer.put(menu_x, y, U'|', current_theme.style(ThemeRole::popup));
             write(buffer, menu_x + 1, y, menu_width - 2, items[index], style);
-            buffer.put(menu_x + menu_width - 1, y, U'|', popup_style);
+            buffer.put(menu_x + menu_width - 1, y, U'|', current_theme.style(ThemeRole::popup));
         }
         const int bottom = menu_y + static_cast<int>(items.size()) + 1;
-        buffer.put(menu_x, bottom, U'+', popup_style);
+        buffer.put(menu_x, bottom, U'+', current_theme.style(ThemeRole::popup));
         for (int column = 1; column < menu_width - 1; ++column)
-            buffer.put(menu_x + column, bottom, U'-', popup_style);
-        buffer.put(menu_x + menu_width - 1, bottom, U'+', popup_style);
+            buffer.put(menu_x + column, bottom, U'-', current_theme.style(ThemeRole::popup));
+        buffer.put(menu_x + menu_width - 1, bottom, U'+', current_theme.style(ThemeRole::popup));
     }
     if (prompt_)
         prompt_->render(buffer, {bounds.x + (bounds.width - 60) / 2, bounds.y + (bounds.height - 5) / 2,
                                  std::min(60, bounds.width), 5});
-    write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, "", menu_style);
+    write(buffer, bounds.x, bounds.y + bounds.height - 1, bounds.width, "", current_theme.style(ThemeRole::menu));
     if (status_.empty()) {
-        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, 3, "F10", accent_style);
-        write(buffer, bounds.x + 4, bounds.y + bounds.height - 1, 6, " Menu  ", menu_style);
-        write(buffer, bounds.x + 10, bounds.y + bounds.height - 1, 6, "Ctrl+O", accent_style);
-        write(buffer, bounds.x + 16, bounds.y + bounds.height - 1, 7, " Open  ", menu_style);
-        write(buffer, bounds.x + 23, bounds.y + bounds.height - 1, 6, "Ctrl+N", accent_style);
-        write(buffer, bounds.x + 29, bounds.y + bounds.height - 1, 9, " Create  ", menu_style);
-        write(buffer, bounds.x + 38, bounds.y + bounds.height - 1, 6, "Ctrl+C", accent_style);
-        write(buffer, bounds.x + 44, bounds.y + bounds.height - 1, 5, " Exit", menu_style);
+        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, 3, "F10",
+              current_theme.style(ThemeRole::menu_mnemonic));
+        write(buffer, bounds.x + 4, bounds.y + bounds.height - 1, 6, " Menu  ", current_theme.style(ThemeRole::menu));
+        write(buffer, bounds.x + 10, bounds.y + bounds.height - 1, 6, "Ctrl+O",
+              current_theme.style(ThemeRole::menu_mnemonic));
+        write(buffer, bounds.x + 16, bounds.y + bounds.height - 1, 7, " Open  ", current_theme.style(ThemeRole::menu));
+        write(buffer, bounds.x + 23, bounds.y + bounds.height - 1, 6, "Ctrl+N",
+              current_theme.style(ThemeRole::menu_mnemonic));
+        write(buffer, bounds.x + 29, bounds.y + bounds.height - 1, 9, " Create  ",
+              current_theme.style(ThemeRole::menu));
+        write(buffer, bounds.x + 38, bounds.y + bounds.height - 1, 6, "Ctrl+C",
+              current_theme.style(ThemeRole::menu_mnemonic));
+        write(buffer, bounds.x + 44, bounds.y + bounds.height - 1, 5, " Exit", current_theme.style(ThemeRole::menu));
     } else {
-        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, status_, menu_style);
+        write(buffer, bounds.x + 1, bounds.y + bounds.height - 1, bounds.width - 2, status_,
+              current_theme.style(ThemeRole::menu));
     }
 }
 

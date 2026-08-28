@@ -3,6 +3,7 @@
 #include "vulpes/core/actions.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
 #include "vulpes/ui/geometry.hpp"
+#include "vulpes/ui/theme.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -24,7 +25,7 @@ struct Document {
 // content remains semantic UI supplied by the application shell.
 class WindowManager {
   public:
-    WindowManager();
+    explicit WindowManager(const Theme& theme = ui::theme(ThemeName::midnight));
 
     void open(Document document);
     [[nodiscard]] auto close_active() -> bool;
@@ -38,6 +39,7 @@ class WindowManager {
     void render_tabs(terminal::ScreenBuffer& buffer, Rect bounds) const;
 
   private:
+    const Theme* theme_;
     std::vector<Document> documents_;
     std::size_t active_index_{};
     std::optional<std::string> modal_title_;

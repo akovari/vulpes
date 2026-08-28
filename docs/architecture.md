@@ -51,6 +51,12 @@ same is true of direct and workspace SQL consoles. It also gives reduced
 terminal sizes a deterministic warning frame and preserves Escape/Ctrl+C as
 clean exits while waiting for a resize.
 
+Workspace chrome selects semantic `ThemeRole` values rather than defining RGB
+colors inside menus, tabs, or status bars. `midnight` is the default theme and
+`high-contrast` is a deliberately high-contrast alternative. Themes affect
+presentation only; they never change action IDs, document state, or the data
+model.
+
 ## Initial decisions
 
 ### C++23 with a conservative feature surface

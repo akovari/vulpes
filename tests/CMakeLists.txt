@@ -17,6 +17,7 @@ add_executable(vulpes_tests
     ui/grid_test.cpp
     ui/sql_console_test.cpp
     ui/text_prompt_test.cpp
+    ui/theme_test.cpp
     ui/workspace_test.cpp
     ui/window_manager_test.cpp
     terminal/frame_diff_test.cpp

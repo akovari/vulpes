@@ -6,10 +6,6 @@
 
 namespace vulpes::ui {
 namespace {
-
-constexpr terminal::Style tab_style{.foreground = {185, 210, 240}, .background = {0, 35, 82}};
-constexpr terminal::Style active_tab_style{.foreground = {0, 0, 0}, .background = {95, 220, 255}, .bold = true};
-
 void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_view text, terminal::Style style) {
     const auto end = buffer.write_utf8(x, y, terminal::truncate_utf8(text, width), style);
     for (int column = end; column < x + width; ++column)
@@ -18,7 +14,7 @@ void write(terminal::ScreenBuffer& buffer, int x, int y, int width, std::string_
 
 } // namespace
 
-WindowManager::WindowManager() {
+WindowManager::WindowManager(const Theme& theme) : theme_{&theme} {
     documents_.push_back({.id = "workspace", .title = "Workspace", .kind = DocumentKind::workspace, .closable = false});
 }
 
@@ -68,12 +64,13 @@ auto WindowManager::handle(core::ActionId action) -> bool {
 void WindowManager::render_tabs(terminal::ScreenBuffer& buffer, Rect bounds) const {
     if (bounds.width < 8 || bounds.height < 1)
         return;
-    write(buffer, bounds.x, bounds.y, bounds.width, "", tab_style);
+    write(buffer, bounds.x, bounds.y, bounds.width, "", theme_->style(ThemeRole::tab));
     int x = bounds.x + 1;
     for (std::size_t index = 0; index < documents_.size() && x < bounds.x + bounds.width; ++index) {
         const auto label = " " + documents_[index].title + (documents_[index].closable ? " x " : " ");
         const int width = std::min(static_cast<int>(label.size()), bounds.x + bounds.width - x);
-        write(buffer, x, bounds.y, width, label, index == active_index_ ? active_tab_style : tab_style);
+        write(buffer, x, bounds.y, width, label,
+              index == active_index_ ? theme_->style(ThemeRole::active_tab) : theme_->style(ThemeRole::tab));
         x += width;
     }
 }
