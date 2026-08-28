@@ -1,0 +1,32 @@
+if(NOT DEFINED VULPES_VERSION_MODULE)
+    message(FATAL_ERROR "VULPES_VERSION_MODULE is required")
+endif()
+
+include("${VULPES_VERSION_MODULE}")
+
+function(assert_version_case description expected_version expected_commit expected_dirty)
+    vulpes_format_version("${description}" "0.1.0" actual_version actual_commit actual_dirty)
+    if(NOT actual_version STREQUAL expected_version)
+        message(FATAL_ERROR "${description}: expected version ${expected_version}, got ${actual_version}")
+    endif()
+    if(NOT actual_commit STREQUAL expected_commit)
+        message(FATAL_ERROR "${description}: expected commit ${expected_commit}, got ${actual_commit}")
+    endif()
+    if(NOT actual_dirty STREQUAL expected_dirty)
+        message(FATAL_ERROR "${description}: expected dirty=${expected_dirty}, got ${actual_dirty}")
+    endif()
+endfunction()
+
+assert_version_case("v1.2.3-0-gabcdef123456" "1.2.3" "abcdef123456" FALSE)
+assert_version_case("v1.2.3-4-gabcdef123456" "1.2.3-dev.4+gabcdef123456" "abcdef123456" FALSE)
+assert_version_case("v1.2.3-4-gabcdef123456-dirty" "1.2.3-dev.4+gabcdef123456.dirty" "abcdef123456" TRUE)
+assert_version_case("abcdef123456" "0.1.0-dev+gabcdef123456" "abcdef123456" FALSE)
+assert_version_case("abcdef123456-dirty" "0.1.0-dev+gabcdef123456.dirty" "abcdef123456" TRUE)
+assert_version_case("" "0.1.0" "unknown" FALSE)
+
+set(VULPES_BUILD_VERSION_OVERRIDE "2.0.0-rc.1+archive")
+vulpes_detect_version("${CMAKE_CURRENT_LIST_DIR}" "0.1.0" override_version override_commit override_dirty
+    override_description)
+if(NOT override_version STREQUAL "2.0.0-rc.1+archive" OR NOT override_description STREQUAL "override")
+    message(FATAL_ERROR "source-archive version override was not preserved")
+endif()

@@ -1,4 +1,13 @@
 #pragma once
 
-#define VULPES_VERSION "@PROJECT_VERSION@"
+#include <string_view>
 
+namespace vulpes::build {
+
+inline constexpr std::string_view version{"@VULPES_BUILD_VERSION@"};
+inline constexpr std::string_view base_version{"@PROJECT_VERSION@"};
+inline constexpr std::string_view git_commit{"@VULPES_GIT_COMMIT@"};
+inline constexpr std::string_view git_description{"@VULPES_GIT_DESCRIPTION@"};
+inline constexpr bool git_dirty{@VULPES_GIT_DIRTY_CPP@};
+
+} // namespace vulpes::build

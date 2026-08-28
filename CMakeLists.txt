@@ -5,8 +5,21 @@ project(Vulpes VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CTest)
 include(FetchContent)
+include(cmake/VulpesVersion.cmake)
 
 option(VULPES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+set(VULPES_BUILD_VERSION_OVERRIDE "" CACHE STRING "Build version for source archives without Git metadata")
+
+find_package(Git QUIET)
+vulpes_detect_version("${PROJECT_SOURCE_DIR}" "${PROJECT_VERSION}" VULPES_BUILD_VERSION VULPES_GIT_COMMIT
+    VULPES_GIT_DIRTY VULPES_GIT_DESCRIPTION)
+vulpes_watch_git("${PROJECT_SOURCE_DIR}")
+if(VULPES_GIT_DIRTY)
+    set(VULPES_GIT_DIRTY_CPP true)
+else()
+    set(VULPES_GIT_DIRTY_CPP false)
+endif()
+message(STATUS "Vulpes build version: ${VULPES_BUILD_VERSION}")
 
 find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22)
 find_program(VULPES_CLANG_TIDY NAMES clang-tidy clang-tidy-22
@@ -114,6 +127,13 @@ target_link_libraries(vulpes PRIVATE Vulpes::core CLI11::CLI11)
 
 if(BUILD_TESTING)
     add_test(NAME vulpes_version COMMAND vulpes --version)
+    set_tests_properties(vulpes_version PROPERTIES PASS_REGULAR_EXPRESSION "Vulpes [0-9]+\\.[0-9]+\\.[0-9]+")
+    add_test(
+        NAME vulpes_version_metadata
+        COMMAND ${CMAKE_COMMAND}
+            -DVULPES_VERSION_MODULE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/VulpesVersion.cmake
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_version_metadata.cmake
+    )
     add_test(NAME vulpes_terminal_capabilities COMMAND vulpes --terminal-capabilities)
     set_tests_properties(vulpes_terminal_capabilities PROPERTIES PASS_REGULAR_EXPRESSION "Interactive TUI available")
     add_test(

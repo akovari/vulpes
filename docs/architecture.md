@@ -110,6 +110,11 @@ C++23 is the language mode because current supported compilers implement it and
 MSVC 18 is the primary local toolchain. Public APIs initially use broadly
 implemented vocabulary types so platform support remains practical.
 
+Build identity is generated from `vMAJOR.MINOR.PATCH` Git tags and exposed as
+typed constants. Untagged commits receive a SemVer-compatible development
+suffix, while source archives fall back deterministically or provide an
+explicit packaging override. See ADR 0017.
+
 ### vcpkg manifest dependencies
 
 The checked-in registry baseline makes dependency resolution reproducible.

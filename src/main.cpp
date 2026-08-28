@@ -325,7 +325,7 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
     auto messages = load_messages(locale, catalog_paths);
     vulpes::core::ApplicationRuntime application{database};
-    std::cout << messages.translate("application.title") << " " << VULPES_VERSION << "\n\n";
+    std::cout << messages.translate("application.title") << " " << vulpes::build::version << "\n\n";
 
     vulpes::core::Command command{.id = vulpes::core::CommandId::tables};
     if (table_name)
@@ -424,7 +424,7 @@ auto main(int argc, char** argv) -> int {
         }
 
         if (version) {
-            std::cout << "Vulpes " << VULPES_VERSION << '\n';
+            std::cout << "Vulpes " << vulpes::build::version << '\n';
             return 0;
         }
         if (terminal_capabilities) {

@@ -67,6 +67,14 @@ unrelated toolchain, which keeps its behavior aligned with CMake and the IDE.
 Enable `VULPES_WARNINGS_AS_ERRORS` in CI once all supported compiler versions
 produce a clean and stable warning set.
 
+## Versioning
+
+Use annotated or lightweight tags named `vMAJOR.MINOR.PATCH`. CMake converts
+the nearest tag, commit distance, abbreviated commit, and dirty state into the
+generated runtime version; see ADR 0017. Do not edit the generated header or
+introduce a separate release-script version. Source-archive builds without a
+`.git` directory may pass `-DVULPES_BUILD_VERSION_OVERRIDE=<version>`.
+
 ## Code conventions
 
 - C++23; RAII and explicit ownership.

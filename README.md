@@ -40,6 +40,12 @@ ctest --preset windows-debug
 .\build\windows-msvc\Debug\vulpes.exe --version
 ```
 
+Development versions are derived from Git, for example
+`0.1.0-dev+gabcdef123456` (with `.dirty` when configured from a modified tree).
+An exact `vMAJOR.MINOR.PATCH` tag produces that release version. Source-archive
+packagers can set `-DVULPES_BUILD_VERSION_OVERRIDE=<version>` when Git metadata
+is intentionally unavailable.
+
 To exercise the first schema-listing vertical slice after creating a database:
 
 ```powershell
