@@ -97,6 +97,12 @@ black-and-white high-contrast workspace chrome with underlined mnemonics:
 .\build\windows-msvc\Debug\vulpes.exe --theme high-contrast
 ```
 
+To verify a terminal host after an input or rendering change, run
+`vulpes --terminal-diagnostics`. It shows Vulpes' normalized `Key` and `Resize`
+events; test arrow keys, Escape (exits), Ctrl+C (exits), function keys, and Alt
+chords. It deliberately exposes Vulpes events rather than CPP-Terminal details,
+so a report is useful across Windows, Linux, and macOS hosts.
+
 The browse view is keyboard driven: arrow keys move through the grid, `F2`
 opens the selected record, `Insert` creates a record, `F8` saves a record form,
 and `Esc` cancels it. Form controls are inferred from SQLite schema information:

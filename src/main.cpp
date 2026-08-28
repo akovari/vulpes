@@ -12,6 +12,7 @@
 #include "vulpes/ui/document_session.hpp"
 #include "vulpes/ui/schema_document.hpp"
 #include "vulpes/ui/sql_document.hpp"
+#include "vulpes/ui/terminal_diagnostics.hpp"
 #include "vulpes/ui/terminal_warning.hpp"
 #include "vulpes/ui/theme.hpp"
 #include "vulpes/ui/workspace.hpp"
@@ -60,6 +61,19 @@ void sql_console(vulpes::db::Database& database, const vulpes::core::Localizer& 
     vulpes::ui::DocumentSession{
         terminal, document, {20, 8}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "8"}})}
         .run();
+}
+
+auto run_terminal_diagnostics(const std::string& locale, const std::vector<std::string>& catalog_paths) -> int {
+    vulpes::core::Localizer messages{locale};
+    for (const auto& catalog_path : catalog_paths)
+        messages.load_catalog_file(std::filesystem::path{catalog_path});
+
+    vulpes::terminal::ConsoleTerminal terminal;
+    vulpes::ui::TerminalDiagnostics document{messages};
+    vulpes::ui::DocumentSession{
+        terminal, document, {40, 10}, messages.translate("terminal.minimum_size", {{"width", "40"}, {"height", "10"}})}
+        .run();
+    return 0;
 }
 
 void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Localizer& messages) {
@@ -350,6 +364,7 @@ auto main(int argc, char** argv) -> int {
         std::string table_name;
         std::string command_source;
         bool sql = false;
+        bool terminal_diagnostics = false;
         std::string locale{"en"};
         std::string theme_name{"midnight"};
         std::string preferences_argument;
@@ -359,9 +374,15 @@ auto main(int argc, char** argv) -> int {
         const auto table_option = app.add_option("--table", table_name, "Browse one table or view");
         const auto command_option = app.add_option("--command", command_source, "Run one Vulpes command and exit");
         const auto sql_option = app.add_flag("--sql", sql, "Open the interactive SQL console");
+        const auto terminal_diagnostics_option =
+            app.add_flag("--terminal-diagnostics", terminal_diagnostics,
+                         "Open interactive normalized terminal-input and resize diagnostics");
         table_option->excludes(command_option);
         table_option->excludes(sql_option);
         command_option->excludes(sql_option);
+        terminal_diagnostics_option->excludes(table_option);
+        terminal_diagnostics_option->excludes(command_option);
+        terminal_diagnostics_option->excludes(sql_option);
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
         app.add_option("--theme", theme_name, "Workspace theme: midnight or high-contrast");
@@ -377,6 +398,12 @@ auto main(int argc, char** argv) -> int {
         if (version) {
             std::cout << "Vulpes " << VULPES_VERSION << '\n';
             return 0;
+        }
+        if (terminal_diagnostics) {
+            if (!database_argument.empty())
+                throw vulpes::Error{vulpes::ErrorCategory::validation,
+                                    "--terminal-diagnostics does not accept a database path"};
+            return run_terminal_diagnostics(locale, catalog_paths);
         }
         if (database_argument.empty()) {
             const auto preferences_path = preferences_argument.empty()

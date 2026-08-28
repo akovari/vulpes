@@ -103,6 +103,9 @@ auto english_catalog() -> MessageCatalog {
     return {
         {"application.title", "Vulpes"},
         {"application.unknown_command", "Unknown command. Type help for available commands."},
+        {"terminal.diagnostics.instructions", "Press keys to inspect normalized input. Esc or Ctrl+C exits."},
+        {"terminal.diagnostics.title", "Terminal diagnostics"},
+        {"terminal.diagnostics.waiting", "Waiting for a terminal event..."},
         {"browse.filter_prompt", "Filter {field} (for example: >= 10; blank clears filters)"},
         {"browse.delete_message", "Delete the selected record from {table}?"},
         {"browse.delete_title", "Delete record"},

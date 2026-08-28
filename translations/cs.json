@@ -2,6 +2,9 @@
   "locale": "cs",
   "messages": {
     "application.title": "Vulpes",
+    "terminal.diagnostics.instructions": "Stiskněte klávesu pro zobrazení normalizovaného vstupu. Esc nebo Ctrl+C ukončí.",
+    "terminal.diagnostics.title": "Diagnostika terminálu",
+    "terminal.diagnostics.waiting": "Čekání na událost terminálu...",
     "workspace.directory_browser_instructions": "Enter Otevřít/složka   Backspace Nadřazená   Esc Zrušit",
     "workspace.directory_browser_parent": "[..]",
     "workspace.directory_browser_title": "Procházet soubory",

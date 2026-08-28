@@ -67,6 +67,8 @@ on Windows, Linux, and macOS.
   hints.
 - [x] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
   rendering without hard-coded colors in individual screens.
+- [x] Add interactive normalized-input and resize diagnostics for manual host
+  verification.
 - [ ] Add terminal capability/redirected-stream diagnostics and a user-facing
   terminal failure screen.
 - [x] Map configurable keys to semantic action IDs.
