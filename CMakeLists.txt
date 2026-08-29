@@ -264,6 +264,7 @@ install(FILES
     LICENSE
     THIRD_PARTY_NOTICES.md
     docs/application-metadata.md
+    docs/distribution.md
     docs/exporting.md
     docs/localization.md
     docs/operations.md

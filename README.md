@@ -63,7 +63,9 @@ creates a Release ZIP plus SHA-256 sidecar after running Release tests from a cl
 `vMAJOR.MINOR.PATCH` tag. See [docs/releasing.md](docs/releasing.md) for the
 artifact contract, [docs/release-notes.md](docs/release-notes.md) for the
 current release status, and [docs/operations.md](docs/operations.md) for
-backup, recovery, compatibility, and upgrade guidance.
+backup, recovery, compatibility, and upgrade guidance. The ZIP remains an
+unsigned pre-release artifact until the platform signing/notarization policy in
+[docs/distribution.md](docs/distribution.md) has been implemented and verified.
 
 To open the workspace on an existing database, or invoke one direct command:
 

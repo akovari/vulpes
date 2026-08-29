@@ -27,7 +27,7 @@ if(NOT version_result EQUAL 0 OR NOT version_output MATCHES "Vulpes [0-9]+\\.[0-
     message(FATAL_ERROR "installed Vulpes executable did not run:\n${version_output}\n${version_error}")
 endif()
 
-foreach(document LICENSE THIRD_PARTY_NOTICES.md application-metadata.md exporting.md localization.md operations.md releasing.md release-notes.md scripting.md)
+foreach(document LICENSE THIRD_PARTY_NOTICES.md application-metadata.md distribution.md exporting.md localization.md operations.md releasing.md release-notes.md scripting.md)
     if(NOT EXISTS "${VULPES_INSTALL_PREFIX}/share/doc/Vulpes/${document}")
         message(FATAL_ERROR "installed release document is missing: ${document}")
     endif()

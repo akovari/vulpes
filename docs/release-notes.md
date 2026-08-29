@@ -37,6 +37,8 @@ runtime upgrade; see [operations.md](operations.md).
   macOS archives require native build, extraction, runtime, and terminal-host
   evidence before publication.
 - Windows code signing, macOS notarization, graphical installers, and
-  distribution-native Linux packages are not included.
+  distribution-native Linux packages are not included. Their required public
+  release process is defined in [distribution.md](distribution.md), but has
+  not yet been implemented or independently verified.
 - GUI/web renderers, networking, visual form design, and a plugin ecosystem
   remain deliberately deferred.

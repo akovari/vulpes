@@ -61,3 +61,8 @@ Windows code signing, macOS notarization, Linux distribution-native packages,
 and a graphical installer are deliberately not claimed by this archive process.
 They require platform credentials, host verification, and distribution policy
 before the packaging TODO can be marked complete.
+
+The exact public-release trust policy, supported package channels, clean-host
+verification evidence, and exception rules are in
+[distribution.md](distribution.md). The current ZIP is an unsigned pre-release
+artifact until that policy is implemented and independently verified.

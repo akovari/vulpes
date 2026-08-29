@@ -188,8 +188,12 @@ on Windows, Linux, and macOS.
 - [x] Document backup, recovery, compatibility, and upgrade behavior.
 - [x] Define versioned archive conventions, SHA-256 sidecars, reviewed license
   bundles, and 0.1 release notes.
-- [ ] Define and verify signing, notarization, native-installer, and
-  distribution-package policy for each supported platform.
+- [x] Define distribution trust, platform-signing, and clean-host verification
+  policy for each supported platform.
+- [ ] Select, implement, and independently verify the Windows native installer
+  and signing, macOS native installer and notarization, and Linux
+  archive/package-signing flows with production credentials and clean native
+  hosts.
 
 ## Post-0.1 — deliberately deferred
 
