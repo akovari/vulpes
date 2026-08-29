@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.31)
 
+if(POLICY CMP0207)
+    cmake_policy(SET CMP0207 NEW)
+endif()
+
 project(Vulpes VERSION 0.1.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
@@ -215,10 +219,65 @@ if(BUILD_TESTING)
             -DTEST_DATABASE=${CMAKE_CURRENT_BINARY_DIR}/vulpes-migrate-app.sqlite
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_migrate_app.cmake
     )
+    add_test(
+        NAME vulpes_install_tree
+        COMMAND ${CMAKE_COMMAND}
+            -DCMAKE_COMMAND=${CMAKE_COMMAND}
+            -DVULPES_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DVULPES_CONFIGURATION=$<CONFIG>
+            -DVULPES_EXECUTABLE_SUFFIX=${CMAKE_EXECUTABLE_SUFFIX}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/assert_install_tree.cmake
+    )
 endif()
 
-install(TARGETS vulpes RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+set(VULPES_RUNTIME_DEPENDENCY_DIRECTORIES)
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    list(APPEND VULPES_RUNTIME_DEPENDENCY_DIRECTORIES
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib"
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib")
+endif()
+
+install(TARGETS vulpes
+    RUNTIME_DEPENDENCY_SET vulpes_runtime_dependencies
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(RUNTIME_DEPENDENCY_SET vulpes_runtime_dependencies
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    DIRECTORIES ${VULPES_RUNTIME_DEPENDENCY_DIRECTORIES}
+    PRE_EXCLUDE_REGEXES
+        "^[Aa][Pp][Ii]-[Mm][Ss]-.*"
+        "^[Ee][Xx][Tt]-[Mm][Ss]-.*"
+        "^[Ss][Hh][Ll][Ww][Aa][Pp][Ii]\\.[Dd][Ll][Ll]$"
+        ".*32\\.[Dd][Ll][Ll]$"
+        "^([Kk][Ee][Rr][Nn][Ee][Ll][Bb][Aa][Ss][Ee]|[Nn][Tt][Dd][Ll][Ll]|[Uu][Cc][Rr][Tt][Bb][Aa][Ss][Ee][Dd]?|[Mm][Ss][Vv][Cc][Pp].*|[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*)\\.[Dd][Ll][Ll]$"
+    POST_EXCLUDE_REGEXES ".*[\\\\/]System32[\\\\/].*" ".*[\\\\/]usr[\\\\/]lib[\\\\/].*")
 install(DIRECTORY translations DESTINATION ${CMAKE_INSTALL_DATADIR}/vulpes)
+install(FILES LICENSE THIRD_PARTY_NOTICES.md docs/operations.md docs/releasing.md docs/release-notes.md
+    DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+function(vulpes_install_license source_file installed_name)
+    if(NOT EXISTS "${source_file}")
+        message(FATAL_ERROR "required third-party license file is missing: ${source_file}")
+    endif()
+    install(FILES "${source_file}" DESTINATION ${CMAKE_INSTALL_DOCDIR}/licenses RENAME "${installed_name}")
+endfunction()
+
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    set(VULPES_VCPKG_SHARE_DIRECTORY "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/sqlite3/copyright" "sqlite3.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/utf8proc/copyright" "utf8proc.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/cli11/copyright" "cli11.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/nlohmann-json/copyright" "nlohmann-json.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/dacap-clip/copyright" "dacap-clip.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/icu/copyright" "icu.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/zlib/copyright" "zlib.txt")
+else()
+    message(WARNING "vcpkg install metadata is unavailable; package license bundle is incomplete")
+endif()
+vulpes_install_license("${cpp_terminal_SOURCE_DIR}/LICENSE" "cpp-terminal.txt")
+vulpes_install_license("${pdfio_source_SOURCE_DIR}/LICENSE" "pdfio-apache-2.0.txt")
+vulpes_install_license("${pdfio_source_SOURCE_DIR}/examples/Roboto-LICENSE.txt" "roboto-ofl-1.1.txt")
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
@@ -252,3 +311,5 @@ if(VULPES_CLANG_TIDY)
 else()
     message(STATUS "clang-tidy not found; tidy target is unavailable")
 endif()
+
+include(cmake/VulpesPackaging.cmake)

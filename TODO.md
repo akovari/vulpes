@@ -178,10 +178,18 @@ on Windows, Linux, and macOS.
 - [x] Add representative seed data and scripted acceptance scenario.
 - [x] Exercise product edit, relationship navigation, stock movement, and report.
 - [x] Fix framework weaknesses without inventory-specific runtime code.
-- [ ] Package standalone artifacts for Windows, Linux, and macOS.
-- [ ] Document backup, recovery, compatibility, and upgrade behavior.
-- [ ] Add versioned installer/archive conventions, checksums, licenses, and release
-  notes for each supported platform.
+- [ ] Produce and verify standalone Release artifacts on Windows, Linux, and macOS.
+  - [x] Define a CPack ZIP install layout with resolved non-system runtime
+    dependencies, translations, docs, and an install-tree smoke test.
+  - [x] Smoke-test a Windows x64 Debug archive, its extracted executable, and
+    its SHA-256 sidecar.
+  - [ ] Build, extract, and exercise a tagged Release archive on each supported
+    platform outside the build tree.
+- [x] Document backup, recovery, compatibility, and upgrade behavior.
+- [x] Define versioned archive conventions, SHA-256 sidecars, reviewed license
+  bundles, and 0.1 release notes.
+- [ ] Define and verify signing, notarization, native-installer, and
+  distribution-package policy for each supported platform.
 
 ## Post-0.1 — deliberately deferred
 

@@ -1,13 +1,15 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('configure', 'build', 'test', 'check', 'format', 'format-check', 'tidy', 'release')]
+    [ValidateSet('configure', 'build', 'test', 'check', 'format', 'format-check', 'tidy', 'release', 'package')]
     [string] $Task = 'check',
 
     [ValidateRange(0, 256)]
     [int] $Jobs = 0,
 
     [string] $CTestRegex = '',
+
+    [string] $OutputDirectory = 'out/packages',
 
     [switch] $Fresh
 )
@@ -168,6 +170,41 @@ function Invoke-Tests {
     Invoke-NativeCommand ctest $arguments
 }
 
+function Assert-CleanReleaseTag {
+    $status = & git status --porcelain
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not inspect Git status for release packaging.'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($status)) {
+        throw 'Release packaging requires a clean Git worktree.'
+    }
+
+    $tag = & git describe --tags --exact-match --match 'v[0-9]*.[0-9]*.[0-9]*'
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+        throw 'Release packaging requires an exact vMAJOR.MINOR.PATCH Git tag.'
+    }
+}
+
+function Invoke-Package {
+    Assert-CleanReleaseTag
+    Invoke-Configure $windowsConfigurePreset
+    Invoke-BuildPreset $releaseBuildPreset
+    Invoke-Tests 'Release'
+
+    $packageDirectory = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDirectory))
+    New-Item -ItemType Directory -Force -Path $packageDirectory | Out-Null
+    Invoke-NativeCommand cpack @(
+        '--config', (Join-Path $repositoryRoot 'build/windows-msvc/CPackConfig.cmake'),
+        '-C', 'Release',
+        '-G', 'ZIP',
+        '-B', $packageDirectory
+    )
+    Get-ChildItem -LiteralPath $packageDirectory -File |
+        Where-Object { $_.Name -like 'vulpes-*.zip' -or $_.Name -like 'vulpes-*.zip.sha256' } |
+        Sort-Object Name |
+        ForEach-Object { Write-Host "Created $($_.FullName)" -ForegroundColor Green }
+}
+
 Push-Location $repositoryRoot
 try {
     Initialize-WindowsToolchain
@@ -208,6 +245,9 @@ try {
             Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
             Invoke-BuildPreset $releaseBuildPreset
             Invoke-Tests 'Release'
+        }
+        'package' {
+            Invoke-Package
         }
     }
 }

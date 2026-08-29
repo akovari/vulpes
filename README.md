@@ -58,6 +58,13 @@ An exact `vMAJOR.MINOR.PATCH` tag produces that release version. Source-archive
 packagers can set `-DVULPES_BUILD_VERSION_OVERRIDE=<version>` when Git metadata
 is intentionally unavailable.
 
+Release archives are explicit, tag-gated operations: `.\scripts\dev.ps1 package`
+creates a Release ZIP plus SHA-256 sidecar after running Release tests from a clean
+`vMAJOR.MINOR.PATCH` tag. See [docs/releasing.md](docs/releasing.md) for the
+artifact contract, [docs/release-notes.md](docs/release-notes.md) for the
+current release status, and [docs/operations.md](docs/operations.md) for
+backup, recovery, compatibility, and upgrade guidance.
+
 To open the workspace on an existing database, or invoke one direct command:
 
 ```powershell
