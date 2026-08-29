@@ -7,6 +7,9 @@ param(
     [ValidateRange(0, 256)]
     [int] $Jobs = 0,
 
+    [ValidateSet('native', 'x64', 'arm64')]
+    [string] $Architecture = 'native',
+
     [string] $CTestRegex = '',
 
     [string] $OutputDirectory = 'out/packages',
@@ -17,13 +20,21 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$processArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant()
+if ($Architecture -eq 'native') {
+    $Architecture = if ($processArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }
+}
+
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$windowsConfigurePreset = 'windows-msvc'
-$debugBuildPreset = 'windows-debug'
-$releaseBuildPreset = 'windows-release'
-$tidyConfigurePreset = 'windows-tidy'
-$tidyBuildPreset = 'windows-tidy'
+$windowsConfigurePreset = if ($Architecture -eq 'arm64') { 'windows-arm64' } else { 'windows-msvc' }
+$debugBuildPreset = if ($Architecture -eq 'arm64') { 'windows-arm64-debug' } else { 'windows-debug' }
+$windowsBuildDirectory = if ($Architecture -eq 'arm64') { 'build/windows-arm64' } else { 'build/windows-msvc' }
+$releaseBuildPreset = if ($Architecture -eq 'arm64') { 'windows-arm64-release' } else { 'windows-release' }
+$tidyConfigurePreset = if ($Architecture -eq 'arm64') { 'windows-arm64-tidy' } else { 'windows-tidy' }
+$tidyBuildPreset = if ($Architecture -eq 'arm64') { 'windows-arm64-tidy' } else { 'windows-tidy' }
+$tidyBuildDirectory = if ($Architecture -eq 'arm64') { 'build/windows-arm64-tidy' } else { 'build/windows-tidy' }
 $visualStudioInstallation = $null
+$windowsHostArchitecture = if ($Architecture -eq 'arm64' -and $processArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }
 
 function Invoke-NativeCommand {
     param(
@@ -61,16 +72,16 @@ function Find-VisualStudioInstallation {
 }
 
 function Initialize-WindowsToolchain {
-    $hasX64Toolchain =
+    $hasRequestedToolchain =
         (Get-Command cl.exe -ErrorAction SilentlyContinue) -and
-        $env:VSCMD_ARG_TGT_ARCH -eq 'x64' -and
-        $env:VSCMD_ARG_HOST_ARCH -eq 'x64'
+        $env:VSCMD_ARG_TGT_ARCH -eq $Architecture -and
+        $env:VSCMD_ARG_HOST_ARCH -eq $windowsHostArchitecture
 
     if ($env:VSINSTALLDIR) {
         $script:visualStudioInstallation = $env:VSINSTALLDIR.TrimEnd('\')
     }
 
-    if (-not $hasX64Toolchain) {
+    if (-not $hasRequestedToolchain) {
         if (-not $script:visualStudioInstallation) {
             $script:visualStudioInstallation = Find-VisualStudioInstallation
         }
@@ -82,7 +93,7 @@ function Initialize-WindowsToolchain {
 
         Import-Module $devShellModule
         Enter-VsDevShell -VsInstallPath $script:visualStudioInstallation `
-            -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+            -SkipAutomaticLocation -DevCmdArguments "-arch=$Architecture -host_arch=$windowsHostArchitecture"
     }
 
     if (-not $script:visualStudioInstallation -and $env:VSINSTALLDIR) {
@@ -101,7 +112,7 @@ function Initialize-WindowsToolchain {
     }
 
     if ($script:visualStudioInstallation) {
-        $llvmBin = Join-Path $script:visualStudioInstallation 'VC\Tools\Llvm\x64\bin'
+        $llvmBin = Join-Path $script:visualStudioInstallation "VC\Tools\Llvm\$windowsHostArchitecture\bin"
         if ((Test-Path -LiteralPath $llvmBin -PathType Container) -and
             -not (($env:Path -split ';') -contains $llvmBin)) {
             $env:Path = "$llvmBin;$env:Path"
@@ -160,7 +171,7 @@ function Invoke-BuildTarget {
 function Invoke-Tests {
     param([string] $Configuration)
 
-    $arguments = @('--test-dir', 'build/windows-msvc', '-C', $Configuration, '--output-on-failure')
+    $arguments = @('--test-dir', $windowsBuildDirectory, '-C', $Configuration, '--output-on-failure')
     if ($Jobs -gt 0) {
         $arguments += @('--parallel', $Jobs.ToString())
     }
@@ -194,7 +205,7 @@ function Invoke-Package {
     $packageDirectory = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDirectory))
     New-Item -ItemType Directory -Force -Path $packageDirectory | Out-Null
     Invoke-NativeCommand cpack @(
-        '--config', (Join-Path $repositoryRoot 'build/windows-msvc/CPackConfig.cmake'),
+        '--config', (Join-Path $repositoryRoot "$windowsBuildDirectory/CPackConfig.cmake"),
         '-C', 'Release',
         '-G', 'ZIP',
         '-B', $packageDirectory
@@ -214,35 +225,35 @@ try {
             Invoke-Configure $windowsConfigurePreset
         }
         'build' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
             Invoke-BuildPreset $debugBuildPreset
         }
         'test' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
             Invoke-BuildPreset $debugBuildPreset
             Invoke-Tests 'Debug'
         }
         'check' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
             Invoke-BuildPreset $debugBuildPreset
-            Invoke-BuildTarget 'build/windows-msvc' 'format-check' 'Debug'
+            Invoke-BuildTarget $windowsBuildDirectory 'format-check' 'Debug'
             Invoke-Tests 'Debug'
         }
         'format' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
-            Invoke-BuildTarget 'build/windows-msvc' 'format' 'Debug'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
+            Invoke-BuildTarget $windowsBuildDirectory 'format' 'Debug'
         }
         'format-check' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
-            Invoke-BuildTarget 'build/windows-msvc' 'format-check' 'Debug'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
+            Invoke-BuildTarget $windowsBuildDirectory 'format-check' 'Debug'
         }
         'tidy' {
-            Ensure-Configure $tidyConfigurePreset 'build/windows-tidy/CMakeCache.txt'
+            Ensure-Configure $tidyConfigurePreset "$tidyBuildDirectory/CMakeCache.txt"
             Invoke-BuildPreset $tidyBuildPreset
-            Invoke-BuildTarget 'build/windows-tidy' 'tidy'
+            Invoke-BuildTarget $tidyBuildDirectory 'tidy'
         }
         'release' {
-            Ensure-Configure $windowsConfigurePreset 'build/windows-msvc/CMakeCache.txt'
+            Ensure-Configure $windowsConfigurePreset "$windowsBuildDirectory/CMakeCache.txt"
             Invoke-BuildPreset $releaseBuildPreset
             Invoke-Tests 'Release'
         }

@@ -60,6 +60,17 @@ building.
 The first command configures, builds, checks formatting, and runs the Debug
 test suite. Later invocations reuse the build directory.
 
+On an ARM64 Windows machine, these same commands select a separate native ARM64
+Debug build for the faster edit/build/test loop:
+
+```powershell
+.\scripts\dev.ps1 build
+.\scripts\dev.ps1 test
+```
+
+This creates `build/windows-arm64`. Use `-Architecture x64` when an explicit
+x64 compatibility build is needed; see [development.md](docs/development.md).
+
 ### Open a database
 
 ```powershell

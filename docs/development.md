@@ -10,12 +10,25 @@
 4. Add unit tests for every core behavior and regression.
 5. Update `TODO.md` when scope or sequencing changes.
 
-The wrapper discovers and initializes the newest Visual Studio x64 toolchain,
+The wrapper discovers and initializes the newest native Visual Studio toolchain,
 bundled vcpkg, and LLVM formatter/analyzer when necessary. It also replaces an
 inherited x86 developer-shell environment, preventing x86 system libraries from
-leaking into an x64 link. It delegates to the checked-in CMake presets; it is not
-an alternative build definition. Linux and macOS contributors use the
+leaking into a native link. It delegates to the checked-in CMake presets; it is
+not an alternative build definition. Linux and macOS contributors use the
 corresponding presets directly.
+
+On ARM64 Windows, the default is a separate native Debug build for the faster
+inner loop:
+
+```powershell
+.\scripts\dev.ps1 build
+.\scripts\dev.ps1 test
+```
+
+This uses `build/windows-arm64`, native ARM64 Visual Studio tools when they are
+available, and the `arm64-windows` vcpkg triplet. Use `-Architecture x64` for a
+separate x64 compatibility build in `build/windows-msvc`; both architectures
+support the normal Debug, tidy, Release, and package workflows.
 
 Ninja tracks CMake and manifest inputs and regenerates an existing build tree
 when they change. Use the explicit `configure` task when changing preset-only
@@ -23,6 +36,11 @@ settings. Routine local development is Debug-only. Run
 `.\scripts\dev.ps1 release` for a release or milestone gate, not after every
 edit. Use `-Fresh` only when CMake's generated graph really needs rebuilding;
 ordinary invocations remain incremental.
+
+Vulpes currently has no C++ modules. CMake's automatic C++20 module scanning
+is therefore disabled for project targets, avoiding a no-op scan/dyndep stage
+for every C++ source. Re-enable it before adding C++ modules or module file
+sets.
 
 Repository-wide contributor and agent invariants live in `AGENTS.md`.
 

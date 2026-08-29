@@ -6,6 +6,12 @@ endif()
 
 project(Vulpes VERSION 0.1.0 LANGUAGES C CXX)
 
+# Vulpes does not currently declare C++ module file sets or use import
+# declarations. CMake otherwise scans every C++20-or-newer source at build time,
+# which adds a substantial no-op dependency-discovery phase. Re-enable scanning
+# before introducing C++ modules.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 include(GNUInstallDirs)
 include(CTest)
 include(FetchContent)
@@ -25,9 +31,10 @@ else()
 endif()
 message(STATUS "Vulpes build version: ${VULPES_BUILD_VERSION}")
 
-find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22)
+set(VULPES_LLVM_TOOL_HINTS "$ENV{VSINSTALLDIR}/VC/Tools/Llvm/$ENV{VSCMD_ARG_HOST_ARCH}/bin")
+find_program(VULPES_CLANG_FORMAT NAMES clang-format clang-format-22 HINTS ${VULPES_LLVM_TOOL_HINTS})
 find_program(VULPES_CLANG_TIDY NAMES clang-tidy clang-tidy-22
-    HINTS "$ENV{VSINSTALLDIR}/VC/Tools/Llvm/x64/bin" "$ENV{VCToolsInstallDir}/../../Llvm/x64/bin")
+    HINTS ${VULPES_LLVM_TOOL_HINTS} "$ENV{VCToolsInstallDir}/../../Llvm/$ENV{VSCMD_ARG_HOST_ARCH}/bin")
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(utf8proc CONFIG REQUIRED)
