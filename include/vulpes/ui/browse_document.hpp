@@ -28,7 +28,8 @@ class BrowseDocument final : public DocumentSurface {
     BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
                    const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr,
                    const appmeta::ApplicationMetadata* metadata = nullptr,
-                   std::optional<appmeta::TableMetadata> table_override = std::nullopt);
+                   std::optional<appmeta::TableMetadata> table_override = std::nullopt,
+                   model::DatasetLifecycle* lifecycle = nullptr);
 
     [[nodiscard]] auto is_dirty() const noexcept -> bool override;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;

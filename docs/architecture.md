@@ -325,11 +325,21 @@ overwrite handling. PDFio and the embedded Unicode font are private report
 implementation details; they are not terminal, widget, or application-metadata
 dependencies. See ADR 0029.
 
+### Lua business logic
+
+`script::Runtime` is an optional application extension that consumes validated
+`script::Definition` values from SQLite-resident metadata. Lua implementation
+details stay private to `src/script`; datasets know only the owned-data
+`model::DatasetLifecycle` contract. The runtime gives each hook a fresh,
+resource-bounded interpreter and a plain record/context table, never a raw
+SQLite handle, UI widget, terminal object, filesystem, or network capability.
+Dataset write transactions enclose record hooks and SQL, while
+`ApplicationRuntime` owns top-level command hooks. See ADR 0030.
+
 ## Deferred decisions
 
 - Terminal library versus small native ANSI/Windows backends.
 - Unicode segmentation and display-width library.
 - Dataset public API and concurrency model.
-- Lua runtime and sandbox policy.
 
 Each requires a focused cross-platform spike and an ADR before adoption.

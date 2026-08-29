@@ -22,6 +22,13 @@ namespace {
            type.find("TEXT") != std::string::npos;
 }
 
+[[nodiscard]] auto is_blob_field(const db::FieldSchema& field) -> bool {
+    auto type = field.declared_type;
+    std::ranges::transform(type, type.begin(),
+                           [](unsigned char value) { return static_cast<char>(std::toupper(value)); });
+    return type.contains("BLOB");
+}
+
 [[nodiscard]] auto operator_sql(FilterOperator comparison) -> std::string_view {
     switch (comparison) {
     case FilterOperator::equal:
@@ -71,8 +78,8 @@ namespace {
 
 } // namespace
 
-Dataset::Dataset(db::Database& database, db::TableSchema schema, std::size_t page_size)
-    : database_{&database}, schema_{std::move(schema)}, page_size_{page_size} {
+Dataset::Dataset(db::Database& database, db::TableSchema schema, std::size_t page_size, DatasetLifecycle* lifecycle)
+    : database_{&database}, schema_{std::move(schema)}, page_size_{page_size}, lifecycle_{lifecycle} {
     if (schema_.name.empty())
         throw Error{ErrorCategory::database, "dataset requires a table or view name"};
     if (page_size_ == 0)
@@ -346,10 +353,14 @@ auto Dataset::referenced_schema(const db::ForeignKeySchema& foreign_key) const -
 
 void Dataset::save() {
     ensure_editing();
-    validate_draft();
-
     db::Transaction transaction{*database_};
     if (mode_ == DatasetMode::insert) {
+        auto record = draft_record(true);
+        if (lifecycle_ != nullptr)
+            lifecycle_->invoke(DatasetHook::before_insert, record);
+        apply_record(record);
+        validate_draft();
+
         std::vector<std::size_t> fields;
         for (std::size_t index = 0; index < draft_.size(); ++index) {
             if (draft_[index])
@@ -377,7 +388,15 @@ void Dataset::save() {
                 statement.bind(static_cast<int>(position + 1), *draft_[fields[position]]);
             statement.execute();
         }
-    } else if (!modified_fields_.empty()) {
+    } else {
+        auto record = draft_record(true);
+        if (lifecycle_ != nullptr)
+            lifecycle_->invoke(DatasetHook::before_update, record);
+        apply_record(record);
+        validate_draft();
+    }
+
+    if (mode_ == DatasetMode::edit && !modified_fields_.empty()) {
         std::string sql{"UPDATE " + db::detail::quote_identifier(schema_.name) + " SET "};
         for (std::size_t position = 0; position < modified_fields_.size(); ++position) {
             if (position != 0)
@@ -409,6 +428,10 @@ void Dataset::save() {
         statement.execute();
         if (database_->changes() != 1)
             throw Error{ErrorCategory::database, "record was changed or deleted by another operation"};
+
+        auto record = draft_record(false);
+        if (lifecycle_ != nullptr)
+            lifecycle_->invoke(DatasetHook::after_update, record);
     }
     transaction.commit();
     reset_edit_state();
@@ -427,6 +450,11 @@ void Dataset::erase() {
     if (!identity)
         throw Error{ErrorCategory::database, "the current record has no stable identity"};
 
+    db::Transaction transaction{*database_};
+    auto record = draft_record(false);
+    if (lifecycle_ != nullptr)
+        lifecycle_->invoke(DatasetHook::before_delete, record);
+
     std::string sql{"DELETE FROM " + db::detail::quote_identifier(schema_.name) + " WHERE "};
     std::vector<db::Value> values;
     for (std::size_t position = 0; position < identity->fields.size(); ++position) {
@@ -442,7 +470,6 @@ void Dataset::erase() {
         }
     }
 
-    db::Transaction transaction{*database_};
     auto statement = database_->prepare(sql);
     for (std::size_t index = 0; index < values.size(); ++index)
         statement.bind(static_cast<int>(index + 1), values[index]);
@@ -588,6 +615,45 @@ void Dataset::validate_draft() const {
         const auto& field = schema_.fields[index];
         if (!field.nullable && (!draft_[index] || draft_[index]->is_null()))
             throw Error{ErrorCategory::validation, "field cannot be NULL: " + field.name};
+    }
+}
+
+auto Dataset::draft_record(bool writable) const -> DatasetRecord {
+    std::vector<DatasetRecordField> fields;
+    fields.reserve(schema_.fields.size());
+    for (std::size_t index = 0; index < schema_.fields.size(); ++index) {
+        const auto& field = schema_.fields[index];
+        std::optional<db::Value> value;
+        if (mode_ == DatasetMode::browse) {
+            const auto row = current();
+            if (!row)
+                throw Error{ErrorCategory::database, "the current record is unavailable"};
+            value = row->at(field.name);
+        } else {
+            value = draft_.at(index);
+        }
+        fields.push_back({.name = field.name,
+                          .value = std::move(value),
+                          .writable = writable && !field.hidden && !field.generated &&
+                                      !(mode_ == DatasetMode::edit && field.primary_key),
+                          .blob = is_blob_field(field)});
+    }
+    return {schema_.name, std::move(fields)};
+}
+
+void Dataset::apply_record(const DatasetRecord& record) {
+    if (record.table() != schema_.name)
+        throw Error{ErrorCategory::validation, "script lifecycle record targets a different table"};
+    if (record.fields().size() != schema_.fields.size())
+        throw Error{ErrorCategory::validation, "script lifecycle record has an incompatible field set"};
+
+    for (const auto& field : record.fields()) {
+        const auto index = field_index(field.name);
+        if (draft_.at(index) == field.value)
+            continue;
+        if (!field.value)
+            throw Error{ErrorCategory::validation, "script cannot unset a dataset field: " + field.name};
+        set(field.name, *field.value);
     }
 }
 

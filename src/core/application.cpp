@@ -3,6 +3,7 @@
 #include "vulpes/appmeta/loader.hpp"
 #include "vulpes/core/error.hpp"
 #include "vulpes/db/database.hpp"
+#include "vulpes/script/runtime.hpp"
 
 #include <algorithm>
 
@@ -18,6 +19,8 @@ namespace {
 } // namespace
 
 auto ApplicationRuntime::execute(const Command& command) const -> CommandResponse {
+    if (scripts_ != nullptr && command.id != CommandId::none)
+        scripts_->on_command(command.name);
     return execute(command, 0);
 }
 

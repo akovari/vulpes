@@ -14,11 +14,12 @@ depend on it.
 ## Decision
 
 Application metadata uses reserved `_app_*` SQLite tables. `_app_schema` owns a
-single positive schema version. The current version is 2:
+single positive schema version. The current version is 3:
 
 - version 1 introduces settings, named forms, and form-field presentation and
   lookup overrides;
 - version 2 introduces named views, reports, commands, menus, and menu items.
+- version 3 introduces ordered Lua business-logic hook definitions.
 
 `migrate_application_metadata` is the only schema-creation/upgrade entry point.
 It applies ordered migrations in one SQLite transaction and is idempotent at

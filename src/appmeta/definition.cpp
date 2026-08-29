@@ -74,6 +74,7 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
     require_unique_names(commands, "command");
     require_unique_names(menus, "menu");
     require_unique_names(reports, "report");
+    require_unique_names(scripts, "script");
 
     std::set<std::string, std::less<>> default_tables;
     for (const auto& form_definition : forms) {
@@ -117,6 +118,37 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
             report_definition.row_limit > 100'000) {
             throw Error{ErrorCategory::metadata,
                         "report has an invalid label, query, or row limit: " + report_definition.name};
+        }
+    }
+    for (const auto& script_definition : scripts) {
+        if (!is_command_name(script_definition.name) || script_definition.source.empty() ||
+            script_definition.source.size() > 64U * 1024U || script_definition.position > 100'000U) {
+            throw Error{ErrorCategory::metadata,
+                        "script has an invalid name, source, or position: " + script_definition.name};
+        }
+        switch (script_definition.hook) {
+        case script::Hook::on_open:
+            if (script_definition.table || script_definition.command)
+                throw Error{ErrorCategory::metadata, "on_open scripts cannot have a table or command scope"};
+            break;
+        case script::Hook::before_insert:
+        case script::Hook::before_update:
+        case script::Hook::after_update:
+        case script::Hook::before_delete:
+            if (!script_definition.table || script_definition.command || !has_table(schema, *script_definition.table) ||
+                is_application_metadata_table(*script_definition.table)) {
+                throw Error{ErrorCategory::metadata,
+                            "record scripts require one ordinary SQLite table and no command scope: " +
+                                script_definition.name};
+            }
+            break;
+        case script::Hook::on_command:
+            if (script_definition.table ||
+                (script_definition.command && !is_command_name(*script_definition.command))) {
+                throw Error{ErrorCategory::metadata,
+                            "on_command scripts may have only a lowercase command scope: " + script_definition.name};
+            }
+            break;
         }
     }
     for (const auto& menu : menus) {

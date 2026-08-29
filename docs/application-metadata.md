@@ -19,7 +19,7 @@ alter business tables, is safe to repeat, and refuses metadata from a newer
 runtime version. Merely opening an ordinary database performs no migration and
 no metadata write.
 
-The current tables are:
+The current metadata schema version is 3. Its tables are:
 
 - `_app_schema`: one metadata schema-version row;
 - `_app_settings`: application key/value settings, including the optional
@@ -30,7 +30,8 @@ The current tables are:
 - `_app_reports`: named, bounded, read-only SQL queries;
 - `_app_commands`: semantic command names and their Vulpes command text; and
 - `_app_menus` and `_app_menu_items`: ordered app-home menus that reference
-  named commands.
+  named commands; and
+- `_app_scripts`: ordered optional Lua business-logic hooks.
 
 Use lowercase ASCII letters, digits, hyphens, and underscores for command names.
 Lookup search fields are stored as a JSON string array. Boolean metadata values
@@ -39,6 +40,9 @@ are `0`, `1`, or `NULL` when an override is absent. Field formats are
 `currency`; the temporal and currency requirements in
 [ADR 0026](adr/0026-application-presentation-metadata-and-relationships.md)
 still apply.
+
+See [scripting.md](scripting.md) for hook scope, record values, transaction
+semantics, script limits, and the trusted-code policy.
 
 ## Commands and launch behavior
 

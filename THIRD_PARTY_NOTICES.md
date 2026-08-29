@@ -14,6 +14,7 @@ all bundled dependencies.
 | dacap/clip | Clipboard adapter | MIT, [dacap/clip](https://github.com/dacap/clip) |
 | CPP-Terminal | Terminal host adapter | MIT, [jupyter-xeus/cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) |
 | zlib | PDF stream compression | zlib License, [madler/zlib](https://github.com/madler/zlib) |
+| Lua | Sandboxed business-logic runtime | MIT, [lua.org](https://www.lua.org/license.html) |
 | PDFio | PDF export implementation | Apache-2.0, [michaelrsweet/pdfio](https://github.com/michaelrsweet/pdfio) |
 | Roboto Regular | Embedded Unicode PDF font | SIL Open Font License 1.1, Copyright 2011 The Roboto Project Authors, [googlefonts/roboto-classic](https://github.com/googlefonts/roboto-classic) |
 

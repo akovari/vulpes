@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/appmeta/metadata.hpp"
+#include "vulpes/script/hook.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -70,6 +71,7 @@ class ApplicationDefinition {
     std::vector<CommandDefinition> commands;
     std::vector<MenuDefinition> menus;
     std::vector<ReportDefinition> reports;
+    std::vector<script::Definition> scripts;
     std::vector<SettingDefinition> settings;
 
     [[nodiscard]] auto empty() const noexcept -> bool { return schema_version == 0; }

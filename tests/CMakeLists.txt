@@ -15,7 +15,9 @@ add_executable(vulpes_tests
     examples/inventory_test.cpp
     examples/workshop_test.cpp
     model/dataset_test.cpp
+    model/lifecycle_test.cpp
     report/export_test.cpp
+    script/runtime_test.cpp
     ui/button_test.cpp
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp

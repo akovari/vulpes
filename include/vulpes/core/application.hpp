@@ -12,6 +12,10 @@ namespace vulpes::db {
 class Database;
 }
 
+namespace vulpes::script {
+class Runtime;
+}
+
 namespace vulpes::core {
 
 enum class CommandOutcome {
@@ -53,8 +57,9 @@ struct CommandResponse {
 
 class ApplicationRuntime {
   public:
-    explicit ApplicationRuntime(db::Database& database, const appmeta::ApplicationDefinition* definition = nullptr)
-        : database_{&database}, definition_{definition} {}
+    explicit ApplicationRuntime(db::Database& database, const appmeta::ApplicationDefinition* definition = nullptr,
+                                script::Runtime* scripts = nullptr)
+        : database_{&database}, definition_{definition}, scripts_{scripts} {}
 
     [[nodiscard]] auto execute(const Command& command) const -> CommandResponse;
 
@@ -63,6 +68,7 @@ class ApplicationRuntime {
 
     db::Database* database_;
     const appmeta::ApplicationDefinition* definition_;
+    script::Runtime* scripts_;
 };
 
 } // namespace vulpes::core

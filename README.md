@@ -262,6 +262,12 @@ ICU MessageFormat supplies translated plural/select grammar, and ICU/CLDR
 supplies locale-aware numeric display. Currency and date/time presentation stay
 explicit metadata policies rather than being guessed from SQLite declarations.
 
+Optional metadata-resident Lua hooks can normalize or validate record drafts and
+guard top-level semantic commands without exposing SQLite, terminal, or UI
+objects. They are trusted application code with strict per-invocation memory and
+instruction limits, not a sandbox for untrusted databases. See
+[docs/scripting.md](docs/scripting.md).
+
 The inventory and workshop acceptance tests exercise only generic Vulpes
 capabilities: schema-driven datasets, transactional editing, searchable
 relationships and drill-down, SQL results rendered through Grid, filtering,

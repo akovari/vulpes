@@ -2,6 +2,7 @@
 
 #include "vulpes/db/row.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/model/lifecycle.hpp"
 
 #include <array>
 #include <cstddef>
@@ -52,7 +53,8 @@ struct RelatedRecord {
 // depends on SQLite statement lifetime or assembles raw SQL.
 class Dataset {
   public:
-    Dataset(db::Database& database, db::TableSchema schema, std::size_t page_size = 100);
+    Dataset(db::Database& database, db::TableSchema schema, std::size_t page_size = 100,
+            DatasetLifecycle* lifecycle = nullptr);
 
     [[nodiscard]] auto schema() const noexcept -> const db::TableSchema& { return schema_; }
     [[nodiscard]] auto rows() const noexcept -> const std::vector<db::Row>& { return rows_; }
@@ -100,6 +102,8 @@ class Dataset {
     void ensure_editable() const;
     void ensure_editing() const;
     void validate_draft() const;
+    [[nodiscard]] auto draft_record(bool writable) const -> DatasetRecord;
+    void apply_record(const DatasetRecord& record);
     void reset_edit_state() noexcept;
     void refresh_after_write();
     [[nodiscard]] auto query_where_clause(std::vector<db::Value>& values) const -> std::string;
@@ -125,6 +129,7 @@ class Dataset {
     std::vector<std::optional<db::Value>> draft_;
     std::vector<std::size_t> modified_fields_;
     std::optional<RowIdentity> original_identity_;
+    DatasetLifecycle* lifecycle_;
 };
 
 } // namespace vulpes::model

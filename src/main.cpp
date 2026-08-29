@@ -9,6 +9,7 @@
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
 #include "vulpes/report/export.hpp"
+#include "vulpes/script/runtime.hpp"
 #include "vulpes/terminal/capabilities.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
@@ -63,11 +64,12 @@ auto load_messages(const std::string& locale, const std::vector<std::string>& ca
 void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table,
             const vulpes::core::Localizer& messages, const vulpes::ui::Theme& theme,
             const vulpes::appmeta::ApplicationMetadata* metadata = nullptr,
-            std::optional<vulpes::appmeta::TableMetadata> table_override = std::nullopt) {
+            std::optional<vulpes::appmeta::TableMetadata> table_override = std::nullopt,
+            vulpes::model::DatasetLifecycle* lifecycle = nullptr) {
     vulpes::terminal::ConsoleTerminal terminal;
     vulpes::core::SystemClipboard clipboard;
     vulpes::ui::BrowseDocument document{
-        database, table, messages, theme, &clipboard, metadata, std::move(table_override)};
+        database, table, messages, theme, &clipboard, metadata, std::move(table_override), lifecycle};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 6}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "6"}})}
         .run();
@@ -164,6 +166,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     refresh_recent_databases();
     std::optional<vulpes::db::Database> database;
     std::optional<vulpes::appmeta::ApplicationDefinition> application_definition;
+    std::optional<vulpes::script::Runtime> scripts;
     using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SchemaDocument,
                                           vulpes::ui::SqlDocument, vulpes::ui::ReportDocument>;
     std::unordered_map<std::string, WorkspaceSurface> surfaces;
@@ -181,7 +184,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database, *table,
                                      messages, theme, &clipboard,
                                      application_definition ? &application_definition->presentation : nullptr,
-                                     std::move(table_override));
+                                     std::move(table_override), scripts ? &*scripts : nullptr);
             }
             return;
         case vulpes::ui::DocumentKind::schema:
@@ -205,15 +208,22 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         }
     };
     const auto open_database = [&](const std::filesystem::path& database_path, vulpes::db::OpenMode open_mode) {
-        surfaces.clear();
-        application_definition.reset();
-        database.emplace(database_path, open_mode);
-        application_definition = vulpes::appmeta::load_application_definition(*database);
-        auto tables = vulpes::db::inspect_schema(*database);
-        if (!application_definition->empty()) {
+        vulpes::db::Database opened_database{database_path, open_mode};
+        auto definition = vulpes::appmeta::load_application_definition(opened_database);
+        std::optional<vulpes::script::Runtime> opened_scripts;
+        if (!definition.empty()) {
+            opened_scripts.emplace(definition.scripts);
+            opened_scripts->on_open();
+        }
+        auto tables = vulpes::db::inspect_schema(opened_database);
+        if (!definition.empty()) {
             std::erase_if(tables,
                           [](const auto& table) { return vulpes::appmeta::is_application_metadata_table(table.name); });
         }
+        surfaces.clear();
+        database.emplace(std::move(opened_database));
+        application_definition = std::move(definition);
+        scripts = std::move(opened_scripts);
         workspace.set_database(path_text(database_path), std::move(tables),
                                open_mode == vulpes::db::OpenMode::read_only);
         if (!application_definition->empty()) {
@@ -313,7 +323,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                     }
                 } else {
                     vulpes::core::ApplicationRuntime application{
-                        *database, application_definition ? &*application_definition : nullptr};
+                        *database, application_definition ? &*application_definition : nullptr,
+                        scripts ? &*scripts : nullptr};
                     const auto response = application.execute(command);
                     switch (response.outcome) {
                     case vulpes::core::CommandOutcome::help:
@@ -434,8 +445,13 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
     auto messages = load_messages(locale, catalog_paths);
     const auto application_definition = vulpes::appmeta::load_application_definition(database);
-    vulpes::core::ApplicationRuntime application{database,
-                                                 application_definition.empty() ? nullptr : &application_definition};
+    std::optional<vulpes::script::Runtime> scripts;
+    if (!application_definition.empty()) {
+        scripts.emplace(application_definition.scripts);
+        scripts->on_open();
+    }
+    vulpes::core::ApplicationRuntime application{
+        database, application_definition.empty() ? nullptr : &application_definition, scripts ? &*scripts : nullptr};
     std::cout << messages.translate("application.title") << " " << vulpes::build::version << "\n\n";
 
     vulpes::core::Command command{.id = vulpes::core::CommandId::tables};
@@ -461,7 +477,8 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::browse:
         browse(database, *response.table, messages, theme,
                application_definition.empty() ? nullptr : &application_definition.presentation,
-               response.form ? std::optional{response.form->presentation} : std::nullopt);
+               response.form ? std::optional{response.form->presentation} : std::nullopt,
+               scripts ? &*scripts : nullptr);
         break;
     case vulpes::core::CommandOutcome::sql:
         sql_console(database, messages, theme);

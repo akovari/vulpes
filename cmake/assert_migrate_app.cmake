@@ -13,7 +13,7 @@ execute_process(
 if(NOT migrate_result EQUAL 0)
     message(FATAL_ERROR "application metadata migration failed: ${migrate_error}")
 endif()
-if(NOT migrate_output MATCHES "metadata schema 2")
+if(NOT migrate_output MATCHES "metadata schema 3")
     message(FATAL_ERROR "application metadata migration returned unexpected output: ${migrate_output}")
 endif()
 

@@ -209,10 +209,10 @@ on Windows, Linux, and macOS.
 
 ## Lua business logic
 
-- [ ] Select/package Lua and define a deliberately small, safe host API.
-- [ ] Add lifecycle hooks: `on_open`, `before_insert`, `before_update`,
+- [x] Select/package Lua 5.5 and define a deliberately small, safe host API.
+- [x] Add lifecycle hooks: `on_open`, `before_insert`, `before_update`,
   `after_update`, `before_delete`, and `on_command`.
-- [ ] Define script storage, error presentation, transaction interaction, and
+- [x] Define script storage, error presentation, transaction interaction, and
   testing/sandbox policy.
 - [ ] GUI/web renderers, networking, designer, and extension ecosystem only after
   the core browse/edit workflow is demonstrably strong.

@@ -26,13 +26,13 @@ TEST_CASE("application metadata migrations are transactional versioned and idemp
           vulpes::appmeta::current_application_schema_version);
     CHECK_NOTHROW(vulpes::appmeta::migrate_application_metadata(database));
 
-    database.execute("INSERT INTO _app_settings(key, value) VALUES('title', 'Workshop');"
+    database.execute("INSERT INTO _app_settings(key, value) VALUES('title', 'Workshop');DROP TABLE _app_scripts;"
                      "DROP TABLE _app_menu_items; DROP TABLE _app_menus; DROP TABLE _app_commands;"
                      "DROP TABLE _app_reports; DROP TABLE _app_views;"
                      "UPDATE _app_schema SET version = 1 WHERE singleton = 1;");
     vulpes::appmeta::migrate_application_metadata(database);
 
-    CHECK(*vulpes::appmeta::application_schema_version(database) == 2);
+    CHECK(*vulpes::appmeta::application_schema_version(database) == 3);
     auto setting = database.prepare("SELECT value FROM _app_settings WHERE key = 'title'");
     REQUIRE(setting.step());
     CHECK(setting.column(0).as_string() == "Workshop");
@@ -60,7 +60,9 @@ TEST_CASE("loader builds and validates complete SQLite resident application meta
                      "INSERT INTO _app_commands VALUES('prices', 'Prices', 'report prices');"
                      "INSERT INTO _app_menus VALUES('main', 'Main', 0);"
                      "INSERT INTO _app_menu_items VALUES('main', 0, 'Products', 'products');"
-                     "INSERT INTO _app_menu_items VALUES('main', 1, 'Prices', 'prices');");
+                     "INSERT INTO _app_menu_items VALUES('main', 1, 'Prices', 'prices');"
+                     "INSERT INTO _app_scripts VALUES('normalize-product', 'before_insert', 'product', NULL, "
+                     "'record.name = string.upper(record.name)', 0);");
 
     const auto definition = vulpes::appmeta::load_application_definition(database);
 
@@ -76,6 +78,8 @@ TEST_CASE("loader builds and validates complete SQLite resident application meta
     REQUIRE(definition.report("prices") != nullptr);
     REQUIRE(definition.menus.size() == 1);
     CHECK(definition.menus.front().items.size() == 2);
+    REQUIRE(definition.scripts.size() == 1);
+    CHECK(definition.scripts.front().table == "product");
     REQUIRE(definition.presentation.table("product") != nullptr);
 }
 
@@ -87,7 +91,19 @@ TEST_CASE("loader rejects future versions and metadata that contradicts SQLite s
                      "INSERT INTO _app_form_fields(form_name, field_name) VALUES('product', 'missing');");
     CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
 
-    database.execute("DELETE FROM _app_form_fields; UPDATE _app_schema SET version = 3 WHERE singleton = 1;");
+    database.execute("DELETE FROM _app_form_fields; UPDATE _app_schema SET version = 4 WHERE singleton = 1;");
     CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
     CHECK_THROWS_AS(vulpes::appmeta::migrate_application_metadata(database), vulpes::Error);
+}
+
+TEST_CASE("loader rejects invalid Lua script scope and source metadata", "[appmeta][script]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE product(id INTEGER PRIMARY KEY, name TEXT)");
+    vulpes::appmeta::migrate_application_metadata(database);
+    database.execute("INSERT INTO _app_scripts VALUES('wrong-scope', 'before_insert', 'missing', NULL, 'return', 0)");
+    CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
+
+    database.execute("DELETE FROM _app_scripts;"
+                     "INSERT INTO _app_scripts VALUES('wrong-command', 'on_command', NULL, 'Bad Name', 'return', 0)");
+    CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
 }

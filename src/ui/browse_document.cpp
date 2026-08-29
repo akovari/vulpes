@@ -102,9 +102,9 @@ auto table_label(const appmeta::ApplicationMetadata* metadata, const appmeta::Ta
 BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, const core::Localizer& messages,
                                const Theme& theme, core::Clipboard* clipboard,
                                const appmeta::ApplicationMetadata* metadata,
-                               std::optional<appmeta::TableMetadata> table_override)
+                               std::optional<appmeta::TableMetadata> table_override, model::DatasetLifecycle* lifecycle)
     : messages_{&messages}, metadata_{metadata}, table_override_{std::move(table_override)}, theme_{&theme},
-      clipboard_{clipboard}, dataset_{database, std::move(table)}, controller_{dataset_},
+      clipboard_{clipboard}, dataset_{database, std::move(table), 100, lifecycle}, controller_{dataset_},
       grid_{dataset_,
             table_label(metadata, table_override_ ? &*table_override_ : nullptr, dataset_.schema().name),
             messages.translate(database.is_read_only() ? "browse.read_only_footer" : "browse.footer"),

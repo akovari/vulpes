@@ -17,6 +17,9 @@ platform and terminal-host verification items in `TODO.md` are complete.
   menus, commands, reports, and `.vulpes` application mode.
 - Named read-only reports and safe exports to CSV, JSON, text, HTML, and
   Unicode-capable PDF.
+- Optional SQLite-resident Lua hooks for bounded record validation/normalization
+  and top-level semantic-command guards. Scripts receive no SQLite, UI,
+  filesystem, network, or process API.
 - CMake/CPack ZIP archives with resolved non-system runtime libraries,
   translations, SHA-256 sidecars, operational documentation, notice inventory,
   and reviewed license texts.
@@ -35,5 +38,5 @@ runtime upgrade; see [operations.md](operations.md).
   evidence before publication.
 - Windows code signing, macOS notarization, graphical installers, and
   distribution-native Linux packages are not included.
-- Lua scripting, GUI/web renderers, networking, visual form design, and a
-  plugin ecosystem remain deliberately deferred.
+- GUI/web renderers, networking, visual form design, and a plugin ecosystem
+  remain deliberately deferred.

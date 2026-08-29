@@ -1,9 +1,12 @@
 #include "vulpes/appmeta/loader.hpp"
 #include "vulpes/core/application.hpp"
 #include "vulpes/core/command.hpp"
+#include "vulpes/core/error.hpp"
 #include "vulpes/db/database.hpp"
+#include "vulpes/script/runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <string_view>
 
 using namespace vulpes;
 
@@ -107,4 +110,23 @@ TEST_CASE("application runtime returns semantic command failures", "[core][appli
           core::CommandOutcome::definition_not_found);
     CHECK(application.execute(core::parse_command("export report xml result.xml")).outcome ==
           core::CommandOutcome::definition_not_found);
+}
+
+TEST_CASE("application runtime invokes Lua command hooks before semantic dispatch", "[core][application][script]") {
+    db::Database database{":memory:"};
+    database.execute("CREATE TABLE customer(id INTEGER PRIMARY KEY)");
+    script::Runtime scripts{{{.name = "guard-browse",
+                              .hook = script::Hook::on_command,
+                              .command = "browse",
+                              .source = "error('browse is closed for maintenance')"}}};
+    core::ApplicationRuntime application{database, nullptr, &scripts};
+
+    CHECK(application.execute(core::parse_command("tables")).outcome == core::CommandOutcome::tables);
+    try {
+        static_cast<void>(application.execute(core::parse_command("browse customer")));
+        FAIL("the command hook should prevent dispatch");
+    } catch (const Error& error) {
+        CHECK(error.category() == ErrorCategory::script);
+        CHECK(std::string_view{error.what()}.contains("maintenance"));
+    }
 }

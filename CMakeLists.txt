@@ -36,6 +36,9 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(clip CONFIG REQUIRED)
 find_package(ICU 78.3 REQUIRED COMPONENTS data i18n uc)
 find_package(ZLIB REQUIRED)
+# Lua is isolated behind script::Runtime. The C API stays private to that
+# implementation and no Vulpes public API exposes Lua state or values.
+find_package(Lua REQUIRED)
 
 # CPP-Terminal owns host-specific raw-mode, keyboard, and resize handling.
 # Keep it behind Vulpes' Terminal interface so widgets and the runtime remain
@@ -129,9 +132,12 @@ add_library(vulpes_core
     src/db/transaction.cpp
     src/db/value.cpp
     src/model/dataset.cpp
+    src/model/lifecycle.cpp
     src/report/export.cpp
     src/report/pdf_export.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/generated/pdf_font_data.cpp
+    src/script/hook.cpp
+    src/script/runtime.cpp
     src/terminal/ansi_input.cpp
     src/terminal/ansi_encoder.cpp
     src/terminal/capabilities.cpp
@@ -179,7 +185,8 @@ target_include_directories(vulpes_core
 target_link_libraries(vulpes_core
     PUBLIC vulpes_options
     PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json cpp-terminal::cpp-terminal
-            clip::clip ICU::data ICU::i18n ICU::uc vulpes_pdfio)
+            clip::clip ICU::data ICU::i18n ICU::uc vulpes_pdfio ${LUA_LIBRARIES})
+target_include_directories(vulpes_core PRIVATE ${LUA_INCLUDE_DIR})
 target_compile_definitions(vulpes_core PRIVATE VULPES_BUILDING_LIBRARY)
 
 configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)
@@ -253,7 +260,16 @@ install(RUNTIME_DEPENDENCY_SET vulpes_runtime_dependencies
         "^([Kk][Ee][Rr][Nn][Ee][Ll][Bb][Aa][Ss][Ee]|[Nn][Tt][Dd][Ll][Ll]|[Uu][Cc][Rr][Tt][Bb][Aa][Ss][Ee][Dd]?|[Mm][Ss][Vv][Cc][Pp].*|[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*)\\.[Dd][Ll][Ll]$"
     POST_EXCLUDE_REGEXES ".*[\\\\/]System32[\\\\/].*" ".*[\\\\/]usr[\\\\/]lib[\\\\/].*")
 install(DIRECTORY translations DESTINATION ${CMAKE_INSTALL_DATADIR}/vulpes)
-install(FILES LICENSE THIRD_PARTY_NOTICES.md docs/operations.md docs/releasing.md docs/release-notes.md
+install(FILES
+    LICENSE
+    THIRD_PARTY_NOTICES.md
+    docs/application-metadata.md
+    docs/exporting.md
+    docs/localization.md
+    docs/operations.md
+    docs/releasing.md
+    docs/release-notes.md
+    docs/scripting.md
     DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 function(vulpes_install_license source_file installed_name)
@@ -272,6 +288,7 @@ if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
     vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/dacap-clip/copyright" "dacap-clip.txt")
     vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/icu/copyright" "icu.txt")
     vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/zlib/copyright" "zlib.txt")
+    vulpes_install_license("${VULPES_VCPKG_SHARE_DIRECTORY}/lua/copyright" "lua.txt")
 else()
     message(WARNING "vcpkg install metadata is unavailable; package license bundle is incomplete")
 endif()

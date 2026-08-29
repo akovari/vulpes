@@ -127,6 +127,21 @@ void migrate_one_to_two(db::Database& database) {
                      "UPDATE _app_schema SET version = 2 WHERE singleton = 1;");
 }
 
+void migrate_two_to_three(db::Database& database) {
+    database.execute(
+        "CREATE TABLE _app_scripts("
+        "name TEXT PRIMARY KEY,"
+        "hook TEXT NOT NULL CHECK(hook IN ('on_open', 'before_insert', 'before_update', 'after_update', "
+        "'before_delete', 'on_command')),"
+        "table_name TEXT, command_name TEXT, source TEXT NOT NULL CHECK(length(source) BETWEEN 1 AND 65536),"
+        "position INTEGER NOT NULL DEFAULT 0 CHECK(position BETWEEN 0 AND 100000),"
+        "CHECK((hook = 'on_open' AND table_name IS NULL AND command_name IS NULL) OR "
+        "(hook IN ('before_insert', 'before_update', 'after_update', 'before_delete') "
+        "AND table_name IS NOT NULL AND command_name IS NULL) OR "
+        "(hook = 'on_command' AND table_name IS NULL)));"
+        "UPDATE _app_schema SET version = 3 WHERE singleton = 1;");
+}
+
 void load_settings(db::Database& database, ApplicationDefinition& definition) {
     auto statement = database.prepare("SELECT key, value FROM _app_settings ORDER BY key");
     while (statement.step())
@@ -209,6 +224,22 @@ void load_version_two(db::Database& database, ApplicationDefinition& definition)
     }
 }
 
+void load_version_three(db::Database& database, ApplicationDefinition& definition) {
+    auto scripts = database.prepare(
+        "SELECT name, hook, table_name, command_name, source, position FROM _app_scripts ORDER BY position, name");
+    while (scripts.step()) {
+        const auto hook = script::parse_hook(scripts.column(1).as_string());
+        if (!hook)
+            throw Error{ErrorCategory::metadata, "unknown application script hook"};
+        definition.scripts.push_back({.name = scripts.column(0).as_string(),
+                                      .hook = *hook,
+                                      .table = optional_string(scripts.column(2)),
+                                      .command = optional_string(scripts.column(3)),
+                                      .source = scripts.column(4).as_string(),
+                                      .position = static_cast<std::size_t>(scripts.column(5).as_int())});
+    }
+}
+
 } // namespace
 
 auto application_schema_version(db::Database& database) -> std::optional<int> {
@@ -248,6 +279,10 @@ void migrate_application_metadata(db::Database& database) {
         migrate_one_to_two(database);
         version = 2;
     }
+    if (version == 2) {
+        migrate_two_to_three(database);
+        version = 3;
+    }
     if (version != current_application_schema_version)
         throw Error{ErrorCategory::metadata, "no application metadata migration path is available"};
     transaction.commit();
@@ -265,6 +300,7 @@ auto load_application_definition(db::Database& database) -> ApplicationDefinitio
     load_settings(database, definition);
     load_forms(database, definition);
     load_version_two(database, definition);
+    load_version_three(database, definition);
     definition.validate(db::inspect_schema(database));
     return definition;
 }
