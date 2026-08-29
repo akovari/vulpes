@@ -100,6 +100,10 @@ class Dataset {
     auto clear_filters() -> Dataset&;
     auto clear_search() -> Dataset&;
     void save_current_filter(std::string_view name);
+    // Replaces the document-owned preset catalogue after validating every
+    // semantic field, value, and name. Metadata loaders use this boundary so
+    // they do not have to reconstruct SQL or reach into Dataset state.
+    void set_saved_filters(std::vector<SavedFilter> filters);
     [[nodiscard]] auto apply_saved_filter(std::string_view name) -> bool;
     [[nodiscard]] auto remove_saved_filter(std::string_view name) -> bool;
     [[nodiscard]] auto aggregate(std::span<const AggregateDefinition> definitions) const
@@ -131,6 +135,7 @@ class Dataset {
     [[nodiscard]] auto field_index(std::string_view field) const -> std::size_t;
     void validate_field(std::string_view field) const;
     void validate_filter(const Filter& filter) const;
+    void validate_saved_filter(const SavedFilter& filter) const;
     void validate_aggregate(const AggregateDefinition& definition) const;
     void ensure_editable() const;
     void ensure_editing() const;

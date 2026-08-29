@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <set>
 #include <type_traits>
 #include <utility>
 
@@ -186,17 +187,23 @@ auto Dataset::clear_search() -> Dataset& {
 }
 
 void Dataset::save_current_filter(std::string_view name) {
-    if (name.empty() || name.size() > 128 ||
-        std::ranges::any_of(name, [](unsigned char character) { return character < 0x20U || character == 0x7FU; })) {
-        throw Error{ErrorCategory::validation, "saved filter names must contain 1 to 128 printable characters"};
-    }
-
     SavedFilter saved{.name = std::string{name}, .filters = filters_, .search = search_};
+    validate_saved_filter(saved);
     const auto existing = std::ranges::find(saved_filters_, name, &SavedFilter::name);
     if (existing == saved_filters_.end())
         saved_filters_.push_back(std::move(saved));
     else
         *existing = std::move(saved);
+}
+
+void Dataset::set_saved_filters(std::vector<SavedFilter> filters) {
+    std::set<std::string, std::less<>> names;
+    for (const auto& filter : filters) {
+        validate_saved_filter(filter);
+        if (!names.insert(filter.name).second)
+            throw Error{ErrorCategory::validation, "saved filter names must be unique"};
+    }
+    saved_filters_ = std::move(filters);
 }
 
 auto Dataset::apply_saved_filter(std::string_view name) -> bool {
@@ -247,7 +254,7 @@ auto Dataset::aggregate(std::span<const AggregateDefinition> definitions) const 
     std::vector<AggregateResult> results;
     results.reserve(definitions.size());
     for (std::size_t index = 0; index < definitions.size(); ++index)
-        results.push_back({.definition = definitions[index], .value = query.column(index)});
+        results.push_back({.definition = definitions[index], .value = query.column(static_cast<int>(index))});
     return results;
 }
 
@@ -684,6 +691,16 @@ void Dataset::validate_filter(const Filter& filter) const {
         filter.comparison != FilterOperator::not_equal) {
         throw Error{ErrorCategory::validation, "NULL can only be compared using equal or not_equal"};
     }
+}
+
+void Dataset::validate_saved_filter(const SavedFilter& filter) const {
+    if (filter.name.empty() || filter.name.size() > 128 ||
+        std::ranges::any_of(filter.name,
+                            [](unsigned char character) { return character < 0x20U || character == 0x7FU; })) {
+        throw Error{ErrorCategory::validation, "saved filter names must contain 1 to 128 printable characters"};
+    }
+    for (const auto& term : filter.filters)
+        validate_filter(term);
 }
 
 void Dataset::validate_aggregate(const AggregateDefinition& definition) const {

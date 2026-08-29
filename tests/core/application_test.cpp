@@ -40,7 +40,8 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
                      "CREATE VIEW active_customers AS SELECT * FROM customer;");
     appmeta::migrate_application_metadata(database);
     database.execute("INSERT INTO _app_forms VALUES('customer', 'customer', 'Customer', 1);"
-                     "INSERT INTO _app_views VALUES('active', 'active_customers', 'Active customers', NULL);"
+                     "INSERT INTO _app_views(name, table_name, label, form_name) "
+                     "VALUES('active', 'active_customers', 'Active customers', NULL);"
                      "INSERT INTO _app_reports VALUES('names', 'Customer names', 'SELECT name FROM customer', 100);"
                      "INSERT INTO _app_commands VALUES('dashboard', 'Dashboard', 'report names');"
                      "INSERT INTO _app_screens VALUES('home', 'Home', 'Customer shortcuts', 1);"

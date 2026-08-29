@@ -31,7 +31,9 @@ class BrowseDocument final : public DocumentSurface {
                    const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr,
                    const appmeta::ApplicationMetadata* metadata = nullptr,
                    std::optional<appmeta::TableMetadata> table_override = std::nullopt,
-                   model::DatasetLifecycle* lifecycle = nullptr, std::size_t page_size = 100);
+                   model::DatasetLifecycle* lifecycle = nullptr, std::size_t page_size = 100,
+                   std::vector<model::SavedFilter> saved_filters = {},
+                   std::optional<std::string> default_filter = std::nullopt);
 
     [[nodiscard]] auto is_dirty() const noexcept -> bool override;
     [[nodiscard]] auto page_size() const noexcept -> std::size_t { return dataset_.page_size(); }

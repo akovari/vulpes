@@ -89,6 +89,31 @@ TEST_CASE("workspace browse documents expose document-local named filter presets
     CHECK_FALSE(document.remove_filter_preset("acme"));
 }
 
+TEST_CASE("workspace browse documents apply metadata-owned default filter presets", "[ui][workspace][filters]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL);"
+                     "INSERT INTO customers VALUES (1, 'Acme'), (2, 'Beta')");
+    vulpes::core::Localizer messages{"en"};
+    const std::vector<vulpes::model::SavedFilter> filters{{
+        .name = "acme-only",
+        .filters = {{.field = "name", .comparison = vulpes::model::FilterOperator::equal, .value = "Acme"}},
+    }};
+    vulpes::ui::BrowseDocument document{database,     vulpes::db::inspect_schema(database).front(),
+                                        messages,     vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+                                        nullptr,      nullptr,
+                                        std::nullopt, nullptr,
+                                        100,          filters,
+                                        "acme-only"};
+    vulpes::terminal::ScreenBuffer buffer{48, 10};
+
+    REQUIRE(document.filter_presets().size() == 1);
+    document.render(buffer, {0, 0, 48, 10});
+    bool renders_beta{};
+    for (int column = 0; column < buffer.width(); ++column)
+        renders_beta = renders_beta || buffer.cell(column, 3).glyph == U'B';
+    CHECK_FALSE(renders_beta);
+}
+
 TEST_CASE("workspace SQL document closes without affecting its database", "[ui][workspace]") {
     vulpes::db::Database database{":memory:"};
     vulpes::core::Localizer messages{"en"};

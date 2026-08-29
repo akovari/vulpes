@@ -36,8 +36,6 @@ application metadata.
 - [ ] Write end-to-end acceptance scenarios for creating a blank `.vulpes`
   application, defining data, building a form/menu/report, entering records,
   and packaging the result without direct `_app_*` edits.
-- [ ] Persist named, compound saved filters through application/view metadata,
-  retaining typed bound values, clear ownership, and safe loading validation.
 - [ ] Add persistent browse/view definitions for field order, widths, frozen
   fields, calculated fields, sort/filter/search defaults, formats, and saved
   filters.

@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace vulpes::appmeta {
 namespace {
@@ -85,6 +86,74 @@ namespace {
     }
 }
 
+[[nodiscard]] auto parse_filter_operator(std::string_view source) -> model::FilterOperator {
+    if (source == "equal")
+        return model::FilterOperator::equal;
+    if (source == "not_equal")
+        return model::FilterOperator::not_equal;
+    if (source == "less")
+        return model::FilterOperator::less;
+    if (source == "less_equal")
+        return model::FilterOperator::less_equal;
+    if (source == "greater")
+        return model::FilterOperator::greater;
+    if (source == "greater_equal")
+        return model::FilterOperator::greater_equal;
+    throw Error{ErrorCategory::metadata, "unknown application view filter comparison: " + std::string{source}};
+}
+
+[[nodiscard]] auto parse_filter_value(const db::Value& kind, const db::Value& integer_value,
+                                      const db::Value& real_value, const db::Value& text_value,
+                                      const db::Value& blob_value) -> db::Value {
+    const auto require_null = [](const db::Value& value) {
+        if (!value.is_null())
+            throw Error{ErrorCategory::metadata, "application view filter has an invalid typed value"};
+    };
+    if (!std::holds_alternative<std::string>(kind.storage()))
+        throw Error{ErrorCategory::metadata, "application view filter value type must be text"};
+    const auto value_kind = kind.as_string();
+    if (value_kind == "null") {
+        require_null(integer_value);
+        require_null(real_value);
+        require_null(text_value);
+        require_null(blob_value);
+        return {};
+    }
+    if (value_kind == "integer") {
+        require_null(real_value);
+        require_null(text_value);
+        require_null(blob_value);
+        if (!std::holds_alternative<std::int64_t>(integer_value.storage()))
+            throw Error{ErrorCategory::metadata, "application view filter integer value is invalid"};
+        return integer_value;
+    }
+    if (value_kind == "real") {
+        require_null(integer_value);
+        require_null(text_value);
+        require_null(blob_value);
+        if (!std::holds_alternative<double>(real_value.storage()))
+            throw Error{ErrorCategory::metadata, "application view filter real value is invalid"};
+        return real_value;
+    }
+    if (value_kind == "text") {
+        require_null(integer_value);
+        require_null(real_value);
+        require_null(blob_value);
+        if (!std::holds_alternative<std::string>(text_value.storage()))
+            throw Error{ErrorCategory::metadata, "application view filter text value is invalid"};
+        return text_value;
+    }
+    if (value_kind == "blob") {
+        require_null(integer_value);
+        require_null(real_value);
+        require_null(text_value);
+        if (!std::holds_alternative<db::Blob>(blob_value.storage()))
+            throw Error{ErrorCategory::metadata, "application view filter blob value is invalid"};
+        return blob_value;
+    }
+    throw Error{ErrorCategory::metadata, "unknown application view filter value type: " + value_kind};
+}
+
 void create_version_one(db::Database& database) {
     database.execute("CREATE TABLE _app_schema("
                      "singleton INTEGER PRIMARY KEY CHECK(singleton = 1),"
@@ -156,6 +225,33 @@ void migrate_three_to_four(db::Database& database) {
                      "UPDATE _app_schema SET version = 4 WHERE singleton = 1;");
 }
 
+void migrate_four_to_five(db::Database& database) {
+    database.execute(
+        "ALTER TABLE _app_views ADD COLUMN default_filter_name TEXT;"
+        "CREATE TABLE _app_view_filters("
+        "view_name TEXT NOT NULL REFERENCES _app_views(name) ON DELETE CASCADE,"
+        "name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 128),"
+        "position INTEGER NOT NULL CHECK(position BETWEEN 0 AND 100000), search_text TEXT,"
+        "PRIMARY KEY(view_name, name));"
+        "CREATE TABLE _app_view_filter_terms("
+        "view_name TEXT NOT NULL, filter_name TEXT NOT NULL, position INTEGER NOT NULL CHECK(position BETWEEN 0 AND "
+        "1000),"
+        "field_name TEXT NOT NULL, comparison TEXT NOT NULL CHECK(comparison IN "
+        "('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')),"
+        "value_kind TEXT NOT NULL CHECK(value_kind IN ('null', 'integer', 'real', 'text', 'blob')),"
+        "integer_value INTEGER, real_value REAL, text_value TEXT, blob_value BLOB,"
+        "CHECK((value_kind = 'null' AND integer_value IS NULL AND real_value IS NULL AND text_value IS NULL "
+        "AND blob_value IS NULL) OR (value_kind = 'integer' AND integer_value IS NOT NULL AND real_value IS NULL "
+        "AND text_value IS NULL AND blob_value IS NULL) OR (value_kind = 'real' AND integer_value IS NULL "
+        "AND real_value IS NOT NULL AND text_value IS NULL AND blob_value IS NULL) OR (value_kind = 'text' "
+        "AND integer_value IS NULL AND real_value IS NULL AND text_value IS NOT NULL AND blob_value IS NULL) "
+        "OR (value_kind = 'blob' AND integer_value IS NULL AND real_value IS NULL AND text_value IS NULL "
+        "AND blob_value IS NOT NULL)),"
+        "PRIMARY KEY(view_name, filter_name, position), FOREIGN KEY(view_name, filter_name) "
+        "REFERENCES _app_view_filters(view_name, name) ON DELETE CASCADE);"
+        "UPDATE _app_schema SET version = 5 WHERE singleton = 1;");
+}
+
 void load_settings(db::Database& database, ApplicationDefinition& definition) {
     auto statement = database.prepare("SELECT key, value FROM _app_settings ORDER BY key");
     while (statement.step())
@@ -204,12 +300,35 @@ void load_forms(db::Database& database, ApplicationDefinition& definition) {
 }
 
 void load_version_two(db::Database& database, ApplicationDefinition& definition) {
-    auto views = database.prepare("SELECT name, table_name, label, form_name FROM _app_views ORDER BY name");
-    while (views.step())
-        definition.views.push_back({.name = views.column(0).as_string(),
-                                    .table = views.column(1).as_string(),
-                                    .label = optional_string(views.column(2)),
-                                    .form = optional_string(views.column(3))});
+    auto views = database.prepare(
+        "SELECT name, table_name, label, form_name, default_filter_name FROM _app_views ORDER BY name");
+    while (views.step()) {
+        ViewDefinition view{.name = views.column(0).as_string(),
+                            .table = views.column(1).as_string(),
+                            .label = optional_string(views.column(2)),
+                            .form = optional_string(views.column(3)),
+                            .default_filter = optional_string(views.column(4))};
+        auto filters = database.prepare(
+            "SELECT name, search_text FROM _app_view_filters WHERE view_name = ? ORDER BY position, name");
+        filters.bind(1, db::Value{view.name});
+        while (filters.step()) {
+            model::SavedFilter filter{.name = filters.column(0).as_string(),
+                                      .search = optional_string(filters.column(1))};
+            auto terms = database.prepare(
+                "SELECT field_name, comparison, value_kind, integer_value, real_value, text_value, blob_value "
+                "FROM _app_view_filter_terms WHERE view_name = ? AND filter_name = ? ORDER BY position");
+            terms.bind(1, db::Value{view.name});
+            terms.bind(2, db::Value{filter.name});
+            while (terms.step()) {
+                filter.filters.push_back({.field = terms.column(0).as_string(),
+                                          .comparison = parse_filter_operator(terms.column(1).as_string()),
+                                          .value = parse_filter_value(terms.column(2), terms.column(3), terms.column(4),
+                                                                      terms.column(5), terms.column(6))});
+            }
+            view.filters.push_back(std::move(filter));
+        }
+        definition.views.push_back(std::move(view));
+    }
 
     auto commands = database.prepare("SELECT name, label, command FROM _app_commands ORDER BY name");
     while (commands.step())
@@ -318,6 +437,10 @@ void migrate_application_metadata(db::Database& database) {
     if (version == 3) {
         migrate_three_to_four(database);
         version = 4;
+    }
+    if (version == 4) {
+        migrate_four_to_five(database);
+        version = 5;
     }
     if (version != current_application_schema_version)
         throw Error{ErrorCategory::metadata, "no application metadata migration path is available"};

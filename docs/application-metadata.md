@@ -19,7 +19,7 @@ alter business tables, is safe to repeat, and refuses metadata from a newer
 runtime version. Merely opening an ordinary database performs no migration and
 no metadata write.
 
-The current metadata schema version is 4. Its tables are:
+The current metadata schema version is 5. Its tables are:
 
 - `_app_schema`: one metadata schema-version row;
 - `_app_settings`: application key/value settings, including the optional
@@ -27,6 +27,8 @@ The current metadata schema version is 4. Its tables are:
 - `_app_forms` and `_app_form_fields`: named forms, default forms, labels,
   ordering, visibility, read-only policy, formats, and relationship lookups;
 - `_app_views`: named application views over an existing SQLite table or view;
+- `_app_view_filters` and `_app_view_filter_terms`: ordered named, typed saved
+  filters owned by a view;
 - `_app_reports`: named, bounded, read-only SQL queries;
 - `_app_commands`: semantic command names and their Vulpes command text; and
 - `_app_menus` and `_app_menu_items`: ordered app-home menus that reference
@@ -103,6 +105,36 @@ dashboard. Names, ordering, labels, descriptions, and command references are
 validated when metadata loads. Future screen designers can enhance this model
 with control types and data bindings without invalidating the coordinate-free
 navigation contract.
+
+## Named view filters
+
+Views can own reusable, compound filters without storing a SQL fragment. A
+filter has an optional text search and ordered comparisons whose values retain
+their SQLite type (`NULL`, integer, real, text, or blob). A view can select one
+of its filters as `default_filter_name`; Vulpes applies it whenever the view is
+opened, in either the workspace or direct browse mode. The metadata loader
+validates every field and comparison against the view's inspected schema before
+the definition reaches the UI.
+
+```sql
+INSERT INTO _app_views(name, table_name, label, default_filter_name)
+VALUES ('active-products', 'products', 'Active products', 'in-stock');
+
+INSERT INTO _app_view_filters(view_name, name, position)
+VALUES ('active-products', 'in-stock', 0);
+
+INSERT INTO _app_view_filter_terms(
+  view_name, filter_name, position, field_name, comparison, value_kind, integer_value
+)
+VALUES ('active-products', 'in-stock', 0, 'quantity', 'greater', 'integer', 0);
+```
+
+The `comparison` values are `equal`, `not_equal`, `less`, `less_equal`,
+`greater`, and `greater_equal`. The `value_kind` must correspond to exactly one
+value column, except `null`, which has no value column and is valid only with
+`equal` or `not_equal`. These tables are a persistence boundary for portable
+view definitions; later authoring UI will edit them through validated models
+rather than direct SQL.
 
 ## Reports
 

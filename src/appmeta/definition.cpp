@@ -27,11 +27,52 @@ template <typename Item> void require_unique_names(const std::vector<Item>& item
     return std::ranges::find(schema, name, &db::TableSchema::name) != schema.end();
 }
 
+[[nodiscard]] auto table_schema(std::span<const db::TableSchema> schema, std::string_view name)
+    -> const db::TableSchema* {
+    const auto found = std::ranges::find(schema, name, &db::TableSchema::name);
+    return found == schema.end() ? nullptr : &*found;
+}
+
 [[nodiscard]] auto is_command_name(std::string_view name) -> bool {
     return !name.empty() && std::ranges::all_of(name, [](unsigned char character) {
         return (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9') || character == '-' ||
                character == '_';
     });
+}
+
+[[nodiscard]] auto is_valid_filter_operator(model::FilterOperator comparison) -> bool {
+    switch (comparison) {
+    case model::FilterOperator::equal:
+    case model::FilterOperator::not_equal:
+    case model::FilterOperator::less:
+    case model::FilterOperator::less_equal:
+    case model::FilterOperator::greater:
+    case model::FilterOperator::greater_equal:
+        return true;
+    }
+    return false;
+}
+
+void validate_view_filters(const ViewDefinition& view, const db::TableSchema& table) {
+    std::set<std::string, std::less<>> names;
+    for (const auto& filter : view.filters) {
+        if (filter.name.empty() || filter.name.size() > 128 ||
+            std::ranges::any_of(filter.name,
+                                [](unsigned char character) { return character < 0x20U || character == 0x7FU; }) ||
+            !names.insert(filter.name).second || filter.filters.size() > 1000) {
+            throw Error{ErrorCategory::metadata, "view has invalid or duplicate saved-filter metadata: " + view.name};
+        }
+        for (const auto& term : filter.filters) {
+            const auto field = std::ranges::find(table.fields, term.field, &db::FieldSchema::name);
+            if (field == table.fields.end() || !is_valid_filter_operator(term.comparison) ||
+                (term.value.is_null() && term.comparison != model::FilterOperator::equal &&
+                 term.comparison != model::FilterOperator::not_equal)) {
+                throw Error{ErrorCategory::metadata, "view saved filter has an invalid term: " + view.name};
+            }
+        }
+    }
+    if (view.default_filter && !names.contains(*view.default_filter))
+        throw Error{ErrorCategory::metadata, "view references an unknown default filter: " + view.name};
 }
 
 } // namespace
@@ -99,7 +140,8 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
     }
 
     for (const auto& view_definition : views) {
-        if (!has_table(schema, view_definition.table) || is_application_metadata_table(view_definition.table))
+        const auto* view_table = table_schema(schema, view_definition.table);
+        if (view_table == nullptr || is_application_metadata_table(view_definition.table))
             throw Error{ErrorCategory::metadata,
                         "view references an unknown application table: " + view_definition.name};
         if (view_definition.label && view_definition.label->empty())
@@ -109,6 +151,7 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
             if (form_definition == nullptr || form_definition->table != view_definition.table)
                 throw Error{ErrorCategory::metadata, "view references an incompatible form: " + view_definition.name};
         }
+        validate_view_filters(view_definition, *view_table);
     }
 
     std::set<std::string, std::less<>> setting_keys;

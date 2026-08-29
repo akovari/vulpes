@@ -111,10 +111,13 @@ Per-field width overrides remain presentation state inside the Grid and are
 adjusted through semantic actions. `GridOptions` can pin leading columns, add
 read-only calculations over owned rows, and request typed aggregate summaries;
 these are semantic projections, not terminal coordinates or widget SQL.
-`Dataset` owns document-local, typed saved-filter presets and the safe
-aggregate-query boundary. The renderer keeps the selected row within a viewport
-smaller than the dataset page, reports absolute row/column position, and derives
-border overflow/thumb markers without exposing terminal behavior to the dataset.
+`Dataset` owns the active typed saved-filter presets and the safe aggregate-query
+boundary. A metadata-defined view can supply portable presets and one default;
+the frontend copies them into the Dataset at document creation, so the Dataset
+still neither reads `_app_*` tables nor constructs SQL from presentation text.
+The renderer keeps the selected row within a viewport smaller than the dataset
+page, reports absolute row/column position, and derives border overflow/thumb
+markers without exposing terminal behavior to the dataset.
 Localized `GridText` supplies empty-state and position labels. See ADRs 0021
 and 0033.
 Record forms derive a viewport from the focused field when a schema contains

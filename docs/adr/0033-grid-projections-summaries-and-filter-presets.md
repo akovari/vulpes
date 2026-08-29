@@ -33,9 +33,10 @@ the same aggregate definitions locally without a database dependency.
 `Dataset` also owns named `SavedFilter` presets. A preset is an in-memory copy
 of the current typed filters and optional search text. Applying one validates
 its inspected fields and refreshes the Dataset once. `BrowseDocument` exposes
-the same semantic operations to any frontend. These presets are deliberately
-document-local: persistent application or saved-view filters are a later
-application-metadata integration, rather than an implicit metadata migration.
+the same semantic operations to any frontend. Version 5 application metadata
+can supply portable view-owned presets, as specified by ADR 0034; the frontend
+copies them into the Dataset at document creation rather than giving a Dataset
+access to application tables.
 
 ## Consequences
 
@@ -51,5 +52,6 @@ application-metadata integration, rather than an implicit metadata migration.
 - Aggregate summaries are presentation-only and are not appended to the
   existing row-oriented CSV, JSON, text, HTML, or PDF exports. A future report
   layout owns any exported summary placement or formatting.
-- Presets survive refreshes within an open browse document but are not yet part
-  of a `.vulpes` application definition.
+- Ad-hoc presets survive refreshes within an open browse document. Portable
+  view-owned presets additionally survive process restarts in a `.vulpes`
+  application.

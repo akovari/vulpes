@@ -103,7 +103,8 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
                                const Theme& theme, core::Clipboard* clipboard,
                                const appmeta::ApplicationMetadata* metadata,
                                std::optional<appmeta::TableMetadata> table_override, model::DatasetLifecycle* lifecycle,
-                               std::size_t page_size)
+                               std::size_t page_size, std::vector<model::SavedFilter> saved_filters,
+                               std::optional<std::string> default_filter)
     : messages_{&messages}, metadata_{metadata}, table_override_{std::move(table_override)}, theme_{&theme},
       clipboard_{clipboard}, dataset_{database, std::move(table), page_size, lifecycle}, controller_{dataset_},
       grid_{dataset_,
@@ -116,6 +117,9 @@ BrowseDocument::BrowseDocument(db::Database& database, db::TableSchema table, co
              .column = messages.translate("grid.column")},
             core::LocaleFormatter{std::string{messages.locale()}},
             table_metadata(metadata, table_override_, dataset_.schema().name)} {
+    dataset_.set_saved_filters(std::move(saved_filters));
+    if (default_filter && !dataset_.apply_saved_filter(*default_filter))
+        throw Error{ErrorCategory::metadata, "browse view references an unavailable saved filter"};
 }
 
 auto BrowseDocument::current_table_metadata() const noexcept -> const appmeta::TableMetadata* {

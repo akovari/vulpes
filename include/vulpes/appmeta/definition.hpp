@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulpes/appmeta/metadata.hpp"
+#include "vulpes/model/dataset.hpp"
 #include "vulpes/script/hook.hpp"
 
 #include <cstddef>
@@ -28,6 +29,11 @@ struct ViewDefinition {
     std::string table;
     std::optional<std::string> label;
     std::optional<std::string> form;
+    // Named filters are a portable application definition. They retain typed
+    // values rather than a fragment of SQL and are copied into a Dataset by a
+    // frontend that opens the view.
+    std::vector<model::SavedFilter> filters;
+    std::optional<std::string> default_filter;
 };
 
 struct CommandDefinition {
