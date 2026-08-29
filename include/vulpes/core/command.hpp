@@ -19,6 +19,7 @@ enum class CommandId {
     view,
     reports,
     report,
+    export_report,
     run,
     sql,
     quit,

@@ -8,6 +8,7 @@
 #include "vulpes/core/workspace_preferences.hpp"
 #include "vulpes/db/database.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/report/export.hpp"
 #include "vulpes/terminal/capabilities.hpp"
 #include "vulpes/terminal/console_terminal.hpp"
 #include "vulpes/terminal/screen_buffer.hpp"
@@ -367,6 +368,21 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                         workspace.open_report(response.report->name, response.report->label);
                         host_active_surface(nullptr, std::nullopt, &*response.report);
                         break;
+                    case vulpes::core::CommandOutcome::export_report: {
+                        const auto summary =
+                            vulpes::report::export_query(*database, response.report->sql, response.report->row_limit,
+                                                         {.destination = response.export_destination,
+                                                          .format = *response.export_format,
+                                                          .overwrite = response.export_overwrite,
+                                                          .title = response.report->label,
+                                                          .locale = std::string{messages.locale()}});
+                        workspace.set_status(messages.translate(
+                            "export.complete",
+                            {{"rows", static_cast<std::int64_t>(summary.rows)},
+                             {"path", path_text(summary.destination)},
+                             {"format", std::string{vulpes::report::export_format_name(summary.format)}}}));
+                        break;
+                    }
                     case vulpes::core::CommandOutcome::unknown_command:
                         workspace.set_status(messages.translate("application.unknown_command"));
                         break;
@@ -467,6 +483,20 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::report:
         show_report(database, *response.report, messages, theme);
         break;
+    case vulpes::core::CommandOutcome::export_report: {
+        const auto summary = vulpes::report::export_query(database, response.report->sql, response.report->row_limit,
+                                                          {.destination = response.export_destination,
+                                                           .format = *response.export_format,
+                                                           .overwrite = response.export_overwrite,
+                                                           .title = response.report->label,
+                                                           .locale = std::string{messages.locale()}});
+        std::cout << messages.translate("export.complete",
+                                        {{"rows", static_cast<std::int64_t>(summary.rows)},
+                                         {"path", path_text(summary.destination)},
+                                         {"format", std::string{vulpes::report::export_format_name(summary.format)}}})
+                  << '\n';
+        break;
+    }
     case vulpes::core::CommandOutcome::unknown_command:
         std::cerr << messages.translate("application.unknown_command") << '\n';
         return 1;
@@ -505,6 +535,11 @@ auto main(int argc, char** argv) -> int {
         std::string database_argument;
         std::string table_name;
         std::string command_source;
+        std::string query_source;
+        std::string export_output_argument;
+        std::string export_format_argument;
+        std::size_t export_row_limit{100'000};
+        bool overwrite_export = false;
         bool sql = false;
         bool terminal_diagnostics = false;
         bool terminal_capabilities = false;
@@ -518,6 +553,21 @@ auto main(int argc, char** argv) -> int {
         const auto table_option = app.add_option("--table", table_name, "Browse one table or view");
         const auto command_option = app.add_option("--command", command_source, "Run one Vulpes command and exit");
         const auto sql_option = app.add_flag("--sql", sql, "Open the interactive SQL console");
+        const auto query_option = app.add_option("--query", query_source, "Export one read-only SQL query");
+        const auto output_option = app.add_option("--output", export_output_argument, "Query export destination");
+        const auto export_format_option =
+            app.add_option("--format", export_format_argument, "Query export format; defaults to the output extension");
+        const auto export_row_limit_option =
+            app.add_option("--row-limit", export_row_limit, "Maximum query export rows")
+                ->check(CLI::Range(std::size_t{1}, std::size_t{100'000}))
+                ->capture_default_str();
+        const auto overwrite_export_option =
+            app.add_flag("--overwrite", overwrite_export, "Replace an existing query export destination");
+        query_option->needs(output_option);
+        output_option->needs(query_option);
+        export_format_option->needs(query_option);
+        export_row_limit_option->needs(query_option);
+        overwrite_export_option->needs(query_option);
         const auto terminal_diagnostics_option =
             app.add_flag("--terminal-diagnostics", terminal_diagnostics,
                          "Open interactive normalized terminal-input and resize diagnostics");
@@ -527,17 +577,23 @@ auto main(int argc, char** argv) -> int {
                                                      "Create or upgrade Vulpes application metadata in the database");
         table_option->excludes(command_option);
         table_option->excludes(sql_option);
+        table_option->excludes(query_option);
         command_option->excludes(sql_option);
+        command_option->excludes(query_option);
+        sql_option->excludes(query_option);
         terminal_diagnostics_option->excludes(table_option);
         terminal_diagnostics_option->excludes(command_option);
         terminal_diagnostics_option->excludes(sql_option);
+        terminal_diagnostics_option->excludes(query_option);
         terminal_diagnostics_option->excludes(terminal_capabilities_option);
         terminal_capabilities_option->excludes(table_option);
         terminal_capabilities_option->excludes(command_option);
         terminal_capabilities_option->excludes(sql_option);
+        terminal_capabilities_option->excludes(query_option);
         migrate_app_option->excludes(table_option);
         migrate_app_option->excludes(command_option);
         migrate_app_option->excludes(sql_option);
+        migrate_app_option->excludes(query_option);
         migrate_app_option->excludes(terminal_diagnostics_option);
         migrate_app_option->excludes(terminal_capabilities_option);
         app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
@@ -574,6 +630,29 @@ auto main(int argc, char** argv) -> int {
             vulpes::db::Database database{std::filesystem::path{database_argument}, vulpes::db::OpenMode::read_write};
             vulpes::appmeta::migrate_application_metadata(database);
             std::cout << "Vulpes application metadata schema " << *vulpes::appmeta::application_schema_version(database)
+                      << '\n';
+            return 0;
+        }
+        if (!query_source.empty()) {
+            if (database_argument.empty())
+                throw vulpes::Error{vulpes::ErrorCategory::validation, "--query requires a database path"};
+            auto messages = load_messages(locale, catalog_paths);
+            vulpes::db::Database database{std::filesystem::path{database_argument}, vulpes::db::OpenMode::read_only};
+            const std::filesystem::path output_path{export_output_argument};
+            const auto format = export_format_argument.empty()
+                                    ? vulpes::report::infer_export_format(output_path)
+                                    : vulpes::report::parse_export_format(export_format_argument);
+            const auto summary = vulpes::report::export_query(database, query_source, export_row_limit,
+                                                              {.destination = output_path,
+                                                               .format = format,
+                                                               .overwrite = overwrite_export,
+                                                               .title = messages.translate("export.query_title"),
+                                                               .locale = std::string{messages.locale()}});
+            std::cout << messages.translate(
+                             "export.complete",
+                             {{"rows", static_cast<std::int64_t>(summary.rows)},
+                              {"path", path_text(summary.destination)},
+                              {"format", std::string{vulpes::report::export_format_name(summary.format)}}})
                       << '\n';
             return 0;
         }

@@ -196,8 +196,8 @@ on Windows, Linux, and macOS.
 
 - [x] Define named SQL-query report metadata and workspace commands.
 - [x] Render reports through Grid with sorting/navigation shared with browse.
-- [ ] Export report/query results to CSV, JSON, plain text, HTML, and PDF.
-- [ ] Define encoding, locale, overwrite, and error-handling behavior for exports.
+- [x] Export report/query results to CSV, JSON, plain text, HTML, and PDF.
+- [x] Define encoding, locale, overwrite, and error-handling behavior for exports.
 
 ## Lua business logic
 

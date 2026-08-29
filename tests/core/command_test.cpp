@@ -26,6 +26,8 @@ TEST_CASE("command parser handles aliases and invalid quotation", "[core][comman
     CHECK(parse_command("view active").id == CommandId::view);
     CHECK(parse_command("reports").id == CommandId::reports);
     CHECK(parse_command("report sales").id == CommandId::report);
+    CHECK(parse_command("export sales csv result.csv").id == CommandId::export_report);
     CHECK(parse_command("run dashboard").id == CommandId::run);
+    CHECK(parse_command(R"(export sales csv "C:\reports\sales.csv")").arguments.back() == R"(C:\reports\sales.csv)");
     CHECK_THROWS_AS(parse_command("browse \"customers"), vulpes::Error);
 }

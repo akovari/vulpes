@@ -12,6 +12,7 @@
     { "name": "cli11", "version>=": "2.7.2" },
     { "name": "nlohmann-json", "version>=": "3.12.0" },
     { "name": "dacap-clip", "version>=": "1.15" },
-    { "name": "icu", "version>=": "78.3" }
+    { "name": "icu", "version>=": "78.3" },
+    { "name": "zlib", "version>=": "1.3.2" }
   ]
 }

@@ -15,6 +15,7 @@ add_executable(vulpes_tests
     examples/inventory_test.cpp
     examples/workshop_test.cpp
     model/dataset_test.cpp
+    report/export_test.cpp
     ui/button_test.cpp
     ui/form_test.cpp
     ui/confirmation_dialog_test.cpp
@@ -50,7 +51,7 @@ add_executable(vulpes_tests
     terminal/screen_buffer_test.cpp
     terminal/test_terminal_test.cpp
 )
-target_link_libraries(vulpes_tests PRIVATE Vulpes::core Catch2::Catch2WithMain)
+target_link_libraries(vulpes_tests PRIVATE Vulpes::core Catch2::Catch2WithMain vulpes_pdfio)
 target_compile_definitions(vulpes_tests PRIVATE VULPES_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
 include(Catch)

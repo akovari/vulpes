@@ -1,0 +1,18 @@
+#include "vulpes/report/pdf_font.hpp"
+
+#include <array>
+#include <cstddef>
+#include <span>
+
+namespace vulpes::report::detail {
+namespace {
+
+constexpr std::array<unsigned char, @VULPES_PDF_FONT_HEX_LENGTH@> font_data{{@VULPES_PDF_FONT_BYTES@}};
+
+} // namespace
+
+auto default_pdf_font() noexcept -> std::span<const std::byte> {
+    return {reinterpret_cast<const std::byte*>(font_data.data()), font_data.size()};
+}
+
+} // namespace vulpes::report::detail

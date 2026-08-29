@@ -65,6 +65,17 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
     REQUIRE(report.report);
     CHECK(report.report->name == "names");
     CHECK(application.execute(core::parse_command("dashboard")).outcome == core::CommandOutcome::report);
+    const auto export_report = application.execute(core::parse_command("export names PDF output.pdf overwrite"));
+    REQUIRE(export_report.outcome == core::CommandOutcome::export_report);
+    REQUIRE(export_report.report);
+    REQUIRE(export_report.export_format);
+    CHECK(*export_report.export_format == report::ExportFormat::pdf);
+    CHECK(export_report.export_destination == "output.pdf");
+    CHECK(export_report.export_overwrite);
+    CHECK(application.execute(core::parse_command("export names xml output.xml")).outcome ==
+          core::CommandOutcome::invalid_arguments);
+    CHECK(application.execute(core::parse_command("export names csv output.csv replace")).outcome ==
+          core::CommandOutcome::invalid_arguments);
     CHECK(application.execute(core::parse_command("report absent")).outcome ==
           core::CommandOutcome::definition_not_found);
     CHECK(application.execute(core::parse_command("browse _app_forms")).outcome ==
@@ -92,4 +103,8 @@ TEST_CASE("application runtime returns semantic command failures", "[core][appli
     CHECK(application.execute(core::parse_command("browse absent")).outcome == core::CommandOutcome::table_not_found);
     CHECK(application.execute(core::parse_command("quit now")).outcome == core::CommandOutcome::invalid_arguments);
     CHECK(application.execute(core::parse_command("sql extra")).outcome == core::CommandOutcome::invalid_arguments);
+    CHECK(application.execute(core::parse_command("export absent csv result.csv")).outcome ==
+          core::CommandOutcome::definition_not_found);
+    CHECK(application.execute(core::parse_command("export report xml result.xml")).outcome ==
+          core::CommandOutcome::definition_not_found);
 }

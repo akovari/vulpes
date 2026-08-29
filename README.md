@@ -27,10 +27,12 @@ $env:VCPKG_ROOT = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpk
 ```
 
 Alternatively, clone and bootstrap vcpkg separately. CMake manifest mode installs
-SQLite, Catch2, utf8proc, CLI11, nlohmann/json, dacap/clip, and ICU automatically.
-CPP-Terminal is fetched at a reviewed, pinned
-commit by CMake because it is not present in the pinned vcpkg registry. The
-`sqlite3` CLI is optional and is used only by the example-database command below.
+SQLite, Catch2, utf8proc, CLI11, nlohmann/json, dacap/clip, ICU, and zlib
+automatically. CPP-Terminal and PDFio are fetched at reviewed, pinned commits by
+CMake because they are not present in the pinned vcpkg registry. PDF export
+embeds a Unicode-capable font and does not require a system font installation.
+The `sqlite3` CLI is optional and is used only by the example-database command
+below.
 
 ## Build and test on Windows
 
@@ -237,10 +239,14 @@ rows by default, and the console reports truncation and affected-row counts.
 Parameter prompts and multiple displayed result sets remain deliberately deferred.
 
 `--command` accepts the database commands plus `forms`, `form <name>`, `views`,
-`view <name>`, `reports`, `report <name>`, and `run <command-name>`. It is a
+`view <name>`, `reports`, `report <name>`, `export <report> <format> <path>
+[overwrite]`, and `run <command-name>`. It is a
 non-interactive bridge to the same application command dispatcher used by the
 in-app command palette and metadata menus. Named report execution opens a
-read-only, bounded result through the shared Grid.
+read-only, bounded result through the shared Grid. `--query` and `--output`
+export one read-only SQL statement without opening the workspace. See
+[docs/exporting.md](docs/exporting.md) for all formats, safety guarantees, and
+examples.
 
 Interface messages use BCP-47 locales and optional UTF-8 JSON catalogs. For
 example, use the shipped Czech translation with `--locale cs-CZ --catalog
@@ -255,7 +261,8 @@ relationships and drill-down, SQL results rendered through Grid, filtering,
 searching, and stock movement insertion. They contain no runtime special cases.
 
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
-and [TODO.md](TODO.md) before changing subsystem boundaries or choosing work.
+[docs/exporting.md](docs/exporting.md), and [TODO.md](TODO.md) before changing
+subsystem boundaries or choosing work.
 
 ## Project status
 

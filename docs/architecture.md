@@ -318,6 +318,13 @@ SQLite-classified read-only statement with result columns, rejects scripts and
 writes, and owns a bounded result. `ReportDocument` delegates navigation and
 rendering to Grid. See ADR 0028.
 
+`report::export_result` consumes that owned result outside of the UI layer and
+writes CSV, JSON, text, HTML, or PDF. It owns output validation, locale-aware
+human-readable formatting, temporary-file replacement, and recovery-safe
+overwrite handling. PDFio and the embedded Unicode font are private report
+implementation details; they are not terminal, widget, or application-metadata
+dependencies. See ADR 0029.
+
 ## Deferred decisions
 
 - Terminal library versus small native ANSI/Windows backends.

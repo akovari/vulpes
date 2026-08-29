@@ -51,6 +51,7 @@ views
 view <name>
 reports
 report <name>
+export <report> <format> <path> [overwrite]
 run <command-name>
 ```
 
@@ -73,6 +74,11 @@ columns. Multiple statements and write/DDL statements are rejected even when
 the database connection itself is writable. Results are owned, bounded by the
 report's `row_limit` (1 through 100,000), and displayed through the same Grid as
 SQL and browse results.
+
+The `export` command routes the same named, bounded report through the
+terminal-independent exporter. It accepts `csv`, `json`, `text`, `html`, or
+`pdf`; an existing output path requires its explicit `overwrite` argument. See
+[exporting.md](exporting.md) for encoding, locale, and recovery behavior.
 
 ## Inventory example
 

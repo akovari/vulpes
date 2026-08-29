@@ -3,6 +3,7 @@
 #include "vulpes/appmeta/definition.hpp"
 #include "vulpes/core/command.hpp"
 #include "vulpes/db/schema.hpp"
+#include "vulpes/report/export.hpp"
 
 #include <optional>
 #include <vector>
@@ -24,6 +25,7 @@ enum class CommandOutcome {
     views,
     reports,
     report,
+    export_report,
     unknown_command,
     invalid_arguments,
     table_not_found,
@@ -44,6 +46,9 @@ struct CommandResponse {
     std::optional<appmeta::FormDefinition> form;
     std::optional<appmeta::ViewDefinition> view;
     std::optional<appmeta::ReportDefinition> report;
+    std::optional<report::ExportFormat> export_format;
+    std::filesystem::path export_destination;
+    bool export_overwrite{false};
 };
 
 class ApplicationRuntime {

@@ -1,6 +1,7 @@
 #include "vulpes/core/application.hpp"
 
 #include "vulpes/appmeta/loader.hpp"
+#include "vulpes/core/error.hpp"
 #include "vulpes/db/database.hpp"
 
 #include <algorithm>
@@ -82,6 +83,27 @@ auto ApplicationRuntime::execute(const Command& command, std::size_t depth) cons
         if (definition_ != nullptr) {
             if (const auto* report = definition_->report(command.arguments.front()); report != nullptr)
                 return {.outcome = CommandOutcome::report, .command = command.id, .report = *report};
+        }
+        return {.outcome = CommandOutcome::definition_not_found, .command = command.id};
+    case CommandId::export_report:
+        if (command.arguments.size() != 3 && command.arguments.size() != 4)
+            return {.outcome = CommandOutcome::invalid_arguments, .command = command.id};
+        if (command.arguments.size() == 4 && command.arguments[3] != "overwrite")
+            return {.outcome = CommandOutcome::invalid_arguments, .command = command.id};
+        if (definition_ != nullptr) {
+            if (const auto* report_definition = definition_->report(command.arguments[0]);
+                report_definition != nullptr) {
+                try {
+                    return {.outcome = CommandOutcome::export_report,
+                            .command = command.id,
+                            .report = *report_definition,
+                            .export_format = report::parse_export_format(command.arguments[1]),
+                            .export_destination = command.arguments[2],
+                            .export_overwrite = command.arguments.size() == 4};
+                } catch (const Error&) {
+                    return {.outcome = CommandOutcome::invalid_arguments, .command = command.id};
+                }
+            }
         }
         return {.outcome = CommandOutcome::definition_not_found, .command = command.id};
     case CommandId::schema:

@@ -38,6 +38,8 @@ auto command_id(std::string_view verb) -> CommandId {
         return CommandId::reports;
     if (verb == "report")
         return CommandId::report;
+    if (verb == "export")
+        return CommandId::export_report;
     if (verb == "run")
         return CommandId::run;
     if (verb == "sql")
@@ -68,10 +70,12 @@ auto parse_command(std::string_view source) -> Command {
                     closed = true;
                     break;
                 }
-                if (character == '\\' && position < source.size())
+                if (character == '\\' && position < source.size() &&
+                    (source[position] == '\\' || source[position] == '"')) {
                     token += source[position++];
-                else
+                } else {
                     token += character;
+                }
             }
             if (!closed)
                 throw Error{ErrorCategory::validation, "unterminated quoted command argument"};
@@ -113,6 +117,8 @@ auto action_id(CommandId command) -> std::string_view {
         return "application.reports";
     case CommandId::report:
         return "application.report";
+    case CommandId::export_report:
+        return "application.export";
     case CommandId::run:
         return "application.run";
     case CommandId::sql:

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.31)
 
-project(Vulpes VERSION 0.1.0 LANGUAGES CXX)
+project(Vulpes VERSION 0.1.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CTest)
@@ -31,6 +31,7 @@ find_package(CLI11 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(clip CONFIG REQUIRED)
 find_package(ICU 78.3 REQUIRED COMPONENTS data i18n uc)
+find_package(ZLIB REQUIRED)
 
 # CPP-Terminal owns host-specific raw-mode, keyboard, and resize handling.
 # Keep it behind Vulpes' Terminal interface so widgets and the runtime remain
@@ -45,6 +46,49 @@ FetchContent_Declare(
     GIT_TAG 945f4931ff3974850401693d13ad8bd9bbd0619e
 )
 FetchContent_MakeAvailable(cpp_terminal)
+
+# PDFio is a small C PDF writer without an upstream CMake project. Fetch the
+# reviewed release commit, then expose only a private target to Vulpes.
+FetchContent_Declare(
+    pdfio_source
+    GIT_REPOSITORY https://github.com/michaelrsweet/pdfio.git
+    GIT_TAG 48b185c650e2e732eed260d63909f4ec68ac9353
+    SOURCE_SUBDIR cmake-not-provided
+)
+FetchContent_MakeAvailable(pdfio_source)
+add_library(vulpes_pdfio STATIC
+    ${pdfio_source_SOURCE_DIR}/pdfio-aes.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-array.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-common.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-content.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-crypto.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-dict.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-file.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-md5.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-object.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-page.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-rc4.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-sha256.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-stream.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-string.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-token.c
+    ${pdfio_source_SOURCE_DIR}/pdfio-value.c
+    ${pdfio_source_SOURCE_DIR}/ttf.c
+)
+target_include_directories(vulpes_pdfio PUBLIC ${pdfio_source_SOURCE_DIR})
+target_link_libraries(vulpes_pdfio PRIVATE ZLIB::ZLIB)
+if(WIN32)
+    target_link_libraries(vulpes_pdfio PRIVATE advapi32)
+endif()
+
+file(READ "${pdfio_source_SOURCE_DIR}/examples/Roboto-Regular.ttf" VULPES_PDF_FONT_HEX HEX)
+string(LENGTH "${VULPES_PDF_FONT_HEX}" VULPES_PDF_FONT_HEX_LENGTH)
+math(EXPR VULPES_PDF_FONT_HEX_LENGTH "${VULPES_PDF_FONT_HEX_LENGTH} / 2")
+string(REGEX REPLACE "([0-9a-fA-F][0-9a-fA-F])" "0x\\1," VULPES_PDF_FONT_BYTES "${VULPES_PDF_FONT_HEX}")
+configure_file(cmake/pdf_font_data.cpp.in generated/pdf_font_data.cpp @ONLY)
+unset(VULPES_PDF_FONT_HEX)
+unset(VULPES_PDF_FONT_HEX_LENGTH)
+unset(VULPES_PDF_FONT_BYTES)
 
 add_library(vulpes_options INTERFACE)
 target_compile_features(vulpes_options INTERFACE cxx_std_23)
@@ -81,6 +125,9 @@ add_library(vulpes_core
     src/db/transaction.cpp
     src/db/value.cpp
     src/model/dataset.cpp
+    src/report/export.cpp
+    src/report/pdf_export.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/pdf_font_data.cpp
     src/terminal/ansi_input.cpp
     src/terminal/ansi_encoder.cpp
     src/terminal/capabilities.cpp
@@ -128,7 +175,7 @@ target_include_directories(vulpes_core
 target_link_libraries(vulpes_core
     PUBLIC vulpes_options
     PRIVATE unofficial::sqlite3::sqlite3 utf8proc::utf8proc nlohmann_json::nlohmann_json cpp-terminal::cpp-terminal
-            clip::clip ICU::data ICU::i18n ICU::uc)
+            clip::clip ICU::data ICU::i18n ICU::uc vulpes_pdfio)
 target_compile_definitions(vulpes_core PRIVATE VULPES_BUILDING_LIBRARY)
 
 configure_file(cmake/version.hpp.in generated/vulpes/version.hpp @ONLY)
