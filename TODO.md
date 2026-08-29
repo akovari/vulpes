@@ -218,5 +218,132 @@ on Windows, Linux, and macOS.
   `after_update`, `before_delete`, and `on_command`.
 - [x] Define script storage, error presentation, transaction interaction, and
   testing/sandbox policy.
-- [ ] GUI/web renderers, networking, designer, and extension ecosystem only after
-  the core browse/edit workflow is demonstrably strong.
+
+## M7 — FoxPro-style workspace and data environment
+
+The existing workspace, metadata, generated forms, reports, and Lua hooks are
+the foundation for this milestone. M7 makes the database-development workflow
+feel coherent and dependable before a visual application builder is layered on
+top. All design-time state must remain semantic and frontend-independent: no
+terminal coordinates, ANSI sequences, or backend-specific input details belong
+in application metadata. The incomplete platform-terminal verification tasks
+above are prerequisites and retain their single authoritative checkboxes there.
+
+- [ ] Write end-to-end acceptance scenarios for creating a blank `.vulpes`
+  application, defining data, building a form/menu/report, entering records,
+  and packaging the result without editing `_app_*` tables directly.
+- [ ] Turn the workspace document model into a keyboard-first window manager:
+  movable/resizable semantic windows, activate/next/previous/window-list
+  commands, cascade/tile arrangements, reliable z-order, and modal ownership.
+- [ ] Add workspace/session persistence for open documents, active database,
+  window arrangement, recent applications, and recoverable unsaved drafts.
+- [ ] Provide a visual database explorer for tables, views, indexes, foreign
+  keys, metadata definitions, reports, scripts, and application commands.
+- [ ] Add a safe schema designer for tables, columns, defaults, constraints,
+  indexes, and foreign keys, backed by transactional migration plans, previews,
+  backups, explicit destructive-change confirmation, and rollback guidance.
+- [ ] Add a query/view designer that produces inspectable SQLite SQL, supports
+  joins, filters, ordering, grouping, and parameters, and clearly separates
+  read-only result queries from editable table datasets.
+- [ ] Define a semantic data-environment model for forms: named datasets,
+  aliases, relationships, query parameters, ordering, and lifecycle ownership.
+- [ ] Bind forms and reports through that model rather than direct table names,
+  while retaining generated-schema defaults for ordinary SQLite databases.
+- [ ] Add a data-environment editor that can configure those datasets,
+  relationships, lookup display fields, and refresh rules without raw metadata
+  SQL.
+- [ ] Add persistent browse/view definitions: chosen fields, widths, order,
+  sort/filter/search defaults, display formats, and named saved views.
+- [ ] Implement database import/export workflows for CSV and JSON with type
+  preview, mapping, validation/error reporting, transaction policy, and
+  deterministic tests; retain the existing report/query exports.
+- [ ] Complete visual, keyboard, localization, and high-contrast review at
+  40x10, 80x25, and wide terminals for English and Czech, including real
+  Windows display-scaling evidence.
+
+## M8 — RAD application builder
+
+M8 lets a developer create and maintain a useful local application wholly in
+Vulpes. SQL remains a supported expert path, but an application author must not
+need to insert rows into reserved metadata tables by hand.
+
+- [ ] Add an application/project manager to create, open, upgrade, validate,
+  clone, back up, and inspect `.vulpes` applications while preserving ordinary
+  SQLite compatibility.
+- [ ] Add application-settings editing for title, locale, theme, startup
+  command, keyboard bindings, and versioned metadata migrations.
+- [ ] Add form management: create a generated form, set its table/data source,
+  choose the default form, duplicate/rename/delete forms, and validate
+  references before saving.
+- [ ] Build a semantic form designer with preview and undo/redo. It must edit
+  field order, groups/sections, labels, help text, visibility, read-only state,
+  widths, formats, tabs, and responsive layout hints rather than persist TUI
+  coordinates.
+- [ ] Expand form controls deliberately: multiline text, date/time, currency,
+  checkbox, lookup/combo/list, radio group, command button, calculated display,
+  and read-only summary fields, each with schema/metadata mapping and tests.
+- [ ] Add a validation-rule editor for required/range/pattern/list/cross-field
+  rules, localized user-facing messages, and a clear boundary between declarative
+  validation and Lua business logic.
+- [ ] Add command-button and form-action editing using stable semantic action
+  identifiers; support save/cancel/new/delete/navigate/open-form/run-command
+  without storing terminal key details in the application definition.
+- [ ] Add view management for named browses, including field selection,
+  presentation, filters, ordering, parameters, read-only policy, and default
+  navigation targets.
+- [ ] Add menu and command editors with ordering, separators, localized labels
+  and explicit mnemonics, enabled-state validation, shortcut assignment, and
+  cycle detection.
+- [ ] Add report management for named SQL reports, parameters, result limits,
+  titles, export defaults, and application-menu/command integration.
+- [ ] Add a visual report-layout designer with semantic bands, headers, detail
+  fields, grouping, totals, page settings, print/preview output, and export
+  mappings; keep Grid reports as the simple default.
+- [ ] Add an application preview/run mode that launches the metadata-defined
+  application with authoring controls hidden, supports returning to design mode,
+  and never mutates data merely by previewing.
+- [ ] Provide metadata validation, reference diagnostics, safe repair/migration
+  operations, and a human-readable application manifest/export for review and
+  version control.
+- [ ] Dogfood the builder by recreating the inventory application exclusively
+  through Vulpes, then compare its resulting metadata and workflows against the
+  scripted example.
+
+## M9 — Application development tools
+
+- [ ] Add a Lua script manager with create/rename/delete/reorder/enable actions,
+  hook scopes, source validation, trusted-code warnings, and metadata-reference
+  diagnostics.
+- [ ] Add a Unicode-safe Lua editor with file-style editing, syntax highlighting,
+  search/replace, go-to diagnostic, undo/redo, and unsaved-change recovery.
+- [ ] Add a deterministic hook test runner and error navigator that expose hook
+  context, transaction outcome, source location, and retained record drafts.
+- [ ] Design a debugger only after the editor and test runner prove useful;
+  document breakpoint, stepping, inspection, security, and cross-frontend
+  semantics before implementation.
+- [ ] Add an application-level error log/diagnostics viewer with redaction,
+  copy/export, structured error categories, and user-actionable recovery paths.
+- [ ] Add data and application backup/restore UI, integrity checks, migration
+  history inspection, and recovery drills using ordinary SQLite tooling.
+
+## M10 — Release-quality application runtime
+
+- [ ] Complete an M8 application-builder acceptance pass on Windows, Linux, and
+  macOS: create both a blank application and an application over an existing
+  database; define its data, forms, menus, validation, scripts, and reports;
+  enter records; and run the resulting application without raw metadata SQL.
+- [ ] Publish a compatibility/support matrix covering terminal hosts,
+  architectures, locale/input limitations, upgrade paths, and recovery policy.
+- [ ] Establish automated and manual accessibility review for keyboard-only
+  operation, high contrast, screen-reader-adjacent terminal behavior, and
+  localized overflow/error presentation.
+
+## Future frontend and extension ecosystem
+
+- [ ] Define a frontend contract and build a proof-of-concept non-TUI renderer
+  that consumes the same application/data semantics without terminal concepts.
+- [ ] Evaluate a native desktop GUI frontend only after M8 validates the semantic
+  metadata and window model.
+- [ ] Evaluate a web frontend, networking, multi-user coordination, plugins, and
+  native extension APIs only after the local single-user RAD workflow is proven
+  strong; none may compromise the SQLite-first deployment model.
