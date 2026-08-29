@@ -42,7 +42,9 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
     database.execute("INSERT INTO _app_forms VALUES('customer', 'customer', 'Customer', 1);"
                      "INSERT INTO _app_views VALUES('active', 'active_customers', 'Active customers', NULL);"
                      "INSERT INTO _app_reports VALUES('names', 'Customer names', 'SELECT name FROM customer', 100);"
-                     "INSERT INTO _app_commands VALUES('dashboard', 'Dashboard', 'report names');");
+                     "INSERT INTO _app_commands VALUES('dashboard', 'Dashboard', 'report names');"
+                     "INSERT INTO _app_screens VALUES('home', 'Home', 'Customer shortcuts', 1);"
+                     "INSERT INTO _app_screen_items VALUES('home', 0, 'Names', NULL, 'dashboard');");
     const auto definition = appmeta::load_application_definition(database);
     core::ApplicationRuntime application{database, &definition};
 
@@ -50,6 +52,7 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
     CHECK(tables.tables.size() == 2);
     CHECK(std::ranges::none_of(tables.tables, [](const auto& table) { return table.name.starts_with("_app_"); }));
     CHECK(application.execute(core::parse_command("forms")).forms.size() == 1);
+    CHECK(application.execute(core::parse_command("screens")).screens.size() == 1);
     CHECK(application.execute(core::parse_command("views")).views.size() == 1);
     CHECK(application.execute(core::parse_command("reports")).reports.size() == 1);
 
@@ -57,6 +60,11 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
     REQUIRE(form.outcome == core::CommandOutcome::browse);
     REQUIRE(form.form);
     CHECK(form.table->name == "customer");
+
+    const auto screen = application.execute(core::parse_command("screen home"));
+    REQUIRE(screen.outcome == core::CommandOutcome::screen);
+    REQUIRE(screen.screen);
+    CHECK(screen.screen->items.front().command == "dashboard");
 
     const auto view = application.execute(core::parse_command("view active"));
     REQUIRE(view.outcome == core::CommandOutcome::browse);
@@ -80,6 +88,8 @@ TEST_CASE("application runtime resolves metadata forms views reports and command
     CHECK(application.execute(core::parse_command("export names csv output.csv replace")).outcome ==
           core::CommandOutcome::invalid_arguments);
     CHECK(application.execute(core::parse_command("report absent")).outcome ==
+          core::CommandOutcome::definition_not_found);
+    CHECK(application.execute(core::parse_command("screen absent")).outcome ==
           core::CommandOutcome::definition_not_found);
     CHECK(application.execute(core::parse_command("browse _app_forms")).outcome ==
           core::CommandOutcome::table_not_found);

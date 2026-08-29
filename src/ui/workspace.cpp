@@ -150,6 +150,11 @@ void Workspace::open_report(std::string name, std::string title) {
     windows_.open({.id = "report:" + std::move(name), .title = std::move(title), .kind = DocumentKind::report});
 }
 
+void Workspace::open_screen(std::string name, std::string title) {
+    windows_.open(
+        {.id = "screen:" + std::move(name), .title = std::move(title), .kind = DocumentKind::application_screen});
+}
+
 void Workspace::begin_path_prompt(Modal modal) {
     modal_ = modal;
     submitted_value_.clear();

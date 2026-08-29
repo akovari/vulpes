@@ -108,11 +108,15 @@ adding parallel optional-modal flags. See ADRs 0018 and 0024.
 page, then distributes remaining cells without changing dataset paging. It uses
 separate header, ordinary-row, selected-row, focused-cell, and footer roles.
 Per-field width overrides remain presentation state inside the Grid and are
-adjusted through semantic actions. The renderer keeps the selected row within a
-viewport smaller than the dataset page, reports absolute row/column position,
-and derives border overflow/thumb markers without exposing terminal behavior to
-the dataset. Localized `GridText` supplies empty-state and position labels. See
-ADR 0021.
+adjusted through semantic actions. `GridOptions` can pin leading columns, add
+read-only calculations over owned rows, and request typed aggregate summaries;
+these are semantic projections, not terminal coordinates or widget SQL.
+`Dataset` owns document-local, typed saved-filter presets and the safe
+aggregate-query boundary. The renderer keeps the selected row within a viewport
+smaller than the dataset page, reports absolute row/column position, and derives
+border overflow/thumb markers without exposing terminal behavior to the dataset.
+Localized `GridText` supplies empty-state and position labels. See ADRs 0021
+and 0033.
 Record forms derive a viewport from the focused field when a schema contains
 more fields than the current window can show. These are rendering policies;
 they do not leak into the dataset model.
@@ -128,10 +132,14 @@ event routing. Specialized controls can adopt the contract incrementally. See
 ADR 0016.
 
 `WorkspacePreferences` is a versioned, user-local JSON file outside the SQLite
-application. It currently persists only a bounded recent-database list, so it
-cannot alter ordinary SQLite compatibility or become a second application
-format. It uses the platform configuration directory by default and accepts an
-explicit path for portable/test use.
+application. It persists a bounded recent-database list plus host presentation
+defaults (locale, theme, dataset page size, and semantic key-binding overrides)
+without altering ordinary SQLite compatibility or becoming a second application
+format. The command line takes precedence over those defaults. It uses the
+platform configuration directory by default and accepts an explicit path for
+portable/test use. SQLite-resident `_app_*` metadata remains the separate,
+portable definition of an application; it must not read or write host
+preferences. See ADR 0031.
 
 `Database` retains its SQLite open mode. Read-only connections make table
 datasets non-editable before a UI action can create a form or delete
@@ -231,10 +239,14 @@ formats, and relationship lookup policy. Validation rejects unknown objects,
 unsafe lookup fields, invalid limits, incomplete currency policy, and ambiguous
 temporal annotations. Forms and grids consume this model without knowing where
 it was stored. `ApplicationDefinition` owns named forms, views, commands, menus,
-reports, and settings loaded from reserved `_app_*` tables. Loading an ordinary
-database is read-only and returns an empty definition; explicit transactional
-migrations own all metadata schema changes. UI code consumes the semantic model
-and never queries metadata tables. See ADRs 0026 and 0027.
+screens, reports, and settings loaded from reserved `_app_*` tables. Screens
+are ordered semantic command links with no terminal coordinates.
+`ScreenDocument` renders that model as a TUI navigation list and returns only a
+selected command name; the workspace host re-dispatches it through
+`ApplicationRuntime`. Loading an ordinary database is read-only and returns an
+empty definition; explicit transactional migrations own all metadata schema
+changes. UI code consumes the semantic model and never queries metadata tables.
+See ADRs 0026, 0027, and 0032.
 
 ### Commands
 
@@ -244,7 +256,7 @@ validates command arity and resolves schema objects, then returns a semantic
 `--command` option is a non-interactive adapter. The workspace `Ctrl+P`
 command palette uses the same parser/runtime, then opens semantic schema,
 browse, report, or SQL documents rather than executing SQLite through a widget.
-Named forms, views, reports, and recursively bounded commands resolve from an
+Named forms, screens, views, reports, and recursively bounded commands resolve from an
 optional `ApplicationDefinition`. Metadata menu items return `run <name>` to
 this same boundary; they do not invoke documents or SQL directly. In app mode,
 reserved `_app_*` tables are hidden from normal navigation while low-level
@@ -296,9 +308,9 @@ so adding a translation does not alter commands, actions, or database names.
 values such as `record.edit` and `dataset.refresh`. Browse controllers receive
 only actions, so neither Windows virtual keys nor ANSI sequences become part of
 application behavior. The built-in mapping supplies the documented browse keys;
-callers can replace individual bindings through `ActionMap::bind`. Persisting
-user-configured bindings is deliberately deferred until the configuration
-format exists.
+callers can replace individual bindings through `ActionMap::bind`. User-local
+configuration persists overrides as normalized keys and stable action IDs, not
+translated labels or terminal escape sequences. See ADRs 0011 and 0031.
 
 ### SQL console boundary
 

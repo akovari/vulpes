@@ -291,6 +291,15 @@ TEST_CASE("workspace application home routes metadata menu items as semantic com
     CHECK(workspace.requested_command() == "run \"low-stock\"");
 }
 
+TEST_CASE("workspace opens a named application screen as a document", "[ui][workspace][appmeta]") {
+    auto workspace = english_workspace();
+    workspace.open_screen("home", "Inventory");
+
+    CHECK(workspace.active_document().id == "screen:home");
+    CHECK(workspace.active_document().title == "Inventory");
+    CHECK(workspace.active_document().kind == vulpes::ui::DocumentKind::application_screen);
+}
+
 TEST_CASE("workspace clears a dismissed modal from the next frame", "[ui][workspace]") {
     auto workspace = english_workspace();
     vulpes::terminal::ScreenBuffer modal_frame{80, 25};

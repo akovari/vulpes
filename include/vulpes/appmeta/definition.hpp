@@ -48,6 +48,24 @@ struct MenuDefinition {
     std::vector<MenuItemDefinition> items;
 };
 
+// A screen is an ordered semantic dashboard. Its items reference named
+// application commands; they do not describe any frontend layout or directly
+// execute SQL. A renderer is free to present the same definition as buttons,
+// cards, a navigation list, or another appropriate frontend control.
+struct ScreenItemDefinition {
+    std::string label;
+    std::optional<std::string> description;
+    std::string command;
+};
+
+struct ScreenDefinition {
+    std::string name;
+    std::string label;
+    std::optional<std::string> description;
+    bool default_screen{false};
+    std::vector<ScreenItemDefinition> items;
+};
+
 struct ReportDefinition {
     std::string name;
     std::string label;
@@ -70,6 +88,7 @@ class ApplicationDefinition {
     std::vector<ViewDefinition> views;
     std::vector<CommandDefinition> commands;
     std::vector<MenuDefinition> menus;
+    std::vector<ScreenDefinition> screens;
     std::vector<ReportDefinition> reports;
     std::vector<script::Definition> scripts;
     std::vector<SettingDefinition> settings;
@@ -79,6 +98,8 @@ class ApplicationDefinition {
     [[nodiscard]] auto default_form(std::string_view table) const noexcept -> const FormDefinition*;
     [[nodiscard]] auto view(std::string_view name) const noexcept -> const ViewDefinition*;
     [[nodiscard]] auto command(std::string_view name) const noexcept -> const CommandDefinition*;
+    [[nodiscard]] auto screen(std::string_view name) const noexcept -> const ScreenDefinition*;
+    [[nodiscard]] auto default_screen() const noexcept -> const ScreenDefinition*;
     [[nodiscard]] auto report(std::string_view name) const noexcept -> const ReportDefinition*;
     [[nodiscard]] auto setting(std::string_view key) const noexcept -> std::optional<std::string_view>;
     void validate(std::span<const db::TableSchema> schema) const;

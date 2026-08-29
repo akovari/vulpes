@@ -30,6 +30,10 @@ auto command_id(std::string_view verb) -> CommandId {
         return CommandId::forms;
     if (verb == "form")
         return CommandId::form;
+    if (verb == "screens")
+        return CommandId::screens;
+    if (verb == "screen")
+        return CommandId::screen;
     if (verb == "views")
         return CommandId::views;
     if (verb == "view")
@@ -109,6 +113,10 @@ auto action_id(CommandId command) -> std::string_view {
         return "application.forms";
     case CommandId::form:
         return "application.form";
+    case CommandId::screens:
+        return "application.screens";
+    case CommandId::screen:
+        return "application.screen";
     case CommandId::views:
         return "application.views";
     case CommandId::view:

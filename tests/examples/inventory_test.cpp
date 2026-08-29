@@ -45,6 +45,12 @@ TEST_CASE("inventory acceptance scenario exercises generic edit relationship mov
     database.execute(read_script(inventory / "examples" / "inventory" / "application.sql"));
     const auto application_definition = vulpes::appmeta::load_application_definition(database);
     vulpes::core::ApplicationRuntime application{database, &application_definition};
+    const auto home = application.execute(vulpes::core::parse_command("screen home"));
+    REQUIRE(home.outcome == vulpes::core::CommandOutcome::screen);
+    REQUIRE(home.screen);
+    CHECK(home.screen->default_screen);
+    CHECK(home.screen->items.size() == 3);
+    CHECK(home.screen->items.front().command == "products");
     const auto low_stock_report = application.execute(vulpes::core::parse_command("run low-stock"));
     REQUIRE(low_stock_report.outcome == vulpes::core::CommandOutcome::report);
     REQUIRE(low_stock_report.report);

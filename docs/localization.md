@@ -41,6 +41,12 @@ Use the shipped Czech catalog explicitly during development:
 .\build\windows-msvc\Debug\vulpes.exe inventory.db --locale cs-CZ --catalog translations\cs.json
 ```
 
+For regular interactive use, the user-local workspace configuration can supply
+the default locale. The precedence is explicit `--locale`, then the `locale`
+value in `settings.json`, then built-in English. The configuration file is
+host-local (use `--config <path>` to select one); application databases retain
+portable SQLite-resident metadata and never carry a user's language preference.
+
 Catalog values use ICU MessageFormat syntax. Named arguments are typed strings,
 integers, floating-point values, or select booleans; plural rules therefore
 receive numbers rather than preformatted strings. Keep each plural or select

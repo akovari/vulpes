@@ -142,6 +142,20 @@ void migrate_two_to_three(db::Database& database) {
         "UPDATE _app_schema SET version = 3 WHERE singleton = 1;");
 }
 
+void migrate_three_to_four(db::Database& database) {
+    database.execute("CREATE TABLE _app_screens("
+                     "name TEXT PRIMARY KEY, label TEXT NOT NULL, description TEXT,"
+                     "is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0, 1)));"
+                     "CREATE UNIQUE INDEX _app_screens_one_default "
+                     "ON _app_screens(is_default) WHERE is_default = 1;"
+                     "CREATE TABLE _app_screen_items("
+                     "screen_name TEXT NOT NULL REFERENCES _app_screens(name) ON DELETE CASCADE,"
+                     "position INTEGER NOT NULL CHECK(position >= 0), label TEXT NOT NULL, description TEXT,"
+                     "command_name TEXT NOT NULL REFERENCES _app_commands(name),"
+                     "PRIMARY KEY(screen_name, position));"
+                     "UPDATE _app_schema SET version = 4 WHERE singleton = 1;");
+}
+
 void load_settings(db::Database& database, ApplicationDefinition& definition) {
     auto statement = database.prepare("SELECT key, value FROM _app_settings ORDER BY key");
     while (statement.step())
@@ -240,6 +254,24 @@ void load_version_three(db::Database& database, ApplicationDefinition& definitio
     }
 }
 
+void load_version_four(db::Database& database, ApplicationDefinition& definition) {
+    auto screens = database.prepare("SELECT name, label, description, is_default FROM _app_screens ORDER BY name");
+    while (screens.step()) {
+        ScreenDefinition screen{.name = screens.column(0).as_string(),
+                                .label = screens.column(1).as_string(),
+                                .description = optional_string(screens.column(2)),
+                                .default_screen = screens.column(3).as_int() != 0};
+        auto items = database.prepare(
+            "SELECT label, description, command_name FROM _app_screen_items WHERE screen_name = ? ORDER BY position");
+        items.bind(1, db::Value{screen.name});
+        while (items.step())
+            screen.items.push_back({.label = items.column(0).as_string(),
+                                    .description = optional_string(items.column(1)),
+                                    .command = items.column(2).as_string()});
+        definition.screens.push_back(std::move(screen));
+    }
+}
+
 } // namespace
 
 auto application_schema_version(db::Database& database) -> std::optional<int> {
@@ -283,6 +315,10 @@ void migrate_application_metadata(db::Database& database) {
         migrate_two_to_three(database);
         version = 3;
     }
+    if (version == 3) {
+        migrate_three_to_four(database);
+        version = 4;
+    }
     if (version != current_application_schema_version)
         throw Error{ErrorCategory::metadata, "no application metadata migration path is available"};
     transaction.commit();
@@ -301,6 +337,7 @@ auto load_application_definition(db::Database& database) -> ApplicationDefinitio
     load_forms(database, definition);
     load_version_two(database, definition);
     load_version_three(database, definition);
+    load_version_four(database, definition);
     definition.validate(db::inspect_schema(database));
     return definition;
 }

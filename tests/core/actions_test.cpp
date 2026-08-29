@@ -20,6 +20,8 @@ TEST_CASE("action map converts terminal keys to stable semantic actions", "[core
     CHECK(actions.action_for(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::right, .ctrl = true}) ==
           vulpes::core::ActionId::grid_widen_column);
     CHECK(vulpes::core::action_id(vulpes::core::ActionId::grid_narrow_column) == "grid.narrow_column");
+    CHECK(vulpes::core::action_from_id("record.edit") == vulpes::core::ActionId::record_edit);
+    CHECK_FALSE(vulpes::core::action_from_id("Record.Edit").has_value());
 
     actions.bind({.key = {.key = vulpes::terminal::Key::f9}, .action = vulpes::core::ActionId::record_edit});
     CHECK(actions.action_for(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f9}) ==

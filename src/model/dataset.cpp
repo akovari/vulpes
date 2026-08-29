@@ -47,6 +47,22 @@ namespace {
     return {};
 }
 
+[[nodiscard]] auto aggregate_sql(AggregateFunction function) -> std::string_view {
+    switch (function) {
+    case AggregateFunction::count:
+        return "COUNT";
+    case AggregateFunction::sum:
+        return "SUM";
+    case AggregateFunction::average:
+        return "AVG";
+    case AggregateFunction::minimum:
+        return "MIN";
+    case AggregateFunction::maximum:
+        return "MAX";
+    }
+    return {};
+}
+
 [[nodiscard]] auto escape_like_pattern(std::string_view text) -> std::string {
     std::string pattern;
     pattern.reserve(text.size() + 2);
@@ -141,11 +157,7 @@ auto Dataset::order_by(std::string_view field, SortDirection direction) -> Datas
 }
 
 auto Dataset::where(Filter filter) -> Dataset& {
-    validate_field(filter.field);
-    if (filter.value.is_null() && filter.comparison != FilterOperator::equal &&
-        filter.comparison != FilterOperator::not_equal) {
-        throw Error{ErrorCategory::validation, "NULL can only be compared using equal or not_equal"};
-    }
+    validate_filter(filter);
     filters_.push_back(std::move(filter));
     page_offset_ = 0;
     refresh();
@@ -171,6 +183,72 @@ auto Dataset::clear_search() -> Dataset& {
     page_offset_ = 0;
     refresh();
     return *this;
+}
+
+void Dataset::save_current_filter(std::string_view name) {
+    if (name.empty() || name.size() > 128 ||
+        std::ranges::any_of(name, [](unsigned char character) { return character < 0x20U || character == 0x7FU; })) {
+        throw Error{ErrorCategory::validation, "saved filter names must contain 1 to 128 printable characters"};
+    }
+
+    SavedFilter saved{.name = std::string{name}, .filters = filters_, .search = search_};
+    const auto existing = std::ranges::find(saved_filters_, name, &SavedFilter::name);
+    if (existing == saved_filters_.end())
+        saved_filters_.push_back(std::move(saved));
+    else
+        *existing = std::move(saved);
+}
+
+auto Dataset::apply_saved_filter(std::string_view name) -> bool {
+    const auto saved = std::ranges::find(saved_filters_, name, &SavedFilter::name);
+    if (saved == saved_filters_.end())
+        return false;
+    for (const auto& filter : saved->filters)
+        validate_filter(filter);
+
+    filters_ = saved->filters;
+    search_ = saved->search;
+    page_offset_ = 0;
+    refresh();
+    return true;
+}
+
+auto Dataset::remove_saved_filter(std::string_view name) -> bool {
+    const auto saved = std::ranges::find(saved_filters_, name, &SavedFilter::name);
+    if (saved == saved_filters_.end())
+        return false;
+    saved_filters_.erase(saved);
+    return true;
+}
+
+auto Dataset::aggregate(std::span<const AggregateDefinition> definitions) const -> std::vector<AggregateResult> {
+    if (definitions.empty())
+        return {};
+    for (const auto& definition : definitions)
+        validate_aggregate(definition);
+
+    std::string sql{"SELECT "};
+    for (std::size_t index = 0; index < definitions.size(); ++index) {
+        if (index != 0)
+            sql += ", ";
+        const auto& definition = definitions[index];
+        sql += std::string{aggregate_sql(definition.function)} + "(";
+        sql += definition.field ? db::detail::quote_identifier(*definition.field) : "*";
+        sql += ") AS " + db::detail::quote_identifier("aggregate_" + std::to_string(index));
+    }
+    std::vector<db::Value> values;
+    auto query =
+        database_->prepare(sql + " FROM " + db::detail::quote_identifier(schema_.name) + query_where_clause(values));
+    for (std::size_t index = 0; index < values.size(); ++index)
+        query.bind(static_cast<int>(index + 1), values[index]);
+    if (!query.step())
+        throw Error{ErrorCategory::database, "aggregate query returned no row"};
+
+    std::vector<AggregateResult> results;
+    results.reserve(definitions.size());
+    for (std::size_t index = 0; index < definitions.size(); ++index)
+        results.push_back({.definition = definitions[index], .value = query.column(index)});
+    return results;
 }
 
 void Dataset::begin_insert() {
@@ -504,6 +582,7 @@ void Dataset::refresh() {
     while (query.step())
         rows_.push_back(query.row());
     current_index_ = 0;
+    ++query_revision_;
 }
 
 auto Dataset::first() -> bool {
@@ -597,6 +676,25 @@ auto Dataset::field_index(std::string_view field) const -> std::size_t {
 
 void Dataset::validate_field(std::string_view field) const {
     static_cast<void>(field_index(field));
+}
+
+void Dataset::validate_filter(const Filter& filter) const {
+    validate_field(filter.field);
+    if (filter.value.is_null() && filter.comparison != FilterOperator::equal &&
+        filter.comparison != FilterOperator::not_equal) {
+        throw Error{ErrorCategory::validation, "NULL can only be compared using equal or not_equal"};
+    }
+}
+
+void Dataset::validate_aggregate(const AggregateDefinition& definition) const {
+    if (definition.function == AggregateFunction::count) {
+        if (definition.field)
+            validate_field(*definition.field);
+        return;
+    }
+    if (!definition.field)
+        throw Error{ErrorCategory::validation, "this aggregation requires a dataset field"};
+    validate_field(*definition.field);
 }
 
 void Dataset::ensure_editable() const {

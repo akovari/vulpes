@@ -22,6 +22,9 @@ TEST_CASE("command parser handles aliases and invalid quotation", "[core][comman
     CHECK(parse_command("invented").id == CommandId::unknown);
     CHECK(parse_command("FORMS").id == CommandId::forms);
     CHECK(parse_command("form customer").id == CommandId::form);
+    CHECK(parse_command("screens").id == CommandId::screens);
+    CHECK(parse_command("screen home").id == CommandId::screen);
+    CHECK(action_id(CommandId::screen) == "application.screen");
     CHECK(parse_command("views").id == CommandId::views);
     CHECK(parse_command("view active").id == CommandId::view);
     CHECK(parse_command("reports").id == CommandId::reports);

@@ -8,7 +8,9 @@ namespace vulpes::ui {
 
 // The frontend-neutral contract for an interactive workspace surface. A
 // surface owns its semantic state; a host owns terminal lifecycle and routing.
-enum class DocumentResult { unchanged, redraw, close };
+// A document can request a semantic application command, but the workspace
+// host remains responsible for parsing and dispatching it through the runtime.
+enum class DocumentResult { unchanged, redraw, command, close };
 
 class DocumentSurface {
   public:

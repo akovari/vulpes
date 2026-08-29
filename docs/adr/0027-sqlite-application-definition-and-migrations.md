@@ -14,12 +14,13 @@ depend on it.
 ## Decision
 
 Application metadata uses reserved `_app_*` SQLite tables. `_app_schema` owns a
-single positive schema version. The current version is 3:
+single positive schema version. The current version is 4:
 
 - version 1 introduces settings, named forms, and form-field presentation and
   lookup overrides;
 - version 2 introduces named views, reports, commands, menus, and menu items.
 - version 3 introduces ordered Lua business-logic hook definitions.
+- version 4 introduces named dashboard screens and ordered command links.
 
 `migrate_application_metadata` is the only schema-creation/upgrade entry point.
 It applies ordered migrations in one SQLite transaction and is idempotent at
@@ -32,8 +33,9 @@ The loader owns all query results and translates rows into
 `ApplicationDefinition`. It parses lookup search fields from a JSON array,
 enforces bounded numeric values and nullable booleans, and converts field-format
 names to the existing enum. It then validates every referenced table, field,
-form, command, and menu item against inspected SQLite schema. The semantic
-definition contains no terminal coordinates or backend types.
+form, command, menu item, and screen item against inspected SQLite schema. The
+semantic definition contains no terminal coordinates, frontend types, or raw
+SQL execution path for dashboard links.
 
 Default form definitions are projected into the existing
 `ApplicationMetadata` presentation model. This lets generated forms and grids

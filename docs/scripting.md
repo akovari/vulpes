@@ -11,7 +11,7 @@ as a security boundary for an untrusted `.vulpes` file.
 
 ## Enable script metadata
 
-Metadata migration is explicit and upgrades `_app_schema` to version 3:
+Metadata migration is explicit and upgrades `_app_schema` to version 4:
 
 ```powershell
 .\build\windows-msvc\Debug\vulpes.exe app.vulpes --migrate-app

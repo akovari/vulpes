@@ -12,7 +12,7 @@
 
 namespace vulpes::ui {
 
-enum class DocumentKind { workspace, browse, schema, sql_console, report };
+enum class DocumentKind { workspace, browse, schema, sql_console, report, application_screen };
 
 struct Document {
     std::string id;

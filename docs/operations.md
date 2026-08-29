@@ -1,5 +1,43 @@
 # Backup, recovery, compatibility, and upgrades
 
+## User-local workspace preferences
+
+Personal workspace preferences are deliberately separate from a database's
+portable `_app_*` metadata. They contain recent databases and presentation/input
+defaults for one host. The default file is `Vulpes/settings.json` below Windows
+`%APPDATA%`, `~/Library/Application Support` on macOS, and
+`$XDG_CONFIG_HOME/vulpes` (or `~/.config/vulpes`) on Linux. Use
+`--config <path>` to use an isolated or portable settings file.
+
+The current format is version 2. Version 1 recent-database files load with
+safe defaults and are rewritten as version 2 when Vulpes updates the recent
+list. A newer configuration version is rejected rather than being interpreted
+or rewritten by an older Vulpes installation.
+
+```json
+{
+  "version": 2,
+  "locale": "cs-CZ",
+  "theme": "high-contrast",
+  "default_dataset_page_size": 48,
+  "recent_databases": ["C:/data/inventory.vulpes"],
+  "key_bindings": [
+    {"action": "record.edit", "key": "f9", "ctrl": false, "alt": false, "shift": false},
+    {"action": "application.menu", "key": "character", "character": "m", "alt": true, "ctrl": false, "shift": false}
+  ]
+}
+```
+
+`key_bindings` overlay the built-in mappings. Each entry uses a stable action
+identifier and a normalized key name (`character`, `enter`, `escape`, arrows,
+navigation keys, `insert`, `delete`, or `f1` through `f12`). A character entry
+must contain exactly one UTF-8 code point, and no physical key combination may
+appear twice. Invalid or unknown binding data is rejected rather than guessed.
+
+For a single launch, `--locale`, `--theme`, and `--page-size` take precedence
+over the settings file and do not persist changes. Page size must be between 1
+and 1000 rows.
+
 Vulpes databases are ordinary SQLite databases. The `.vulpes` suffix is a
 convention only: any SQLite tool can inspect business tables and Vulpes’
 reserved `_app_*` metadata tables.

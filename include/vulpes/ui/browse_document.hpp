@@ -17,7 +17,9 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
+#include <vector>
 
 namespace vulpes::ui {
 
@@ -29,9 +31,14 @@ class BrowseDocument final : public DocumentSurface {
                    const Theme& theme = ui::theme(ThemeName::midnight), core::Clipboard* clipboard = nullptr,
                    const appmeta::ApplicationMetadata* metadata = nullptr,
                    std::optional<appmeta::TableMetadata> table_override = std::nullopt,
-                   model::DatasetLifecycle* lifecycle = nullptr);
+                   model::DatasetLifecycle* lifecycle = nullptr, std::size_t page_size = 100);
 
     [[nodiscard]] auto is_dirty() const noexcept -> bool override;
+    [[nodiscard]] auto page_size() const noexcept -> std::size_t { return dataset_.page_size(); }
+    void save_filter_preset(std::string_view name);
+    [[nodiscard]] auto apply_filter_preset(std::string_view name) -> bool;
+    [[nodiscard]] auto remove_filter_preset(std::string_view name) -> bool;
+    [[nodiscard]] auto filter_presets() const noexcept -> const std::vector<model::SavedFilter>&;
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> DocumentResult override;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) override;
 

@@ -3,6 +3,7 @@
 #include "vulpes/db/schema.hpp"
 #include "vulpes/model/dataset.hpp"
 
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace vulpes;
@@ -105,6 +106,43 @@ TEST_CASE("dataset uses correct NULL predicate semantics", "[model][dataset]") {
 
     dataset.clear_filters().where({"city", model::FilterOperator::not_equal, nullptr});
     CHECK(dataset.total_count() == 4);
+}
+
+TEST_CASE("dataset saves typed filter presets and calculates over the active query",
+          "[model][dataset][filters][aggregate]") {
+    auto database = make_dataset_database();
+    model::Dataset dataset{database, customer_schema(database)};
+
+    dataset.where({"active", model::FilterOperator::equal, true}).search("Prague");
+    dataset.save_current_filter("active-prague");
+    REQUIRE(dataset.saved_filters().size() == 1);
+    CHECK(dataset.saved_filters().front().name == "active-prague");
+
+    dataset.clear_filters().clear_search();
+    REQUIRE(dataset.total_count() == 5);
+    REQUIRE(dataset.apply_saved_filter("active-prague"));
+    CHECK(dataset.total_count() == 2);
+    CHECK_FALSE(dataset.apply_saved_filter("missing"));
+
+    const std::array definitions{
+        model::AggregateDefinition{.function = model::AggregateFunction::count},
+        model::AggregateDefinition{.function = model::AggregateFunction::sum, .field = "balance"},
+        model::AggregateDefinition{.function = model::AggregateFunction::average, .field = "balance"},
+        model::AggregateDefinition{.function = model::AggregateFunction::minimum, .field = "name"},
+    };
+    const auto results = dataset.aggregate(definitions);
+    REQUIRE(results.size() == definitions.size());
+    CHECK(results[0].value.as_int() == 2);
+    CHECK(results[1].value.as_double() == 13.5);
+    CHECK(results[2].value.as_double() == 6.75);
+    CHECK(results[3].value.as_string() == "Delta");
+
+    CHECK(dataset.remove_saved_filter("active-prague"));
+    CHECK_FALSE(dataset.remove_saved_filter("active-prague"));
+    CHECK_THROWS_AS(dataset.save_current_filter("bad\nname"), Error);
+    const std::array invalid{
+        model::AggregateDefinition{.function = model::AggregateFunction::sum, .field = "not_a_field"}};
+    CHECK_THROWS_AS(dataset.aggregate(invalid), Error);
 }
 
 TEST_CASE("dataset exposes bounded foreign-key lookup options with display-field heuristics", "[model][dataset]") {

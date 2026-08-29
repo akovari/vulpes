@@ -55,6 +55,15 @@ auto ApplicationDefinition::command(std::string_view name) const noexcept -> con
     return find_named(commands, name);
 }
 
+auto ApplicationDefinition::screen(std::string_view name) const noexcept -> const ScreenDefinition* {
+    return find_named(screens, name);
+}
+
+auto ApplicationDefinition::default_screen() const noexcept -> const ScreenDefinition* {
+    const auto found = std::ranges::find(screens, true, &ScreenDefinition::default_screen);
+    return found == screens.end() ? nullptr : &*found;
+}
+
 auto ApplicationDefinition::report(std::string_view name) const noexcept -> const ReportDefinition* {
     return find_named(reports, name);
 }
@@ -73,6 +82,7 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
     require_unique_names(views, "view");
     require_unique_names(commands, "command");
     require_unique_names(menus, "menu");
+    require_unique_names(screens, "screen");
     require_unique_names(reports, "report");
     require_unique_names(scripts, "script");
 
@@ -159,6 +169,26 @@ void ApplicationDefinition::validate(std::span<const db::TableSchema> schema) co
                 throw Error{ErrorCategory::metadata, "menu item references an unknown command: " + menu.name};
         }
     }
+    std::size_t default_screen_count{};
+    for (const auto& screen_definition : screens) {
+        if (!is_command_name(screen_definition.name) || screen_definition.label.empty() ||
+            (screen_definition.description && screen_definition.description->empty()) ||
+            screen_definition.items.size() > 1000) {
+            throw Error{ErrorCategory::metadata,
+                        "screen has an invalid label, description, or item count: " + screen_definition.name};
+        }
+        if (screen_definition.default_screen)
+            ++default_screen_count;
+        for (const auto& item : screen_definition.items) {
+            if (item.label.empty() || (item.description && item.description->empty()) ||
+                command(item.command) == nullptr) {
+                throw Error{ErrorCategory::metadata,
+                            "screen item has an invalid label, description, or command: " + screen_definition.name};
+            }
+        }
+    }
+    if (default_screen_count > 1)
+        throw Error{ErrorCategory::metadata, "more than one application screen is marked as default"};
 }
 
 } // namespace vulpes::appmeta

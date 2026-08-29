@@ -36,7 +36,8 @@ Move-Item inventory.db inventory.vulpes
 .\build\windows-msvc\Debug\vulpes.exe inventory.vulpes
 ```
 
-Then choose Products, edit the hammer, open its Category or Supplier lookup,
+The application opens to its metadata-defined inventory dashboard. Choose
+Products, edit the hammer, open its Category or Supplier lookup,
 choose Stock movements to insert a movement, and open Low-stock report. The same
 workflows remain available through ordinary browse and SQL commands.
 

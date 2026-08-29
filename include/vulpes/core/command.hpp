@@ -15,6 +15,8 @@ enum class CommandId {
     browse,
     forms,
     form,
+    screens,
+    screen,
     views,
     view,
     reports,

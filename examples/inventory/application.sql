@@ -40,6 +40,14 @@ INSERT INTO _app_commands(name, label, command) VALUES
   ('stock-movements', 'Stock movements', 'form stock-movement'),
   ('low-stock', 'Low-stock report', 'report low-stock');
 
+INSERT INTO _app_screens(name, label, description, is_default) VALUES
+  ('home', 'Vulpes Inventory', 'Choose an inventory task.', 1);
+
+INSERT INTO _app_screen_items(screen_name, position, label, description, command_name) VALUES
+  ('home', 0, 'Products', 'Browse and maintain the product catalogue.', 'products'),
+  ('home', 1, 'Stock movements', 'Record stock received, moved, or issued.', 'stock-movements'),
+  ('home', 2, 'Low-stock report', 'Show products at or below their reorder level.', 'low-stock');
+
 INSERT INTO _app_menus(name, label, position) VALUES
   ('inventory', 'Inventory', 0);
 

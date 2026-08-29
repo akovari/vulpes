@@ -52,6 +52,7 @@ class Workspace {
     void open_schema(const db::TableSchema& table);
     void open_sql_console();
     void open_report(std::string name, std::string title);
+    void open_screen(std::string name, std::string title);
     [[nodiscard]] auto handle(core::ActionId action, const terminal::InputEvent& event) -> WorkspaceResult;
     void render(terminal::ScreenBuffer& buffer, Rect bounds) const;
 

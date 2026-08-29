@@ -1,6 +1,7 @@
 #include "vulpes/core/actions.hpp"
 
 #include <algorithm>
+#include <array>
 #include <utility>
 
 namespace vulpes::core {
@@ -126,6 +127,39 @@ auto action_id(ActionId action) -> std::string_view {
         return {};
     }
     return {};
+}
+
+auto action_from_id(std::string_view identifier) -> std::optional<ActionId> {
+    constexpr std::array actions{
+        ActionId::application_back,
+        ActionId::application_quit,
+        ActionId::application_menu,
+        ActionId::application_command_palette,
+        ActionId::database_open,
+        ActionId::database_open_read_only,
+        ActionId::database_create,
+        ActionId::workspace_next_document,
+        ActionId::workspace_close_document,
+        ActionId::document_switch_pane,
+        ActionId::dataset_previous,
+        ActionId::dataset_next,
+        ActionId::dataset_first,
+        ActionId::dataset_last,
+        ActionId::grid_previous_column,
+        ActionId::grid_next_column,
+        ActionId::grid_narrow_column,
+        ActionId::grid_widen_column,
+        ActionId::record_new,
+        ActionId::record_edit,
+        ActionId::record_delete,
+        ActionId::dataset_search,
+        ActionId::dataset_filter,
+        ActionId::dataset_refresh,
+        ActionId::dataset_sort,
+    };
+    const auto action =
+        std::ranges::find_if(actions, [&](const auto candidate) { return action_id(candidate) == identifier; });
+    return action == actions.end() ? std::nullopt : std::optional{*action};
 }
 
 } // namespace vulpes::core

@@ -12,10 +12,11 @@ for browse and SQL work. This is intentionally a classic local RAD workflow,
 not a browser-style application.
 
 The implemented post-0.1 foundation also includes optional SQLite-resident
-application metadata, named read-only Grid reports, and application menus. Lua
-hooks remain a later layer. Form designers, plugins, networking, a server,
-GUI/web frontends, an ORM, and a custom database or programming language remain
-out of scope.
+application metadata, named read-only Grid reports, application menus, and
+bounded Lua lifecycle hooks. Form designers, application authoring tools,
+native extensions, networking, a server, GUI/web frontends, an ORM, and a
+custom database or programming language are not yet implemented. Their order
+and acceptance criteria are tracked in `TODO.md`.
 
 The long-form originating plan is represented as actionable phases in
 `TODO.md`; this document is the scope guard used during review.

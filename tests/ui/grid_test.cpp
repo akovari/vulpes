@@ -56,6 +56,74 @@ TEST_CASE("grid selects and scrolls columns independently of dataset navigation"
     CHECK(grid.selected_field()->name == "first");
 }
 
+TEST_CASE("grid keeps frozen columns visible while scrolling calculated read-only projections",
+          "[ui][grid][frozen][calculated]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE item(id INTEGER PRIMARY KEY, name TEXT, quantity INTEGER, price REAL, note TEXT);"
+                     "INSERT INTO item VALUES (1, 'Hammer', 3, 12.5, 'stock')");
+    vulpes::model::Dataset dataset{database, vulpes::db::inspect_schema(database).front()};
+    const vulpes::ui::GridOptions options{
+        .frozen_columns = 1,
+        .calculated_columns = {{.id = "line_total",
+                                .label = "Line total",
+                                .value =
+                                    [](const vulpes::db::Row& row) {
+                                        return row.at("quantity").as_int() * row.at("price").as_double();
+                                    }}},
+        .aggregations = {{.definition = {.function = vulpes::model::AggregateFunction::count}, .label = "Records"},
+                         {.definition = {.function = vulpes::model::AggregateFunction::sum, .field = "price"},
+                          .label = "Prices"}},
+    };
+    vulpes::ui::Grid grid{dataset, "Items",      "",           vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+                          {},      std::nullopt, std::nullopt, options};
+    vulpes::terminal::ScreenBuffer buffer{14, 8};
+
+    REQUIRE(grid.move_right());
+    REQUIRE(grid.move_right());
+    REQUIRE(grid.move_right());
+    grid.render(buffer, {0, 0, 14, 8});
+    CHECK(grid.first_visible_column_index() == 3);
+    CHECK(buffer.cell(1, 3).glyph == U'1');
+
+    REQUIRE(grid.move_right());
+    REQUIRE(grid.move_right());
+    grid.render(buffer, {0, 0, 14, 8});
+    CHECK(grid.selected_column_is_read_only());
+    CHECK(grid.selected_field() == nullptr);
+    CHECK_FALSE(grid.sort_selected());
+    vulpes::terminal::ScreenBuffer calculated_buffer{80, 8};
+    grid.render(calculated_buffer, {0, 0, 80, 8});
+    bool rendered_total{};
+    for (int column = 0; column < calculated_buffer.width(); ++column)
+        rendered_total = rendered_total || calculated_buffer.cell(column, 3).glyph == U'7';
+    CHECK(rendered_total);
+    const auto& aggregates = grid.aggregation_results();
+    REQUIRE(aggregates.size() == 2);
+    CHECK(aggregates[0].value.as_int() == 1);
+    CHECK(aggregates[1].value.as_double() == 12.5);
+}
+
+TEST_CASE("grid aggregates owned SQL rows without a database dependency", "[ui][grid][aggregate]") {
+    vulpes::db::Database database{":memory:"};
+    const auto rows = vulpes::ui::GridRows::from_sql_result(
+        database.run_sql("SELECT 2 AS quantity UNION ALL SELECT 3 UNION ALL SELECT NULL"));
+    const vulpes::ui::GridOptions options{
+        .aggregations = {{.definition = {.function = vulpes::model::AggregateFunction::count}, .label = "Rows"},
+                         {.definition = {.function = vulpes::model::AggregateFunction::count, .field = "quantity"},
+                          .label = "Values"},
+                         {.definition = {.function = vulpes::model::AggregateFunction::sum, .field = "quantity"},
+                          .label = "Total"}},
+    };
+    vulpes::ui::Grid grid{rows, "Results",    "",           vulpes::ui::theme(vulpes::ui::ThemeName::midnight),
+                          {},   std::nullopt, std::nullopt, options};
+
+    const auto& aggregates = grid.aggregation_results();
+    REQUIRE(aggregates.size() == 3);
+    CHECK(aggregates[0].value.as_int() == 3);
+    CHECK(aggregates[1].value.as_int() == 2);
+    CHECK(aggregates[2].value.as_int() == 5);
+}
+
 TEST_CASE("grid follows selected rows and renders position and scrollbar affordances", "[ui][grid][scroll]") {
     vulpes::db::Database database{":memory:"};
     database.execute("CREATE TABLE sample(id INTEGER PRIMARY KEY, name TEXT);"

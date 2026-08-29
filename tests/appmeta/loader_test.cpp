@@ -28,11 +28,17 @@ TEST_CASE("application metadata migrations are transactional versioned and idemp
 
     database.execute("INSERT INTO _app_settings(key, value) VALUES('title', 'Workshop');DROP TABLE _app_scripts;"
                      "DROP TABLE _app_menu_items; DROP TABLE _app_menus; DROP TABLE _app_commands;"
-                     "DROP TABLE _app_reports; DROP TABLE _app_views;"
-                     "UPDATE _app_schema SET version = 1 WHERE singleton = 1;");
+                     "DROP TABLE _app_reports; DROP TABLE _app_views; DROP TABLE _app_screen_items;"
+                     "DROP TABLE _app_screens; UPDATE _app_schema SET version = 1 WHERE singleton = 1;");
     vulpes::appmeta::migrate_application_metadata(database);
 
-    CHECK(*vulpes::appmeta::application_schema_version(database) == 3);
+    CHECK(*vulpes::appmeta::application_schema_version(database) == 4);
+    const auto schema = vulpes::db::inspect_schema(database);
+    const auto screen_table = std::ranges::find(schema, "_app_screens", &vulpes::db::TableSchema::name);
+    REQUIRE(screen_table != schema.end());
+    CHECK(std::ranges::none_of(screen_table->fields, [](const auto& field) {
+        return field.name == "x" || field.name == "y" || field.name == "width" || field.name == "height";
+    }));
     auto setting = database.prepare("SELECT value FROM _app_settings WHERE key = 'title'");
     REQUIRE(setting.step());
     CHECK(setting.column(0).as_string() == "Workshop");
@@ -58,6 +64,10 @@ TEST_CASE("loader builds and validates complete SQLite resident application meta
                      "'SELECT name, price FROM product ORDER BY name', 500);"
                      "INSERT INTO _app_commands VALUES('products', 'Products', 'browse product');"
                      "INSERT INTO _app_commands VALUES('prices', 'Prices', 'report prices');"
+                     "INSERT INTO _app_screens VALUES('home', 'Inventory home', 'Choose an inventory task.', 1);"
+                     "INSERT INTO _app_screen_items VALUES('home', 0, 'Products', 'Browse the product catalogue.', "
+                     "'products');"
+                     "INSERT INTO _app_screen_items VALUES('home', 1, 'Product prices', NULL, 'prices');"
                      "INSERT INTO _app_menus VALUES('main', 'Main', 0);"
                      "INSERT INTO _app_menu_items VALUES('main', 0, 'Products', 'products');"
                      "INSERT INTO _app_menu_items VALUES('main', 1, 'Prices', 'prices');"
@@ -75,6 +85,10 @@ TEST_CASE("loader builds and validates complete SQLite resident application meta
           std::vector<std::string>{"name", "code"});
     REQUIRE(definition.view("active") != nullptr);
     REQUIRE(definition.command("products") != nullptr);
+    REQUIRE(definition.screen("home") != nullptr);
+    CHECK(definition.default_screen() == definition.screen("home"));
+    CHECK(definition.screen("home")->items.size() == 2);
+    CHECK(definition.screen("home")->items.front().command == "products");
     REQUIRE(definition.report("prices") != nullptr);
     REQUIRE(definition.menus.size() == 1);
     CHECK(definition.menus.front().items.size() == 2);
@@ -91,7 +105,7 @@ TEST_CASE("loader rejects future versions and metadata that contradicts SQLite s
                      "INSERT INTO _app_form_fields(form_name, field_name) VALUES('product', 'missing');");
     CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
 
-    database.execute("DELETE FROM _app_form_fields; UPDATE _app_schema SET version = 4 WHERE singleton = 1;");
+    database.execute("DELETE FROM _app_form_fields; UPDATE _app_schema SET version = 5 WHERE singleton = 1;");
     CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
     CHECK_THROWS_AS(vulpes::appmeta::migrate_application_metadata(database), vulpes::Error);
 }
@@ -105,5 +119,15 @@ TEST_CASE("loader rejects invalid Lua script scope and source metadata", "[appme
 
     database.execute("DELETE FROM _app_scripts;"
                      "INSERT INTO _app_scripts VALUES('wrong-command', 'on_command', NULL, 'Bad Name', 'return', 0)");
+    CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
+}
+
+TEST_CASE("loader rejects invalid semantic application screen metadata", "[appmeta][screen]") {
+    vulpes::db::Database database{":memory:"};
+    database.execute("CREATE TABLE product(id INTEGER PRIMARY KEY, name TEXT)");
+    vulpes::appmeta::migrate_application_metadata(database);
+    database.execute("INSERT INTO _app_commands VALUES('products', 'Products', 'browse product');"
+                     "INSERT INTO _app_screens VALUES('home', '', NULL, 1);");
+
     CHECK_THROWS_AS(vulpes::appmeta::load_application_definition(database), vulpes::Error);
 }

@@ -227,13 +227,14 @@ auto english_catalog() -> MessageCatalog {
         {"lookup.title", "Select {field}"},
         {"prompt.instructions", "Arrows Move   Shift+Arrows Select   Enter Apply   Esc Cancel"},
         {"command.help",
-         "Commands: help, tables, schema <table>, browse <table>, forms, form <name>, views, view <name>, reports, "
-         "report <name>, export <report> <format> <path> [overwrite], run <command>, sql, quit"},
+         "Commands: help, tables, schema <table>, browse <table>, forms, form <name>, screens, screen <name>, views, "
+         "view <name>, reports, report <name>, export <report> <format> <path> [overwrite], run <command>, sql, quit"},
         {"export.complete", "{rows, plural, one {Exported # row} other {Exported # rows}} to {path} ({format})."},
         {"export.query_title", "SQL query result"},
         {"report.footer", "Esc Back  Arrow keys Navigate  F6 Sort"},
         {"report.footer_truncated", "Result truncated  Esc Back  Arrow keys Navigate  F6 Sort"},
         {"workspace.command_forms", "{count, plural, one {# form} other {# forms}}"},
+        {"workspace.command_screens", "{count, plural, one {# screen} other {# screens}}"},
         {"workspace.command_views", "{count, plural, one {# view} other {# views}}"},
         {"workspace.command_reports", "{count, plural, one {# report} other {# reports}}"},
         {"error.unknown_definition", "Unknown application item: {name}"},

@@ -1,280 +1,91 @@
-# Vulpes task list
+# Vulpes remaining delivery roadmap
 
-Checkboxes describe completion, not intent. Items are ordered by dependency and
-product risk. A milestone is not complete until its tests and documentation pass
-on Windows, Linux, and macOS.
+This is a forward-looking checklist: completed work is intentionally omitted.
+Use the source tree, ADRs, release notes, and Git history for completed design
+and implementation evidence. A task is checked only after its stated outcome
+has been implemented, tested at the appropriate boundary, and documented.
 
-## M0 — Repository foundation
+## M0 — 0.1 platform and release gates
 
-- [x] C++23/CMake project and version command.
-- [x] Pinned vcpkg manifest for SQLite and Catch2.
-- [x] Windows, Linux, and macOS CI skeleton.
-- [x] Architecture, development, scope, and build documentation.
-- [ ] Confirm the first CI run on all platforms.
-- [x] Add enforced `clang-format` configuration, CMake targets, and CI check.
-- [x] Add an opt-in pre-commit hook for staged C/C++ formatting.
-- [x] Add reviewed `clang-tidy` checks and a static-analysis target.
-- [x] Add release metadata generated from Git tags.
-- [x] Add a Debug-first developer script and repository agent instructions so
-  local configure/build/test/format/tidy commands remain reproducible.
-
-## M1 — Safe SQLite foundation
-
-- [x] Movable RAII `Database`, `Statement`, and `Transaction`.
-- [x] SQLite `NULL`, integer, real, text, and blob `Value` storage.
-- [x] Positional and named parameter binding.
-- [x] Basic table/view, column, and foreign-key introspection.
-- [x] Add row/name lookup without exposing statement lifetimes.
-- [x] Discover unique constraints, indexes, generated/hidden columns, composite
-  keys, and foreign-key actions.
-- [x] Classify constraint errors and preserve extended SQLite result codes.
-- [x] Test blobs, empty values, invalid UTF-8 policy, nested transaction policy,
-  busy handling, read-only mode, and move semantics.
-- [x] Add safe identifier quoting as an internal shared utility.
-
-## M2 — Dataset/cursor model
-
-- [x] Write an ADR for row identity, stable ordering, and pagination fallback.
-- [x] Implement read-only datasets with fields, current row, first/next/previous,
-  last, refresh, and bounded paging.
-- [x] Implement typed sort/filter/search specifications with bound values; never
-  accept unchecked identifier or SQL fragments from UI code.
-- [x] Prefer keyset pagination for stable unique orderings.
-- [x] Add insert/edit modes, dirty tracking, validation, save, cancel, and delete.
-- [x] Cover no-primary-key tables and views with explicit capability flags.
-
-## M3 — Terminal and semantic UI foundation
-
-- [x] `ScreenBuffer`, styles, normalized key/resize events, and backend interface.
-- [x] Spike Unicode grapheme segmentation/display width and record an ADR.
-- [x] Implement deterministic screen diffing independent of byte encoding.
-- [x] Implement `TestTerminal`, a pure ANSI encoder, and an isolated native
-  `ConsoleTerminal` adapter for browse navigation.
-- [x] Adopt CPP-Terminal behind the `Terminal` adapter with deterministic
-  normalization tests for keyboard chords and resize events.
-- [ ] Verify CPP-Terminal keyboard input, resize notifications, and cleanup on
-  supported Windows, Linux, and macOS hosts.
-- [ ] Verify raw-mode restoration, Ctrl+C, resize, and initialized-terminal
-  failure handling on all supported platforms.
-- [x] Render a recoverable terminal-too-small warning after a resize rather than
-  spinning without a frame or input handling.
-- [ ] Complete Windows raw-input verification for Escape, arrows, Ctrl+C, function
-  keys, Alt chords, and terminal restoration on Windows Terminal and legacy hosts.
-- [ ] Complete Linux/macOS raw-input verification for Escape ambiguity, resize,
-  Ctrl+C, UTF-8, and terminal restoration.
-- [x] Implement measurement/layout, container, and label primitives.
-- [x] Add tested semantic focus traversal for editable form fields and
-  confirmation-dialog buttons.
-- [x] Add a reusable, theme-aware status bar for messages and localized shortcut
-  hints.
-- [x] Add theme tokens, high-contrast palette tests, and shortcut/mnemonic
-  rendering without hard-coded colors in individual screens.
-- [x] Add interactive normalized-input and resize diagnostics for manual host
-  verification.
-- [x] Add terminal capability/redirected-stream diagnostics and a plain
-  user-facing failure path before raw-mode initialization.
-- [x] Map configurable keys to semantic action IDs.
-- [x] Apply shared semantic theme roles to workspace and document surfaces,
-  including focused inputs, errors, disabled controls, grids, and window chrome.
-- [x] Add Unicode window frames, opaque overlays, clipped drop shadows, and
-  deterministic logical-cell tests.
-
-## M4 — First vertical slice: browse
-
-- [x] Implement static grid layout and logical-cell tests.
-- [x] Bind grid rows to a read-only dataset.
-- [x] Add selected-row state, vertical navigation, and dataset paging.
-- [x] Add horizontal grid navigation and scrolling.
-- [x] Add command dispatcher with `help`, `tables`, `schema`, `browse`, and `quit`.
-- [x] Add safe sorting, filtering, searching, and refresh through typed dataset
-  APIs and a reusable prompt widget.
-- [x] Add bounded, owned SQL-script result execution for the console boundary.
-- [x] Reuse Grid for a multiline SQL console.
-
-## M4.5 — Workspace shell
-
-- [x] Start without arguments in a keyboard-first workspace shell.
-- [x] Add keyboard-navigable File, Database, View, Window, and Help menus.
-- [x] Open or create SQLite databases through a portable path-entry dialog.
-- [x] Manage active document tabs, modal input, focus, and a status bar.
-- [x] Host browse and SQL-console surfaces as persistent workspace documents.
-- [ ] Make File-menu Escape/Left/Right/Alt mnemonic behavior reliable on all
-  supported Windows terminal hosts.
-- [x] Implement the Database, View, Window, and Help menus rather than only the
-  File-menu prototype, with deterministic keyboard tests.
-- [x] Add document tabs, active-document switching, close confirmation, and a
-  tab-local title/status model.
-- [x] Add a command window/palette using the existing command dispatcher.
-- [x] Persist a bounded recent-database list in versioned, user-local workspace
-  preferences and expose it on the home screen.
-- [x] Add explicit read/write, read-only, and create workspace open modes with
-  read-only dataset guards, visual indication, and a CLI non-creation test.
-- [x] Design and implement an optional directory browser separately from
-  portable path entry.
-- [x] Add measured classic-style pop-up menus with separator rows, aligned
-  shortcut columns, disabled actions, item mnemonics, and Unicode tab chrome.
-- [x] Make modal geometry safe at the minimum supported terminal width.
-
-## M4.6 — TUI interaction and presentation quality
-
-- [x] Size grid columns from headers/current-page values and distinguish the
-  focused cell from the selected row.
-- [x] Keep the focused generated-form field visible in compact windows and show
-  overflow indicators.
-- [x] Replace append-only prompt and generated-field entry with a shared
-  cursor-aware UTF-8 line editor supporting Left/Right, Home/End, Backspace,
-  Delete, a logical caret, and horizontal cursor following.
-- [x] Extend cursor-aware editing to the multiline SQL console with logical
-  line/column navigation, preferred display-column movement, page navigation,
-  indentation, and vertically/horizontally scrolling editor viewports.
-- [x] Add explicit F7 focus switching between SQL editor and result-grid panes,
-  including distinct focused/unfocused selection rendering.
-- [x] Add selection, word movement, clipboard commands, bracketed-paste event
-  normalization, and configurable field overwrite/insert behavior.
-- [x] Add SQL editor undo/redo, bounded command history, and editing tests before
-  evaluating syntax highlighting or schema-aware completion.
-- [x] Define explicit per-locale menu mnemonics instead of inferring the first
-  character, including collision validation and unambiguous activation.
-- [x] Add grid row/column position indicators, scrollbar affordances, empty-state
-  presentation, and user-adjustable column widths.
-- [x] Add dirty-document markers and a general modal/window stack before forms
-  can host nested relationship drill-down windows.
-- [x] Audit every interactive surface at 40x10, 80x25, and wide terminals with
-  English and Czech catalogs, both palettes, and Windows display scaling.
-
-## Cross-cutting — localization
-
-- [x] Define stable message keys, locale fallback, and named message arguments.
-- [x] Use CLI11 for process-level command-line parsing.
-- [x] Add external UTF-8 catalog loading and locale selection configuration.
-- [x] Add ICU-backed plural/select message formatting with the first translated
-  application catalog.
-- [x] Localize all workspace/menu/status/help text and add Czech catalog coverage.
-- [x] Add locale-aware date, time, number, and currency display policies.
-
-## M5 — Edit workflow and generated forms
-
-- [x] Implement a schema-generated text, number, checkbox, and read-only record
-  form with keyboard save/cancel.
-- [x] Add reusable button and opaque dialog-window primitives, including
-  destructive-action confirmation.
-- [x] Add transactional insert/edit/delete handling and destructive delete
-  confirmation.
-- [x] Map constraint/validation failures to fields without losing edits.
-- [x] Infer boolean-like fields conservatively.
-- [x] Infer foreign-key display fields (`name`, `title`, `description`, `code`) and
-  implement a bounded keyboard relationship lookup.
-- [x] Add searchable, metadata-configurable relationship lookups and related-record
-  drill-down.
-- [ ] Validate the complete workshop success scenario on all platforms.
-- [x] Add field labels, ordering, hidden/read-only overrides, formats, and lookup
-  behavior from optional application metadata.
-- [x] Add date/time display/edit controls only after an explicit SQLite annotation
-  policy is defined.
-
-## M6 — Inventory dogfood and 0.1 packaging
-
-- [x] Add generic inventory example schema and low-stock view.
-- [x] Add representative seed data and scripted acceptance scenario.
-- [x] Exercise product edit, relationship navigation, stock movement, and report.
-- [x] Fix framework weaknesses without inventory-specific runtime code.
-- [ ] Produce and verify standalone Release artifacts on Windows, Linux, and macOS.
-  - [x] Define a CPack ZIP install layout with resolved non-system runtime
-    dependencies, translations, docs, and an install-tree smoke test.
-  - [x] Smoke-test a Windows x64 Debug archive, its extracted executable, and
-    its SHA-256 sidecar.
-  - [ ] Build, extract, and exercise a tagged Release archive on each supported
-    platform outside the build tree.
-- [x] Document backup, recovery, compatibility, and upgrade behavior.
-- [x] Define versioned archive conventions, SHA-256 sidecars, reviewed license
-  bundles, and 0.1 release notes.
-- [x] Define distribution trust, platform-signing, and clean-host verification
-  policy for each supported platform.
-- [ ] Select, implement, and independently verify the Windows native installer
-  and signing, macOS native installer and notarization, and Linux
-  archive/package-signing flows with production credentials and clean native
-  hosts.
-
-## Post-0.1 — deliberately deferred
-
-- [x] Define and migrate SQLite-resident `_app_*` metadata tables.
-- [x] Load metadata as enhancements to ordinary SQLite schema introspection.
-- [x] Support metadata-defined form labels, field order, visibility, read-only
-  state, formatting, views, commands, menus, reports, and settings.
-- [x] Launch a metadata-defined application from a `.vulpes` SQLite file while
-  retaining ordinary SQLite-tool compatibility.
-
-## Reports and export
-
-- [x] Define named SQL-query report metadata and workspace commands.
-- [x] Render reports through Grid with sorting/navigation shared with browse.
-- [x] Export report/query results to CSV, JSON, plain text, HTML, and PDF.
-- [x] Define encoding, locale, overwrite, and error-handling behavior for exports.
-
-## Lua business logic
-
-- [x] Select/package Lua 5.5 and define a deliberately small, safe host API.
-- [x] Add lifecycle hooks: `on_open`, `before_insert`, `before_update`,
-  `after_update`, `before_delete`, and `on_command`.
-- [x] Define script storage, error presentation, transaction interaction, and
-  testing/sandbox policy.
+- [ ] Confirm successful CI runs on Windows, Linux, and macOS using the
+  supported compiler matrix.
+- [ ] Verify CPP-Terminal input, resize notifications, raw-mode restoration,
+  Ctrl+C cleanup, and initialized-terminal failure handling on a real host for
+  every supported platform.
+- [ ] Complete Windows input verification on Windows Terminal and a supported
+  legacy console host: Escape, arrows, function keys, Alt mnemonics, Ctrl+C,
+  resize, Unicode input, and terminal restoration.
+- [ ] Complete Linux and macOS input verification in supported local terminals
+  and SSH: Escape ambiguity, arrows, function keys, Ctrl+C, resize, Unicode
+  input, and terminal restoration.
+- [ ] Validate the complete workshop success scenario through the interactive
+  UI on Windows, Linux, and macOS.
+- [ ] Build, extract, and exercise a tagged standalone Release archive outside
+  the build tree on every supported platform.
+- [ ] Implement and independently verify Windows installer/signing, macOS
+  installer/notarization, and Linux archive/package-signing flows with
+  production credentials and clean native-host evidence.
 
 ## M7 — FoxPro-style workspace and data environment
 
-The existing workspace, metadata, generated forms, reports, and Lua hooks are
-the foundation for this milestone. M7 makes the database-development workflow
-feel coherent and dependable before a visual application builder is layered on
-top. All design-time state must remain semantic and frontend-independent: no
-terminal coordinates, ANSI sequences, or backend-specific input details belong
-in application metadata. The incomplete platform-terminal verification tasks
-above are prerequisites and retain their single authoritative checkboxes there.
+M7 strengthens the core database-development workflow before the visual RAD
+builder. Every definition remains semantic and frontend-independent: no
+terminal coordinates, ANSI sequences, or backend-specific events may enter
+application metadata.
 
 - [ ] Write end-to-end acceptance scenarios for creating a blank `.vulpes`
   application, defining data, building a form/menu/report, entering records,
-  and packaging the result without editing `_app_*` tables directly.
+  and packaging the result without direct `_app_*` edits.
+- [ ] Persist named, compound saved filters through application/view metadata,
+  retaining typed bound values, clear ownership, and safe loading validation.
+- [ ] Add persistent browse/view definitions for field order, widths, frozen
+  fields, calculated fields, sort/filter/search defaults, formats, and saved
+  filters.
 - [ ] Turn the workspace document model into a keyboard-first window manager:
   movable/resizable semantic windows, activate/next/previous/window-list
   commands, cascade/tile arrangements, reliable z-order, and modal ownership.
-- [ ] Add workspace/session persistence for open documents, active database,
-  window arrangement, recent applications, and recoverable unsaved drafts.
+- [ ] Persist and restore an interrupted workspace session: open documents,
+  active database, window arrangement, and recoverable unsaved drafts.
 - [ ] Provide a visual database explorer for tables, views, indexes, foreign
-  keys, metadata definitions, reports, scripts, and application commands.
+  keys, metadata definitions, reports, scripts, commands, and screens.
 - [ ] Add a safe schema designer for tables, columns, defaults, constraints,
   indexes, and foreign keys, backed by transactional migration plans, previews,
   backups, explicit destructive-change confirmation, and rollback guidance.
 - [ ] Add a query/view designer that produces inspectable SQLite SQL, supports
-  joins, filters, ordering, grouping, and parameters, and clearly separates
+  joins, filters, ordering, grouping, and parameters, and distinguishes
   read-only result queries from editable table datasets.
-- [ ] Define a semantic data-environment model for forms: named datasets,
-  aliases, relationships, query parameters, ordering, and lifecycle ownership.
-- [ ] Bind forms and reports through that model rather than direct table names,
-  while retaining generated-schema defaults for ordinary SQLite databases.
-- [ ] Add a data-environment editor that can configure those datasets,
-  relationships, lookup display fields, and refresh rules without raw metadata
-  SQL.
-- [ ] Add persistent browse/view definitions: chosen fields, widths, order,
-  sort/filter/search defaults, display formats, and named saved views.
-- [ ] Implement database import/export workflows for CSV and JSON with type
-  preview, mapping, validation/error reporting, transaction policy, and
-  deterministic tests; retain the existing report/query exports.
+- [ ] Define a semantic data-environment model for forms and screens: named
+  datasets, aliases, relationships, query parameters, ordering, refresh rules,
+  and lifecycle ownership.
+- [ ] Bind forms, screens, and reports through the data environment rather than
+  direct table names, while retaining generated-schema defaults for ordinary
+  SQLite databases.
+- [ ] Add a data-environment editor for datasets, relationships, lookup display
+  fields, and refresh rules without raw metadata SQL.
+- [ ] Implement CSV and JSON import workflows with type preview, mapping,
+  validation/error reporting, transaction policy, and deterministic tests.
 - [ ] Complete visual, keyboard, localization, and high-contrast review at
   40x10, 80x25, and wide terminals for English and Czech, including real
   Windows display-scaling evidence.
 
 ## M8 — RAD application builder
 
-M8 lets a developer create and maintain a useful local application wholly in
-Vulpes. SQL remains a supported expert path, but an application author must not
-need to insert rows into reserved metadata tables by hand.
+M8 makes Vulpes capable of authoring a useful local application from within
+Vulpes. SQL remains an expert path, but authors must not need to create or edit
+reserved metadata rows by hand.
 
 - [ ] Add an application/project manager to create, open, upgrade, validate,
-  clone, back up, and inspect `.vulpes` applications while preserving ordinary
-  SQLite compatibility.
+  clone, back up, restore, and inspect `.vulpes` applications while preserving
+  ordinary SQLite compatibility.
 - [ ] Add application-settings editing for title, locale, theme, startup
-  command, keyboard bindings, and versioned metadata migrations.
-- [ ] Add form management: create a generated form, set its table/data source,
-  choose the default form, duplicate/rename/delete forms, and validate
-  references before saving.
+  command, semantic key bindings, and versioned metadata migrations.
+- [ ] Add screen/dashboard management: create, rename, duplicate, delete, set
+  startup, and navigate named semantic screens without coordinate metadata.
+- [ ] Add screen/dashboard design with semantic groups, summaries, navigation,
+  actions, responsive layout hints, preview, undo/redo, and validation.
+- [ ] Add form management: create generated forms, select a table/data source,
+  choose a default form, duplicate/rename/delete forms, and validate references
+  before saving.
 - [ ] Build a semantic form designer with preview and undo/redo. It must edit
   field order, groups/sections, labels, help text, visibility, read-only state,
   widths, formats, tabs, and responsive layout hints rather than persist TUI
@@ -285,53 +96,52 @@ need to insert rows into reserved metadata tables by hand.
 - [ ] Add a validation-rule editor for required/range/pattern/list/cross-field
   rules, localized user-facing messages, and a clear boundary between declarative
   validation and Lua business logic.
-- [ ] Add command-button and form-action editing using stable semantic action
-  identifiers; support save/cancel/new/delete/navigate/open-form/run-command
-  without storing terminal key details in the application definition.
+- [ ] Add command-button and form/screen-action editing using stable semantic
+  action identifiers; support save/cancel/new/delete/navigate/open-form/
+  open-screen/run-command without terminal key details in metadata.
 - [ ] Add view management for named browses, including field selection,
-  presentation, filters, ordering, parameters, read-only policy, and default
-  navigation targets.
-- [ ] Add menu and command editors with ordering, separators, localized labels
-  and explicit mnemonics, enabled-state validation, shortcut assignment, and
-  cycle detection.
+  presentation, parameters, read-only policy, default navigation targets, and
+  all M7 Grid capabilities.
+- [ ] Add menu and command editors with ordering, separators, localized labels,
+  explicit mnemonics, enabled-state validation, shortcut assignment, and cycle
+  detection.
 - [ ] Add report management for named SQL reports, parameters, result limits,
   titles, export defaults, and application-menu/command integration.
 - [ ] Add a visual report-layout designer with semantic bands, headers, detail
   fields, grouping, totals, page settings, print/preview output, and export
   mappings; keep Grid reports as the simple default.
-- [ ] Add an application preview/run mode that launches the metadata-defined
-  application with authoring controls hidden, supports returning to design mode,
-  and never mutates data merely by previewing.
+- [ ] Add application preview/run mode that hides authoring controls, supports
+  returning to design mode, and never mutates data merely by previewing.
 - [ ] Provide metadata validation, reference diagnostics, safe repair/migration
   operations, and a human-readable application manifest/export for review and
   version control.
 - [ ] Dogfood the builder by recreating the inventory application exclusively
-  through Vulpes, then compare its resulting metadata and workflows against the
-  scripted example.
+  through Vulpes, then compare its metadata and workflows against the scripted
+  example.
 
-## M9 — Application development tools
+## M9 — Application development and operations tools
 
 - [ ] Add a Lua script manager with create/rename/delete/reorder/enable actions,
   hook scopes, source validation, trusted-code warnings, and metadata-reference
   diagnostics.
-- [ ] Add a Unicode-safe Lua editor with file-style editing, syntax highlighting,
-  search/replace, go-to diagnostic, undo/redo, and unsaved-change recovery.
+- [ ] Add a Unicode-safe Lua editor with syntax highlighting, search/replace,
+  go-to diagnostic, undo/redo, and unsaved-change recovery.
 - [ ] Add a deterministic hook test runner and error navigator that expose hook
   context, transaction outcome, source location, and retained record drafts.
 - [ ] Design a debugger only after the editor and test runner prove useful;
   document breakpoint, stepping, inspection, security, and cross-frontend
   semantics before implementation.
-- [ ] Add an application-level error log/diagnostics viewer with redaction,
-  copy/export, structured error categories, and user-actionable recovery paths.
-- [ ] Add data and application backup/restore UI, integrity checks, migration
-  history inspection, and recovery drills using ordinary SQLite tooling.
+- [ ] Add application-level error log and diagnostics views with redaction,
+  copy/export, structured categories, and user-actionable recovery paths.
+- [ ] Add backup/restore UI, integrity checks, migration-history inspection, and
+  recovery drills using ordinary SQLite tooling.
 
-## M10 — Release-quality application runtime
+## M10 — Release-quality RAD runtime
 
 - [ ] Complete an M8 application-builder acceptance pass on Windows, Linux, and
-  macOS: create both a blank application and an application over an existing
-  database; define its data, forms, menus, validation, scripts, and reports;
-  enter records; and run the resulting application without raw metadata SQL.
+  macOS: create blank and existing-database applications; define data, forms,
+  screens, menus, validation, scripts, and reports; enter records; and run the
+  result without raw metadata SQL.
 - [ ] Publish a compatibility/support matrix covering terminal hosts,
   architectures, locale/input limitations, upgrade paths, and recovery policy.
 - [ ] Establish automated and manual accessibility review for keyboard-only
@@ -340,10 +150,13 @@ need to insert rows into reserved metadata tables by hand.
 
 ## Future frontend and extension ecosystem
 
-- [ ] Define a frontend contract and build a proof-of-concept non-TUI renderer
-  that consumes the same application/data semantics without terminal concepts.
-- [ ] Evaluate a native desktop GUI frontend only after M8 validates the semantic
-  metadata and window model.
-- [ ] Evaluate a web frontend, networking, multi-user coordination, plugins, and
-  native extension APIs only after the local single-user RAD workflow is proven
-  strong; none may compromise the SQLite-first deployment model.
+- [ ] Define and prove a frontend contract with a non-TUI renderer that consumes
+  the same application and data semantics without terminal concepts.
+- [ ] Define a small, versioned, capability-limited native C++ extension
+  contract, including process isolation/trust policy, compatibility guarantees,
+  tests, and packaging; do not expose raw runtime internals.
+- [ ] Evaluate a native desktop GUI frontend only after M8 validates the
+  semantic metadata and window model.
+- [ ] Evaluate a web frontend, networking, multi-user coordination, and plugins
+  only after the local single-user RAD workflow is proven strong; none may
+  compromise the SQLite-first deployment model.

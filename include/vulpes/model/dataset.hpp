@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -24,6 +25,29 @@ enum class DatasetMode { browse, insert, edit };
 struct Filter {
     std::string field;
     FilterOperator comparison{FilterOperator::equal};
+    db::Value value;
+};
+
+// A named, typed query state owned by one Dataset. Presets deliberately keep
+// values separate from SQL so a frontend never has to reconstruct a WHERE
+// clause from user-entered text.
+struct SavedFilter {
+    std::string name;
+    std::vector<Filter> filters;
+    std::optional<std::string> search;
+};
+
+enum class AggregateFunction { count, sum, average, minimum, maximum };
+
+// An aggregation references only an inspected dataset field. count may omit
+// its field to mean COUNT(*); every other function requires one.
+struct AggregateDefinition {
+    AggregateFunction function{AggregateFunction::count};
+    std::optional<std::string> field;
+};
+
+struct AggregateResult {
+    AggregateDefinition definition;
     db::Value value;
 };
 
@@ -67,12 +91,19 @@ class Dataset {
     [[nodiscard]] auto is_dirty() const noexcept -> bool { return !modified_fields_.empty(); }
     [[nodiscard]] auto page_size() const noexcept -> std::size_t { return page_size_; }
     [[nodiscard]] auto page_offset() const noexcept -> std::size_t { return page_offset_; }
+    [[nodiscard]] auto query_revision() const noexcept -> std::size_t { return query_revision_; }
+    [[nodiscard]] auto saved_filters() const noexcept -> const std::vector<SavedFilter>& { return saved_filters_; }
 
     auto order_by(std::string_view field, SortDirection direction = SortDirection::ascending) -> Dataset&;
     auto where(Filter filter) -> Dataset&;
     auto search(std::string_view text) -> Dataset&;
     auto clear_filters() -> Dataset&;
     auto clear_search() -> Dataset&;
+    void save_current_filter(std::string_view name);
+    [[nodiscard]] auto apply_saved_filter(std::string_view name) -> bool;
+    [[nodiscard]] auto remove_saved_filter(std::string_view name) -> bool;
+    [[nodiscard]] auto aggregate(std::span<const AggregateDefinition> definitions) const
+        -> std::vector<AggregateResult>;
 
     void begin_insert();
     void begin_edit();
@@ -99,6 +130,8 @@ class Dataset {
   private:
     [[nodiscard]] auto field_index(std::string_view field) const -> std::size_t;
     void validate_field(std::string_view field) const;
+    void validate_filter(const Filter& filter) const;
+    void validate_aggregate(const AggregateDefinition& definition) const;
     void ensure_editable() const;
     void ensure_editing() const;
     void validate_draft() const;
@@ -130,6 +163,8 @@ class Dataset {
     std::vector<std::size_t> modified_fields_;
     std::optional<RowIdentity> original_identity_;
     DatasetLifecycle* lifecycle_;
+    std::vector<SavedFilter> saved_filters_;
+    std::size_t query_revision_{};
 };
 
 } // namespace vulpes::model

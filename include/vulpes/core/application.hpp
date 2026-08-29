@@ -26,6 +26,8 @@ enum class CommandOutcome {
     sql,
     quit,
     forms,
+    screens,
+    screen,
     views,
     reports,
     report,
@@ -45,9 +47,11 @@ struct CommandResponse {
     std::vector<db::TableSchema> tables;
     std::optional<db::TableSchema> table;
     std::vector<appmeta::FormDefinition> forms;
+    std::vector<appmeta::ScreenDefinition> screens;
     std::vector<appmeta::ViewDefinition> views;
     std::vector<appmeta::ReportDefinition> reports;
     std::optional<appmeta::FormDefinition> form;
+    std::optional<appmeta::ScreenDefinition> screen;
     std::optional<appmeta::ViewDefinition> view;
     std::optional<appmeta::ReportDefinition> report;
     std::optional<report::ExportFormat> export_format;

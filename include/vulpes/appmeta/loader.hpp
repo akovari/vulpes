@@ -11,7 +11,7 @@ class Database;
 
 namespace vulpes::appmeta {
 
-inline constexpr int current_application_schema_version = 3;
+inline constexpr int current_application_schema_version = 4;
 
 [[nodiscard]] auto application_schema_version(db::Database& database) -> std::optional<int>;
 [[nodiscard]] auto has_application_metadata(db::Database& database) -> bool;

@@ -60,6 +60,12 @@ auto ApplicationRuntime::execute(const Command& command, std::size_t depth) cons
             response.forms = definition_->forms;
         return response;
     }
+    case CommandId::screens: {
+        auto response = requires_no_arguments(command, CommandOutcome::screens);
+        if (response.outcome == CommandOutcome::screens && definition_ != nullptr)
+            response.screens = definition_->screens;
+        return response;
+    }
     case CommandId::views: {
         auto response = requires_no_arguments(command, CommandOutcome::views);
         if (response.outcome == CommandOutcome::views && definition_ != nullptr)
@@ -113,6 +119,7 @@ auto ApplicationRuntime::execute(const Command& command, std::size_t depth) cons
     case CommandId::browse:
         break;
     case CommandId::form:
+    case CommandId::screen:
     case CommandId::view:
         if (command.arguments.size() != 1)
             return {.outcome = CommandOutcome::invalid_arguments, .command = command.id};
@@ -133,6 +140,12 @@ auto ApplicationRuntime::execute(const Command& command, std::size_t depth) cons
         if (table == tables.end())
             return {.outcome = CommandOutcome::table_not_found, .command = command.id};
         return {.outcome = CommandOutcome::browse, .command = command.id, .table = *table, .form = *form};
+    }
+    if (command.id == CommandId::screen) {
+        const auto* screen = definition_->screen(command.arguments.front());
+        if (screen == nullptr)
+            return {.outcome = CommandOutcome::definition_not_found, .command = command.id};
+        return {.outcome = CommandOutcome::screen, .command = command.id, .screen = *screen};
     }
     if (command.id == CommandId::view) {
         const auto* view = definition_->view(command.arguments.front());

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <string>
 
 namespace {
 
@@ -67,4 +68,71 @@ TEST_CASE("workspace preferences preserve Unicode recent database paths", "[core
     const auto loaded = vulpes::core::WorkspacePreferences::load(settings_path);
     REQUIRE(loaded.recent_databases().size() == 1);
     CHECK(loaded.recent_databases().front() == database_path);
+}
+
+TEST_CASE("workspace preferences migrate v1 recent databases to versioned host settings", "[core][preferences]") {
+    TemporaryDirectory temporary;
+    const auto settings_path = temporary.path() / "settings.json";
+    std::filesystem::create_directories(temporary.path());
+    {
+        std::ofstream file{settings_path};
+        file << R"({"version":1,"recent_databases":["older.db","newer.db"]})";
+    }
+
+    auto preferences = vulpes::core::WorkspacePreferences::load(settings_path);
+    CHECK(preferences.locale() == "en");
+    CHECK(preferences.theme() == "midnight");
+    CHECK(preferences.default_dataset_page_size() == vulpes::core::WorkspacePreferences::default_page_size);
+    CHECK(preferences.key_bindings().empty());
+    REQUIRE(preferences.recent_databases().size() == 2);
+    CHECK(preferences.recent_databases().front() == std::filesystem::path{"older.db"});
+
+    preferences.save(settings_path);
+    std::ifstream saved{settings_path};
+    const std::string document{std::istreambuf_iterator<char>{saved}, std::istreambuf_iterator<char>{}};
+    CHECK(document.find("\"version\": 2") != std::string::npos);
+}
+
+TEST_CASE("workspace preferences persist presentation defaults and semantic key binding overrides",
+          "[core][preferences]") {
+    TemporaryDirectory temporary;
+    const auto settings_path = temporary.path() / "settings.json";
+    vulpes::core::WorkspacePreferences preferences;
+    preferences.set_locale("cs-CZ");
+    preferences.set_theme("high-contrast");
+    preferences.set_default_dataset_page_size(48);
+    preferences.set_key_bindings({
+        {.key = {.key = vulpes::terminal::Key::f9}, .action = vulpes::core::ActionId::record_edit},
+        {.key = {.key = vulpes::terminal::Key::character, .character = U'\u00E9', .alt = true},
+         .action = vulpes::core::ActionId::application_menu},
+    });
+    preferences.save(settings_path);
+
+    const auto loaded = vulpes::core::WorkspacePreferences::load(settings_path);
+    CHECK(loaded.locale() == "cs-CZ");
+    CHECK(loaded.theme() == "high-contrast");
+    CHECK(loaded.default_dataset_page_size() == 48);
+    REQUIRE(loaded.key_bindings().size() == 2);
+    CHECK(loaded.key_bindings().at(1).key.character == U'\u00E9');
+    CHECK(loaded.key_bindings().at(1).key.alt);
+
+    vulpes::core::ActionMap actions;
+    for (const auto& binding : loaded.key_bindings())
+        actions.bind(binding);
+    CHECK(actions.action_for(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::f9}) ==
+          vulpes::core::ActionId::record_edit);
+    CHECK(actions.action_for(vulpes::terminal::KeyEvent{.key = vulpes::terminal::Key::character,
+                                                        .character = U'\u00E9',
+                                                        .alt = true}) == vulpes::core::ActionId::application_menu);
+}
+
+TEST_CASE("workspace preferences reject unsafe page sizes and duplicate key bindings", "[core][preferences]") {
+    vulpes::core::WorkspacePreferences preferences;
+    CHECK_THROWS_AS(preferences.set_default_dataset_page_size(0), vulpes::Error);
+    CHECK_THROWS_AS(preferences.set_default_dataset_page_size(1'001), vulpes::Error);
+    CHECK_THROWS_AS(preferences.set_key_bindings({
+                        {.key = {.key = vulpes::terminal::Key::f9}, .action = vulpes::core::ActionId::record_edit},
+                        {.key = {.key = vulpes::terminal::Key::f9}, .action = vulpes::core::ActionId::dataset_refresh},
+                    }),
+                    vulpes::Error);
 }

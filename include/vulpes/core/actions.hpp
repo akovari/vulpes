@@ -58,5 +58,6 @@ class ActionMap {
 };
 
 [[nodiscard]] auto action_id(ActionId action) -> std::string_view;
+[[nodiscard]] auto action_from_id(std::string_view identifier) -> std::optional<ActionId>;
 
 } // namespace vulpes::core

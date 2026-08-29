@@ -17,7 +17,8 @@ Vulpes embeds Lua 5.5 through the pinned vcpkg `lua` package. The Lua C API is
 private to `script::Runtime`; public Vulpes headers expose no `lua_State`, Lua
 value, or terminal type.
 
-Metadata schema version 3 adds `_app_scripts`. Each script has a stable name,
+Metadata schema version 3 added `_app_scripts`; it remains part of the current
+application metadata schema. Each script has a stable name,
 hook, optional table or command scope, source, and deterministic
 `position`/name ordering. Validated scripts become owned `script::Definition`
 values in `ApplicationDefinition`.

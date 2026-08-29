@@ -17,6 +17,7 @@
 #include "vulpes/ui/document_session.hpp"
 #include "vulpes/ui/report_document.hpp"
 #include "vulpes/ui/schema_document.hpp"
+#include "vulpes/ui/screen_document.hpp"
 #include "vulpes/ui/sql_document.hpp"
 #include "vulpes/ui/terminal_diagnostics.hpp"
 #include "vulpes/ui/terminal_warning.hpp"
@@ -25,11 +26,13 @@
 #include "vulpes/version.hpp"
 
 #include <CLI/CLI.hpp>
+#include <concepts>
 #include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -65,11 +68,11 @@ void browse(vulpes::db::Database& database, const vulpes::db::TableSchema& table
             const vulpes::core::Localizer& messages, const vulpes::ui::Theme& theme,
             const vulpes::appmeta::ApplicationMetadata* metadata = nullptr,
             std::optional<vulpes::appmeta::TableMetadata> table_override = std::nullopt,
-            vulpes::model::DatasetLifecycle* lifecycle = nullptr) {
+            vulpes::model::DatasetLifecycle* lifecycle = nullptr, std::size_t page_size = 100) {
     vulpes::terminal::ConsoleTerminal terminal;
     vulpes::core::SystemClipboard clipboard;
     vulpes::ui::BrowseDocument document{
-        database, table, messages, theme, &clipboard, metadata, std::move(table_override), lifecycle};
+        database, table, messages, theme, &clipboard, metadata, std::move(table_override), lifecycle, page_size};
     vulpes::ui::DocumentSession{
         terminal, document, {20, 6}, messages.translate("terminal.minimum_size", {{"width", "20"}, {"height", "6"}})}
         .run();
@@ -143,10 +146,10 @@ void print_schema(const vulpes::db::TableSchema& table, const vulpes::core::Loca
 }
 
 auto run_workspace(const std::string& locale, const std::vector<std::string>& catalog_paths,
-                   const vulpes::ui::Theme& theme, const std::filesystem::path& preferences_path,
+                   const vulpes::ui::Theme& theme, std::size_t dataset_page_size,
+                   vulpes::core::WorkspacePreferences preferences, const std::filesystem::path& preferences_path,
                    std::optional<std::filesystem::path> initial_database = std::nullopt) -> int {
     auto messages = load_messages(locale, catalog_paths);
-    auto preferences = vulpes::core::WorkspacePreferences::load(preferences_path);
     vulpes::terminal::ConsoleTerminal terminal;
     auto size = terminal.size();
     if (size.width <= 0 || size.height <= 0)
@@ -154,6 +157,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     vulpes::terminal::ScreenBuffer previous{size.width, size.height};
     vulpes::terminal::ScreenBuffer current{size.width, size.height};
     vulpes::core::ActionMap actions;
+    for (const auto& binding : preferences.key_bindings())
+        actions.bind(binding);
     vulpes::core::SystemClipboard clipboard;
     vulpes::ui::Workspace workspace{vulpes::ui::make_workspace_text(messages), theme, &clipboard};
     const auto refresh_recent_databases = [&] {
@@ -167,12 +172,14 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
     std::optional<vulpes::db::Database> database;
     std::optional<vulpes::appmeta::ApplicationDefinition> application_definition;
     std::optional<vulpes::script::Runtime> scripts;
-    using WorkspaceSurface = std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SchemaDocument,
-                                          vulpes::ui::SqlDocument, vulpes::ui::ReportDocument>;
+    using WorkspaceSurface =
+        std::variant<vulpes::ui::BrowseDocument, vulpes::ui::SchemaDocument, vulpes::ui::SqlDocument,
+                     vulpes::ui::ReportDocument, vulpes::ui::ScreenDocument>;
     std::unordered_map<std::string, WorkspaceSurface> surfaces;
     const auto host_active_surface = [&](const vulpes::db::TableSchema* table = nullptr,
                                          std::optional<vulpes::appmeta::TableMetadata> table_override = std::nullopt,
-                                         const vulpes::appmeta::ReportDefinition* report = nullptr) {
+                                         const vulpes::appmeta::ReportDefinition* report = nullptr,
+                                         const vulpes::appmeta::ScreenDefinition* screen = nullptr) {
         if (!database)
             return;
         const auto& document = workspace.active_document();
@@ -184,7 +191,7 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::BrowseDocument>, *database, *table,
                                      messages, theme, &clipboard,
                                      application_definition ? &application_definition->presentation : nullptr,
-                                     std::move(table_override), scripts ? &*scripts : nullptr);
+                                     std::move(table_override), scripts ? &*scripts : nullptr, dataset_page_size);
             }
             return;
         case vulpes::ui::DocumentKind::schema:
@@ -202,6 +209,10 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                 surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::ReportDocument>, *database, *report,
                                      messages, theme);
             }
+            return;
+        case vulpes::ui::DocumentKind::application_screen:
+            if (screen != nullptr)
+                surfaces.try_emplace(document.id, std::in_place_type<vulpes::ui::ScreenDocument>, *screen, theme);
             return;
         case vulpes::ui::DocumentKind::workspace:
             return;
@@ -231,6 +242,10 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             if (const auto configured_title = application_definition->setting("title"))
                 title = *configured_title;
             workspace.set_application(std::move(title), application_definition->menus);
+            if (const auto* screen = application_definition->default_screen(); screen != nullptr) {
+                workspace.open_screen(screen->name, screen->label);
+                host_active_surface(nullptr, std::nullopt, nullptr, screen);
+            }
         }
         preferences.add_recent_database(database_path);
         preferences.save(preferences_path);
@@ -276,6 +291,32 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         const auto action = actions.action_for(event);
         const auto active_document_id = workspace.active_document().id;
         const auto outcome = workspace.handle(action, event);
+        std::optional<std::string> document_command;
+        if (outcome == vulpes::ui::WorkspaceResult::unchanged) {
+            const auto& document = workspace.active_document();
+            if (document.kind != vulpes::ui::DocumentKind::workspace) {
+                if (const auto surface = surfaces.find(document.id); surface != surfaces.end()) {
+                    const auto result = std::visit(
+                        [&](auto& active_surface) {
+                            const auto result = active_surface.handle(action, event);
+                            using Surface = std::remove_cvref_t<decltype(active_surface)>;
+                            if constexpr (std::same_as<Surface, vulpes::ui::ScreenDocument>) {
+                                if (result == vulpes::ui::DocumentResult::command) {
+                                    if (const auto command_name = active_surface.take_command(); command_name)
+                                        document_command = "run \"" + *command_name + '"';
+                                }
+                            }
+                            return result;
+                        },
+                        surface->second);
+                    if (result == vulpes::ui::DocumentResult::close) {
+                        const auto closed_id = document.id;
+                        static_cast<void>(workspace.close_active_document());
+                        surfaces.erase(closed_id);
+                    }
+                }
+            }
+        }
         if (outcome == vulpes::ui::WorkspaceResult::quit)
             return 0;
         if (outcome == vulpes::ui::WorkspaceResult::open_database ||
@@ -296,9 +337,11 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
             } catch (const vulpes::Error& error) {
                 workspace.set_status(error.what());
             }
-        } else if (outcome == vulpes::ui::WorkspaceResult::command) {
+        } else if (outcome == vulpes::ui::WorkspaceResult::command || document_command) {
             try {
-                const auto command = vulpes::core::parse_command(workspace.requested_command());
+                const auto command =
+                    vulpes::core::parse_command(document_command ? std::string_view{*document_command}
+                                                                 : std::string_view{workspace.requested_command()});
                 const auto show_invalid_arguments = [&] {
                     workspace.set_status(
                         messages.translate("error.invalid_command_arguments",
@@ -366,6 +409,15 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
                         workspace.set_status(messages.translate(
                             "workspace.command_forms", {{"count", static_cast<std::int64_t>(response.forms.size())}}));
                         break;
+                    case vulpes::core::CommandOutcome::screens:
+                        workspace.set_status(
+                            messages.translate("workspace.command_screens",
+                                               {{"count", static_cast<std::int64_t>(response.screens.size())}}));
+                        break;
+                    case vulpes::core::CommandOutcome::screen:
+                        workspace.open_screen(response.screen->name, response.screen->label);
+                        host_active_surface(nullptr, std::nullopt, nullptr, &*response.screen);
+                        break;
                     case vulpes::core::CommandOutcome::views:
                         workspace.set_status(messages.translate(
                             "workspace.command_views", {{"count", static_cast<std::int64_t>(response.views.size())}}));
@@ -420,19 +472,6 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
         } else if ((outcome == vulpes::ui::WorkspaceResult::browse_table && database && workspace.selected_table()) ||
                    (outcome == vulpes::ui::WorkspaceResult::run_sql && database)) {
             host_active_surface();
-        } else if (outcome == vulpes::ui::WorkspaceResult::unchanged) {
-            const auto& document = workspace.active_document();
-            if (document.kind != vulpes::ui::DocumentKind::workspace) {
-                if (const auto surface = surfaces.find(document.id); surface != surfaces.end()) {
-                    const auto result = std::visit(
-                        [&](auto& active_surface) { return active_surface.handle(action, event); }, surface->second);
-                    if (result == vulpes::ui::DocumentResult::close) {
-                        const auto closed_id = document.id;
-                        static_cast<void>(workspace.close_active_document());
-                        surfaces.erase(closed_id);
-                    }
-                }
-            }
         }
         if (!workspace.has_document(active_document_id))
             surfaces.erase(active_document_id);
@@ -441,7 +480,8 @@ auto run_workspace(const std::string& locale, const std::vector<std::string>& ca
 
 auto run(const std::filesystem::path& database_path, const std::optional<std::string>& table_name,
          const std::optional<std::string>& command_source, const std::string& locale,
-         const std::vector<std::string>& catalog_paths, const vulpes::ui::Theme& theme) -> int {
+         const std::vector<std::string>& catalog_paths, const vulpes::ui::Theme& theme, std::size_t dataset_page_size)
+    -> int {
     vulpes::db::Database database{database_path, vulpes::db::OpenMode::read_write};
     auto messages = load_messages(locale, catalog_paths);
     const auto application_definition = vulpes::appmeta::load_application_definition(database);
@@ -477,8 +517,8 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::browse:
         browse(database, *response.table, messages, theme,
                application_definition.empty() ? nullptr : &application_definition.presentation,
-               response.form ? std::optional{response.form->presentation} : std::nullopt,
-               scripts ? &*scripts : nullptr);
+               response.form ? std::optional{response.form->presentation} : std::nullopt, scripts ? &*scripts : nullptr,
+               dataset_page_size);
         break;
     case vulpes::core::CommandOutcome::sql:
         sql_console(database, messages, theme);
@@ -488,6 +528,17 @@ auto run(const std::filesystem::path& database_path, const std::optional<std::st
     case vulpes::core::CommandOutcome::forms:
         for (const auto& form : response.forms)
             std::cout << "  " << form.name << " -> " << form.table << '\n';
+        break;
+    case vulpes::core::CommandOutcome::screens:
+        for (const auto& screen : response.screens)
+            std::cout << "  " << screen.name << " - " << screen.label << '\n';
+        break;
+    case vulpes::core::CommandOutcome::screen:
+        std::cout << response.screen->label << '\n';
+        if (response.screen->description)
+            std::cout << "  " << *response.screen->description << '\n';
+        for (const auto& item : response.screen->items)
+            std::cout << "  " << item.label << " -> " << item.command << '\n';
         break;
     case vulpes::core::CommandOutcome::views:
         for (const auto& view : response.views)
@@ -561,8 +612,9 @@ auto main(int argc, char** argv) -> int {
         bool terminal_diagnostics = false;
         bool terminal_capabilities = false;
         bool migrate_app_metadata = false;
-        std::string locale{"en"};
-        std::string theme_name{"midnight"};
+        std::string locale_argument;
+        std::string theme_argument;
+        std::size_t page_size_argument{};
         std::string preferences_argument;
         std::vector<std::string> catalog_paths;
         app.add_flag("--version", version, "Show Vulpes version and exit");
@@ -613,9 +665,15 @@ auto main(int argc, char** argv) -> int {
         migrate_app_option->excludes(query_option);
         migrate_app_option->excludes(terminal_diagnostics_option);
         migrate_app_option->excludes(terminal_capabilities_option);
-        app.add_option("--locale", locale, "BCP-47 locale for user-interface messages");
+        const auto locale_option =
+            app.add_option("--locale", locale_argument, "BCP-47 locale for user-interface messages");
         app.add_option("--catalog", catalog_paths, "UTF-8 JSON message catalog; may be repeated");
-        app.add_option("--theme", theme_name, "Workspace theme: midnight or high-contrast");
+        const auto theme_option =
+            app.add_option("--theme", theme_argument, "Workspace theme: midnight or high-contrast");
+        const auto page_size_option =
+            app.add_option("--page-size", page_size_argument, "Rows to load per table dataset (1-1000)")
+                ->check(CLI::Range(vulpes::core::WorkspacePreferences::minimum_dataset_page_size,
+                                   vulpes::core::WorkspacePreferences::maximum_dataset_page_size));
         app.add_option("--config", preferences_argument,
                        "Workspace preferences JSON path (defaults to the user configuration directory)");
         app.set_help_flag("-h,--help", "Show this help and exit");
@@ -629,6 +687,14 @@ auto main(int argc, char** argv) -> int {
             std::cout << "Vulpes " << vulpes::build::version << '\n';
             return 0;
         }
+        const auto preferences_path = preferences_argument.empty() ? vulpes::core::default_workspace_preferences_path()
+                                                                   : std::filesystem::path{preferences_argument};
+        const auto preferences = vulpes::core::WorkspacePreferences::load(preferences_path);
+        const auto locale = locale_option->count() > 0U ? locale_argument : preferences.locale();
+        const auto theme_name = theme_option->count() > 0U ? theme_argument : preferences.theme();
+        const auto dataset_page_size =
+            page_size_option->count() > 0U ? page_size_argument : preferences.default_dataset_page_size();
+        const auto& theme = vulpes::ui::theme(vulpes::ui::parse_theme(theme_name));
         if (terminal_capabilities) {
             if (!database_argument.empty())
                 throw vulpes::Error{vulpes::ErrorCategory::validation,
@@ -673,16 +739,13 @@ auto main(int argc, char** argv) -> int {
                       << '\n';
             return 0;
         }
-        const auto preferences_path = preferences_argument.empty() ? vulpes::core::default_workspace_preferences_path()
-                                                                   : std::filesystem::path{preferences_argument};
         if (database_argument.empty()) {
-            return run_workspace(locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)),
-                                 preferences_path);
+            return run_workspace(locale, catalog_paths, theme, dataset_page_size, preferences, preferences_path);
         }
 
         if (table_name.empty() && command_source.empty() && !sql) {
-            return run_workspace(locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)),
-                                 preferences_path, std::filesystem::path{database_argument});
+            return run_workspace(locale, catalog_paths, theme, dataset_page_size, preferences, preferences_path,
+                                 std::filesystem::path{database_argument});
         }
 
         return run(std::filesystem::path{database_argument},
@@ -690,7 +753,7 @@ auto main(int argc, char** argv) -> int {
                    sql                      ? std::optional{std::string{"sql"}}
                    : command_source.empty() ? std::nullopt
                                             : std::optional{command_source},
-                   locale, catalog_paths, vulpes::ui::theme(vulpes::ui::parse_theme(theme_name)));
+                   locale, catalog_paths, theme, dataset_page_size);
     } catch (const vulpes::Error& error) {
         std::cerr << "vulpes: " << error.what() << '\n';
         return 1;
